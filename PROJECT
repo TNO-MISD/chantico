@@ -10,4 +10,14 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: chantico
 repo: ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: ci.tno.nl
+  group: chantico
+  kind: Pdu
+  path: ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1
+  version: v1alpha1
 version: "3"

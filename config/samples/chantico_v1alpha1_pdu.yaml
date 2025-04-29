@@ -1,0 +1,11 @@
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: Pdu
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: pdu-sample
+  namespace: chantico
+spec:
+  ip: 192.168.178.201
+  port: 5558
