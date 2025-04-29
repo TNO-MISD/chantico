@@ -1,8 +1,8 @@
-# Chantico
+# Chantico: Energy Domain Controller
 
 ![](assets/chantico.png)
 
-// TODO(user): Add simple overview of use/purpose
+Streamlining Energy Management for Cloud Operators.
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
