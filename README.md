@@ -1,6 +1,6 @@
 # Chantico: Energy Domain Controller
 
-![](assets/chantico.png)
+![](assets/logo/chantico.png)
 
 Streamlining Energy Management for Cloud Operators.
 
