@@ -1,0 +1,68 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.1
+  name: measurements.chantico.ci.tno.nl
+spec:
+  group: chantico.ci.tno.nl
+  names:
+    kind: Measurement
+    listKind: MeasurementList
+    plural: measurements
+    singular: measurement
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Measurement is the Schema for the measurements API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MeasurementSpec defines the desired state of Measurement
+            properties:
+              dataSource:
+                type: string
+              isInternal:
+                type: boolean
+              name:
+                description: Foo is an example field of Measurement. Edit measurement_types.go
+                  to remove/update
+                type: string
+              protocol:
+                type: string
+              query:
+                type: string
+            required:
+            - dataSource
+            - isInternal
+            - name
+            - protocol
+            - query
+            type: object
+          status:
+            description: MeasurementStatus defines the observed state of Measurement
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
