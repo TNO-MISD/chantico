@@ -10,5 +10,5 @@ spec:
   name: pdu-kwh-measurement
   isInternal: true
   protocol: prometheus
-  dataSource: 10.111.56.183:9090
+  dataSource: chantico-snmp-prometheus:9090
   query: sdbDevOutMtKWhTotal
