@@ -74,8 +74,9 @@ func (r *MeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
-
 	}
+
+	measurement.Register(ctx)
 
 	var backOffLimit int32 = 1
 	aggregator_cron := &batchv1.CronJob{
@@ -133,18 +134,19 @@ func (r *MeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		},
 	}
 
-	// Set PDU instance as the owner and controller
+	// Set measurement instance as the owner and controller
 	if err := controllerutil.SetControllerReference(measurement, aggregator_cron, r.Scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Create or update the deployment
+	// Create or update the cron job
 	err = r.Create(ctx, aggregator_cron)
 	if err != nil {
 		if client.IgnoreAlreadyExists(err) != nil {
 			return reconcile.Result{}, err
 		}
 	}
+
 	err = r.Update(ctx, aggregator_cron)
 	if err != nil {
 		return reconcile.Result{}, err

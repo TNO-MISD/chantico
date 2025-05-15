@@ -17,6 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	sqlhelper "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico/sql-helper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -61,6 +70,47 @@ type MeasurementList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Measurement `json:"items"`
+}
+
+func (measurement Measurement) Register(ctx context.Context) {
+	// Connect to database
+	loggerStruct := log.FromContext(ctx)
+
+	db_string := fmt.Sprintf("postgres://ps_user:SecurePassword@%s:%s/ps_db", os.Getenv("POSTGRES_PORT_5432_TCP_ADDR"), os.Getenv("POSTGRES_SERVICE_PORT"))
+
+	loggerStruct.Info(db_string)
+
+	db, err := pgx.Connect(ctx, db_string)
+	if err != nil {
+		loggerStruct.Info(err.Error())
+		return
+	}
+	defer db.Close(ctx)
+
+	queries := sqlhelper.New(db)
+
+	uuid := new(pgtype.UUID)
+	err = uuid.Scan(string(measurement.UID))
+	loggerStruct.Info(string(measurement.UID))
+	if err != nil {
+		loggerStruct.Info(err.Error())
+		return
+	}
+	loggerStruct.Info(uuid.String())
+	measurementParams := sqlhelper.CreateMeasurementParams{
+		ID:         *uuid,
+		Name:       measurement.Spec.Name,
+		IsInternal: measurement.Spec.IsInternal,
+		Protocol:   measurement.Spec.Protocol,
+		DataSource: measurement.Spec.DataSource,
+		Query:      measurement.Spec.Query,
+	}
+
+	_, err = queries.CreateMeasurement(ctx, measurementParams)
+	if err != nil {
+		loggerStruct.Info(err.Error())
+		return
+	}
 }
 
 func init() {
