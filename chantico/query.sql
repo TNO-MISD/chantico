@@ -15,3 +15,11 @@ SELECT * FROM measurements WHERE id = $1;
 
 -- name: DeleteMeasurement :exec
 DELETE FROM measurements WHERE id = $1;
+
+-- name: CreateMeasurementValue :one
+INSERT INTO measurement_values (
+	measurement_id, value, timestamp_start, timestamp_end
+) VALUES (
+	$1, $2, $3, $4
+)
+RETURNING *;

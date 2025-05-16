@@ -50,6 +50,40 @@ func (q *Queries) CreateMeasurement(ctx context.Context, arg CreateMeasurementPa
 	return i, err
 }
 
+const createMeasurementValue = `-- name: CreateMeasurementValue :one
+INSERT INTO measurement_values (
+	measurement_id, value, timestamp_start, timestamp_end
+) VALUES (
+	$1, $2, $3, $4
+)
+RETURNING id, measurement_id, value, timestamp_start, timestamp_end
+`
+
+type CreateMeasurementValueParams struct {
+	MeasurementID  pgtype.UUID
+	Value          float32
+	TimestampStart pgtype.Timestamp
+	TimestampEnd   pgtype.Timestamp
+}
+
+func (q *Queries) CreateMeasurementValue(ctx context.Context, arg CreateMeasurementValueParams) (MeasurementValue, error) {
+	row := q.db.QueryRow(ctx, createMeasurementValue,
+		arg.MeasurementID,
+		arg.Value,
+		arg.TimestampStart,
+		arg.TimestampEnd,
+	)
+	var i MeasurementValue
+	err := row.Scan(
+		&i.ID,
+		&i.MeasurementID,
+		&i.Value,
+		&i.TimestampStart,
+		&i.TimestampEnd,
+	)
+	return i, err
+}
+
 const deleteMeasurement = `-- name: DeleteMeasurement :exec
 DELETE FROM measurements WHERE id = $1
 `

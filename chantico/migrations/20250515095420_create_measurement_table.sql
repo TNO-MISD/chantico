@@ -12,8 +12,9 @@ CREATE TABLE measurements (
 CREATE TABLE measurement_values (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	measurement_id UUID NOT NULL REFERENCES measurements(id),
-	value TEXT NOT NULL,
-	timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	value REAL NOT NULL,
+	timestamp_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	timestamp_end TIMESTAMP NOT NULL
 );
 
 

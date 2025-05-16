@@ -18,8 +18,9 @@ type Measurement struct {
 }
 
 type MeasurementValue struct {
-	ID            pgtype.UUID
-	MeasurementID pgtype.UUID
-	Value         string
-	Timestamp     pgtype.Timestamp
+	ID             pgtype.UUID
+	MeasurementID  pgtype.UUID
+	Value          float32
+	TimestampStart pgtype.Timestamp
+	TimestampEnd   pgtype.Timestamp
 }
