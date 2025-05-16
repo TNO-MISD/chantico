@@ -11,4 +11,4 @@ spec:
   isInternal: true
   protocol: prometheus
   dataSource: chantico-snmp-prometheus:9090
-  query: sdbDevOutMtKWhTotal
+  query: sdbDevOutMtPowerWatt{instance="10.5.1.2", job="snmp_schleifenbauer", sdbDevIdIndex="0", sdbDevOutMtIndex="6"}
