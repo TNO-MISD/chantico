@@ -91,19 +91,22 @@ func (r *MeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					BackoffLimit: &backOffLimit,
 					Template: corev1.PodTemplateSpec{
 						Spec: appsv1.PodSpec{
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									Name: "chantico-gitlab-pull",
+								},
+							},
 							Containers: []corev1.Container{
 								{
-									Name:  "curl-data",
-									Image: "rancher/curl",
+									Name:  "get-data",
+									Image: "ci.tno.nl:4567/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico-aggregator:0.0.1",
 									Command: []string{
 										"/bin/sh",
 									},
 									Args: []string{
 										"-c",
 										fmt.Sprintf(
-											"now=$(date +%%s); past=$(( ${now} - 5 * 60 )); curl http://%s/api/v1/query_range?query=%s\\&step=1\\&start=${past}\\&end=${now} > /tmp/snmp-prometheus-volume-mount/%s-${now}.json",
-											measurement.Spec.DataSource,
-											measurement.Spec.Query,
+											"chantico-aggregator -time '2025-05-16 13:00:00' -uuid %s -pgdbstring postgres://ps_user:SecurePassword@${POSTGRES_SERVICE_HOST}:${POSTGRES_SERVICE_PORT}/ps_db",
 											measurement.UID,
 										),
 									},
