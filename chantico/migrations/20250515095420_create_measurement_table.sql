@@ -6,7 +6,9 @@ CREATE TABLE measurements (
 	is_internal BOOLEAN NOT NULL,
 	protocol VARCHAR(255) NOT NULL,
 	data_source VARCHAR(255) NOT NULL,
-	query TEXT NOT NULL
+	query TEXT NOT NULL,
+	registration_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	last_measurement_time TIMESTAMP
 );
 
 CREATE TABLE measurement_values (
