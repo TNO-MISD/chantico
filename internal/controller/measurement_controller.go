@@ -99,14 +99,14 @@ func (r *MeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 							Containers: []corev1.Container{
 								{
 									Name:  "get-data",
-									Image: "ci.tno.nl:4567/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico-aggregator:0.0.1",
+									Image: "ci.tno.nl:4567/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico-aggregator:0.0.2",
 									Command: []string{
 										"/bin/sh",
 									},
 									Args: []string{
 										"-c",
 										fmt.Sprintf(
-											"chantico-aggregator -time '2025-05-16 13:00:00' -uuid %s -pgdbstring postgres://ps_user:SecurePassword@${POSTGRES_SERVICE_HOST}:${POSTGRES_SERVICE_PORT}/ps_db",
+											"chantico-aggregator -uuid %s -pgdbstring postgres://ps_user:SecurePassword@${POSTGRES_SERVICE_HOST}:${POSTGRES_SERVICE_PORT}/ps_db",
 											measurement.UID,
 										),
 									},
