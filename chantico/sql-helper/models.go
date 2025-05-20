@@ -9,12 +9,14 @@ import (
 )
 
 type Measurement struct {
-	ID         pgtype.UUID
-	Name       string
-	IsInternal bool
-	Protocol   string
-	DataSource string
-	Query      string
+	ID                  pgtype.UUID
+	Name                string
+	IsInternal          bool
+	Protocol            string
+	DataSource          string
+	Query               string
+	RegistrationTime    pgtype.Timestamp
+	LastMeasurementTime pgtype.Timestamp
 }
 
 type MeasurementValue struct {

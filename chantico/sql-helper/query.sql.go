@@ -17,7 +17,7 @@ INSERT INTO measurements (
 ) VALUES (
 	$1, $2, $3, $4, $5, $6
 )
-RETURNING id, name, is_internal, protocol, data_source, query
+RETURNING id, name, is_internal, protocol, data_source, query, registration_time, last_measurement_time
 `
 
 type CreateMeasurementParams struct {
@@ -46,6 +46,8 @@ func (q *Queries) CreateMeasurement(ctx context.Context, arg CreateMeasurementPa
 		&i.Protocol,
 		&i.DataSource,
 		&i.Query,
+		&i.RegistrationTime,
+		&i.LastMeasurementTime,
 	)
 	return i, err
 }
@@ -94,7 +96,7 @@ func (q *Queries) DeleteMeasurement(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getMeasurement = `-- name: GetMeasurement :one
-SELECT id, name, is_internal, protocol, data_source, query FROM measurements WHERE id = $1
+SELECT id, name, is_internal, protocol, data_source, query, registration_time, last_measurement_time FROM measurements WHERE id = $1
 `
 
 func (q *Queries) GetMeasurement(ctx context.Context, id pgtype.UUID) (Measurement, error) {
@@ -107,12 +109,14 @@ func (q *Queries) GetMeasurement(ctx context.Context, id pgtype.UUID) (Measureme
 		&i.Protocol,
 		&i.DataSource,
 		&i.Query,
+		&i.RegistrationTime,
+		&i.LastMeasurementTime,
 	)
 	return i, err
 }
 
 const listMeasurements = `-- name: ListMeasurements :many
-SELECT id, name, is_internal, protocol, data_source, query FROM measurements
+SELECT id, name, is_internal, protocol, data_source, query, registration_time, last_measurement_time FROM measurements
 ORDER BY name
 `
 
@@ -132,6 +136,8 @@ func (q *Queries) ListMeasurements(ctx context.Context) ([]Measurement, error) {
 			&i.Protocol,
 			&i.DataSource,
 			&i.Query,
+			&i.RegistrationTime,
+			&i.LastMeasurementTime,
 		); err != nil {
 			return nil, err
 		}
@@ -141,4 +147,32 @@ func (q *Queries) ListMeasurements(ctx context.Context) ([]Measurement, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateLastMeasurementTime = `-- name: UpdateLastMeasurementTime :one
+UPDATE measurements 
+SET last_measurement_time = $2 
+WHERE id = $1
+RETURNING id, name, is_internal, protocol, data_source, query, registration_time, last_measurement_time
+`
+
+type UpdateLastMeasurementTimeParams struct {
+	ID                  pgtype.UUID
+	LastMeasurementTime pgtype.Timestamp
+}
+
+func (q *Queries) UpdateLastMeasurementTime(ctx context.Context, arg UpdateLastMeasurementTimeParams) (Measurement, error) {
+	row := q.db.QueryRow(ctx, updateLastMeasurementTime, arg.ID, arg.LastMeasurementTime)
+	var i Measurement
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.IsInternal,
+		&i.Protocol,
+		&i.DataSource,
+		&i.Query,
+		&i.RegistrationTime,
+		&i.LastMeasurementTime,
+	)
+	return i, err
 }

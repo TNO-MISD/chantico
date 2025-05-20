@@ -13,6 +13,12 @@ RETURNING *;
 -- name: GetMeasurement :one
 SELECT * FROM measurements WHERE id = $1;
 
+-- name: UpdateLastMeasurementTime :one
+UPDATE measurements
+SET last_measurement_time = $2 
+WHERE id = $1
+RETURNING *;
+
 -- name: DeleteMeasurement :exec
 DELETE FROM measurements WHERE id = $1;
 
