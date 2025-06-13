@@ -1,26 +1,15 @@
-## Installation
+# Energy domain controller - Goal
 
-To install chantico:
+## First use-case
 
-1. Create a volume with at least 3Gi of storage. In our current set-up:
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: <PVC-NAME>
-  namespace: chantico
-spec:
-  storageClassName: csi-rbd
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 3Gi
-  volumeMode: Filesystem
-```
+### Use case
 
-1. Install snmp and prometheus via `helm`:
+![](puml/use-case-1.png)
 
-```bash
-helm install config/initial-deployments/ --set persistentVolumeClaimName=<PVC-NAME>
-```
+The first considered use case of chantico is a server plugged on two PDU outlets from two different PDUs with a baremetal offering (with IPMI interface access to the consumer).
+
+### Sequence diagram
+
+The sequence diagram are the interactions between chantico, the workflow orchestrator and the engineer
+![](puml/workflows-edc-interactions.png)
+
