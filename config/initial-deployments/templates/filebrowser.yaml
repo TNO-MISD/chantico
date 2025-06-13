@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chantico-filebrowser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chantico-filebrowser
+  template:
+    metadata:
+      labels:
+        app: chantico-filebrowser
+    spec:
+      containers:
+      - name: filebrowser
+        image: filebrowser/filebrowser
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: chantico-volume-mount
+          mountPath: /srv
+      volumes:
+      - name: chantico-volume-mount
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistentVolumeClaimName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filebrowser
+spec:
+  selector:
+    app: filebrowser
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

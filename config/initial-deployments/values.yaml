@@ -1,0 +1,5 @@
+persistentVolumeClaimName: chantico-snmp-prometheus-volume-claim
+prometheusRetention: 5h
+postgresDb: chantico
+postgresUser: chanticoUser
+postgresPassword: toulouse
