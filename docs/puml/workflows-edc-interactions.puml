@@ -2,14 +2,14 @@
 title: Interaction with the Workflow Orchestrator / Engineer / Chantico
 
 group initialize
-	Engineer -> Chantico: Install
-	Chantico -> Chantico: Initialize SNMP / Prometheus / default
+	Engineer -[#green]-> Chantico: Install
+	Chantico -[#green]-> Chantico: Initialize SNMP / Prometheus / default
 end
 
 group registerPDU
-Engineer -> Chantico: Upload MIB
+Engineer -[#green]-> Chantico: Upload MIB
 Engineer -> Chantico: Upload SNMP config
-Engineer -> Chantico: Set-up SNMP and Prometheus
+Chantico -> Chantico: Set-up SNMP and Prometheus
 end
 
 group createPDU1
@@ -28,12 +28,13 @@ end createPDU
 
 group createServer
 WorkflowOrchestrator -> Chantico: ServiceId, List ResourceId
-Chantico -> Chantico: Start aggregating
+Chantico -[#orange]-> Chantico: Start aggregating
 Chantico -> WorkflowOrchestrator: 200 (OK)
 end createServer
 
 group createBaremetal
 WorkflowOrchestrator -> Chantico: ServiceId, ResourceId Server + Frequency
+Chantico -> Chantico: Start aggregating
 Chantico -> WorkflowOrchestrator: 200 (OK)
 end createBaremetal
 @enduml
