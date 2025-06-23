@@ -8,8 +8,8 @@ end
 
 group registerPDU
 Engineer -[#green]-> Chantico: Upload MIB
-Engineer -> Chantico: Upload SNMP config
-Chantico -> Chantico: Set-up SNMP and Prometheus
+Engineer -[#green]-> Chantico: Create SNMP yaml
+Chantico -[#green]-> Chantico: Set-up SNMP
 end
 
 group createPDU1

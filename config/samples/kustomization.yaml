@@ -2,4 +2,5 @@
 resources:
 - chantico_v1alpha1_pdu.yaml
 - chantico_v1alpha1_measurement.yaml
+- chantico_v1alpha1_measurementdevice.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
