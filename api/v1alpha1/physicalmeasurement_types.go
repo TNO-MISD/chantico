@@ -29,7 +29,10 @@ type PhysicalMeasurementSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of PhysicalMeasurement. Edit physicalmeasurement_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Ip                string   `json:"ip"`
+	ServiceId         string   `json:"serviceId"`
+	MeasurementDevice string   `json:"measurementDevice"`
+	ResourceIds       []string `json:"resourceIds,omitempty"`
 }
 
 // PhysicalMeasurementStatus defines the observed state of PhysicalMeasurement

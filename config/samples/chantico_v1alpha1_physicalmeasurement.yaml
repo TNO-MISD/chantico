@@ -5,5 +5,8 @@ metadata:
     app.kubernetes.io/name: chantico
     app.kubernetes.io/managed-by: kustomize
   name: physicalmeasurement-sample
+  namespace: chantico
 spec:
-  # TODO(user): Add fields here
+  ip: 10.5.1.1
+  serviceId: 7d4dacd2-5032-11f0-a7b3-00155d7beecc
+  measurementDevice: schleifenbauer-in
