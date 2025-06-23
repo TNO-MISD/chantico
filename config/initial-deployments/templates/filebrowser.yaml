@@ -14,12 +14,19 @@ spec:
     spec:
       containers:
       - name: filebrowser
-        image: filebrowser/filebrowser
+        image: filebrowser/filebrowser:v2.32.2
         ports:
         - containerPort: 80
         volumeMounts:
         - name: chantico-volume-mount
           mountPath: /srv
+        command:
+        - sh
+        - -c
+        - |
+          /filebrowser config init;
+          /filebrowser users add admin admin;
+          /filebrowser
       volumes:
       - name: chantico-volume-mount
         persistentVolumeClaim:
