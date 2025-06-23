@@ -9,6 +9,8 @@ Streamlining Energy Management for Cloud Operators.
 
 ## Getting Started
 
+> This documentation has been auto generated in `docs/` folder you will find a practical guide how to install and use chantico.
+
 ### Prerequisites
 - go version v1.22.0+
 - docker version 17.03+.

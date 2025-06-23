@@ -1,0 +1,14 @@
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: Measurement
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: measurement-sample
+  namespace: chantico
+spec:
+  name: pdu-kwh-measurement
+  isInternal: true
+  protocol: prometheus
+  dataSource: chantico-snmp-prometheus:9090
+  query: sdbDevOutMtPowerWatt{instance="10.5.1.2", job="snmp_schleifenbauer", sdbDevIdIndex="0", sdbDevOutMtIndex="6"}
