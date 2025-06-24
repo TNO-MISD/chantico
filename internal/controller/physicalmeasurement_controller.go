@@ -30,6 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	chanticov1alpha1 "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
+	sqlhelper "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico/sql-helper"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // PhysicalMeasurementReconciler reconciles a PhysicalMeasurement object
@@ -112,14 +116,42 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Reload the deployment after the job is complete
+	// Save ID / Measurement in postgres
+	physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
+	r.Get(ctx, req.NamespacedName, physicalMeasurement)
+
+	dbUrl := os.Getenv("PG_DBSTRING")
+	db, err := pgx.Connect(ctx, dbUrl)
+	if err != nil {
+		fmt.Printf("PG_DBSTRING: %s\n", dbUrl)
+		return ctrl.Result{}, err
+	}
+	defer db.Close(ctx)
+
+	queries := sqlhelper.New(db)
+	var uuid pgtype.UUID
+	err = uuid.Scan(string(physicalMeasurement.UID))
+	if err != nil {
+		fmt.Printf("UID: %s\n", string(physicalMeasurement.UID))
+		return ctrl.Result{}, err
+	}
+	physicalMeasurementParams := sqlhelper.UpdatePhysicalMeasurementParams{
+		ID:        uuid,
+		ServiceID: physicalMeasurement.Spec.ServiceId,
+	}
+	_, err = queries.UpdatePhysicalMeasurement(ctx, physicalMeasurementParams)
+	if err != nil {
+		fmt.Printf("Could not create the physical measurement %s\n", err)
+		return ctrl.Result{}, err
+	}
+
+	// Update the deployment to trigger a reload
 	deployment := &appsv1.Deployment{}
 	err = r.Get(ctx, client.ObjectKey{Name: "chantico-prometheus", Namespace: "chantico"}, deployment)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Update the deployment to trigger a reload
 	if deployment.Spec.Template.Annotations == nil {
 		deployment.Spec.Template.Annotations = map[string]string{}
 	}
@@ -128,10 +160,6 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// Save ID / Measurement in postgres
-
-	// Reload the deployment
 
 	return ctrl.Result{}, nil
 }

@@ -30,10 +30,13 @@ INSERT INTO measurement_values (
 )
 RETURNING *;
 
--- name: CreatePhysicalMeasurement :one
+-- name: UpdatePhysicalMeasurement :one
 INSERT INTO physical_measurements (
-	id, service_id
+    id, service_id
 ) VALUES (
-	$1, $2
+    $1, $2
 )
+ON CONFLICT (service_id) 
+DO UPDATE SET
+    id = EXCLUDED.id
 RETURNING *;

@@ -86,27 +86,6 @@ func (q *Queries) CreateMeasurementValue(ctx context.Context, arg CreateMeasurem
 	return i, err
 }
 
-const createPhysicalMeasurement = `-- name: CreatePhysicalMeasurement :one
-INSERT INTO physical_measurements (
-	id, service_id
-) VALUES (
-	$1, $2
-)
-RETURNING id, service_id
-`
-
-type CreatePhysicalMeasurementParams struct {
-	ID        pgtype.UUID
-	ServiceID string
-}
-
-func (q *Queries) CreatePhysicalMeasurement(ctx context.Context, arg CreatePhysicalMeasurementParams) (PhysicalMeasurement, error) {
-	row := q.db.QueryRow(ctx, createPhysicalMeasurement, arg.ID, arg.ServiceID)
-	var i PhysicalMeasurement
-	err := row.Scan(&i.ID, &i.ServiceID)
-	return i, err
-}
-
 const deleteMeasurement = `-- name: DeleteMeasurement :exec
 DELETE FROM measurements WHERE id = $1
 `
@@ -195,5 +174,29 @@ func (q *Queries) UpdateLastMeasurementTime(ctx context.Context, arg UpdateLastM
 		&i.RegistrationTime,
 		&i.LastMeasurementTime,
 	)
+	return i, err
+}
+
+const updatePhysicalMeasurement = `-- name: UpdatePhysicalMeasurement :one
+INSERT INTO physical_measurements (
+    id, service_id
+) VALUES (
+    $1, $2
+)
+ON CONFLICT (service_id) 
+DO UPDATE SET
+    id = EXCLUDED.id
+RETURNING id, service_id
+`
+
+type UpdatePhysicalMeasurementParams struct {
+	ID        pgtype.UUID
+	ServiceID string
+}
+
+func (q *Queries) UpdatePhysicalMeasurement(ctx context.Context, arg UpdatePhysicalMeasurementParams) (PhysicalMeasurement, error) {
+	row := q.db.QueryRow(ctx, updatePhysicalMeasurement, arg.ID, arg.ServiceID)
+	var i PhysicalMeasurement
+	err := row.Scan(&i.ID, &i.ServiceID)
 	return i, err
 }

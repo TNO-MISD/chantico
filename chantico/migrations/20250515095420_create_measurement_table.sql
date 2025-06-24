@@ -21,8 +21,8 @@ CREATE TABLE measurement_values (
 
 
 CREATE TABLE physical_measurements (
-	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-	service_id VARCHAR(255) NOT NULL
+	id UUID NOT NULL,
+	service_id VARCHAR(255) PRIMARY KEY
 );
 
 -- +goose StatementEnd
