@@ -53,3 +53,15 @@ spec:
         persistentVolumeClaim:
           claimName: {{ .Values.persistentVolumeClaimName }}
       restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chantico-snmp
+spec:
+  selector:
+    app: chantico-snmp
+  ports:
+    - protocol: TCP
+      port: 9116
+      targetPort: 9116

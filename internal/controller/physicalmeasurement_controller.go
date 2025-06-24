@@ -20,8 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -89,18 +92,42 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 		for _, ip := range ips {
 			configLines = append(configLines, fmt.Sprintf("        - \"%s\"", ip))
 		}
+		configLines = append(configLines, "    params:")
+		configLines = append(configLines, fmt.Sprintf("      module: [%s]", deviceId))
+		configLines = append(configLines, "      auth: [public_v3]")
+		configLines = append(configLines, "    metrics_path: \"/snmp\"")
+		configLines = append(configLines, "    scrape_interval: 10s")
+		configLines = append(configLines, "    scrape_timeout: 5s")
+		configLines = append(configLines, "    relabel_configs:")
+		configLines = append(configLines, "      - source_labels: [__address__]")
+		configLines = append(configLines, "        target_label: __param_target")
+		configLines = append(configLines, "      - source_labels: [__param_target]")
+		configLines = append(configLines, "        target_label: instance")
+		configLines = append(configLines, "      - target_label: __address__")
+		configLines = append(configLines, "        replacement: chantico-snmp:9116")
 	}
-	configLines = append(configLines, "    scrape_interval: 10s")
-	configLines = append(configLines, "    scrape_timeout: 5s")
-	configLines = append(configLines, "    relabel_configs:")
-	configLines = append(configLines, "      - source_labels: [__address__]")
-	configLines = append(configLines, "    target_label: __param_target")
-	configLines = append(configLines, "      - source_labels: [__param_target]")
-	configLines = append(configLines, "    target_label: instance")
-	configLines = append(configLines, "      - target_label: __address__")
-	configLines = append(configLines, "    replacement: chantico_snmp:9116")
 
-	fmt.Printf("\n%s\n", strings.Join(configLines, "\n"))
+	err = os.WriteFile("/tmp/chantico-volume-mount/prometheus/yml/prometheus.yml", []byte(strings.Join(configLines, "\n")), 0644)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Reload the deployment after the job is complete
+	deployment := &appsv1.Deployment{}
+	err = r.Get(ctx, client.ObjectKey{Name: "chantico-prometheus", Namespace: "chantico"}, deployment)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Update the deployment to trigger a reload
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = map[string]string{}
+	}
+	deployment.Spec.Template.Annotations["reloadedAt"] = time.Now().Format(time.RFC3339)
+	err = r.Update(ctx, deployment)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Save ID / Measurement in postgres
 
