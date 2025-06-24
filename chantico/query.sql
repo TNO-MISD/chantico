@@ -29,3 +29,11 @@ INSERT INTO measurement_values (
 	$1, $2, $3, $4
 )
 RETURNING *;
+
+-- name: CreatePhysicalMeasurement :one
+INSERT INTO physical_measurements (
+	id, service_id
+) VALUES (
+	$1, $2
+)
+RETURNING *;

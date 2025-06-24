@@ -20,10 +20,16 @@ CREATE TABLE measurement_values (
 );
 
 
+CREATE TABLE physical_measurements (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	service_id VARCHAR(255) NOT NULL
+);
+
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE measurement_values;
 DROP TABLE measurements;
+DROP TABLE physical_measurements
 -- +goose StatementEnd
