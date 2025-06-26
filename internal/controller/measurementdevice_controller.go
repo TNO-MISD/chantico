@@ -33,7 +33,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	chanticov1alpha1 "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	StatePending   = "Pending"
+	StateRunning   = "Running"
+	StateCompleted = "Completed"
+	StateFailed    = "Failed"
+	StateReloaded  = "Reloaded"
 )
 
 // MeasurementDeviceReconciler reconciles a MeasurementDevice object
@@ -55,12 +62,37 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	measurementDevice := &chanticov1alpha1.MeasurementDevice{}
 	err := r.Get(ctx, req.NamespacedName, measurementDevice)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	measurementDevices := &chanticov1alpha1.MeasurementDeviceList{}
-	err = r.List(ctx, measurementDevices)
+	fmt.Printf("\n\n==Measurement: %s==\n", measurementDevice.GetName())
+	fmt.Printf("STATE: %s\n", measurementDevice.Status.State)
+	fmt.Printf("Generation: %s\n", strconv.FormatInt(measurementDevice.ObjectMeta.Generation, 10))
+	fmt.Printf("===\n\n")
 
+	if measurementDevice.Status.Generation < measurementDevice.ObjectMeta.Generation {
+		measurementDevice.Status.State = ""
+	}
+
+	switch measurementDevice.Status.State {
+	case "":
+		return r.startJob(ctx, measurementDevice, req)
+	case StateRunning:
+		return r.checkJobStatus(ctx, measurementDevice, req)
+	case StateCompleted:
+		return r.reloadDeployment(ctx, measurementDevice, req)
+	case StateFailed:
+		return ctrl.Result{}, nil
+	case StateReloaded:
+		return ctrl.Result{}, nil
+	default:
+		return ctrl.Result{}, fmt.Errorf("unknown state: %s", measurementDevice.Status.State)
+	}
+}
+
+func (r *MeasurementDeviceReconciler) startJob(ctx context.Context, measurementDevice *chanticov1alpha1.MeasurementDevice, req ctrl.Request) (ctrl.Result, error) {
+	measurementDevices := &chanticov1alpha1.MeasurementDeviceList{}
+	err := r.List(ctx, measurementDevices)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -155,45 +187,74 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		},
 	}
 	err = r.Create(ctx, job)
-
 	if err != nil {
 		if client.IgnoreAlreadyExists(err) != nil {
-			return reconcile.Result{}, err
+			measurementDevice.Status.State = StateFailed
+			measurementDevice.Status.ErrorMessage = err.Error()
+			_ = r.Status().Update(ctx, measurementDevice)
+			return ctrl.Result{}, err
 		}
 	}
 
-	go func() {
-		// Polling mechanism to wait for job completion
-		for {
-			err = r.Get(ctx, client.ObjectKey{Name: jobName, Namespace: req.Namespace}, job)
-			if err != nil {
-				return
-			}
+	measurementDevice.Status.State = StateRunning
+	measurementDevice.Status.JobName = jobName
+	measurementDevice.Status.JobStatus = "Running"
+	measurementDevice.Status.LastUpdated = time.Now().Format(time.RFC3339)
+	measurementDevice.Status.Generation = measurementDevice.ObjectMeta.Generation
+	err = r.Status().Update(ctx, measurementDevice)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-			if r.isJobComplete(job) {
-				break
-			}
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+}
 
-			time.Sleep(time.Second) // Poll every 10 seconds
-		}
+func (r *MeasurementDeviceReconciler) checkJobStatus(ctx context.Context, measurementDevice *chanticov1alpha1.MeasurementDevice, req ctrl.Request) (ctrl.Result, error) {
+	job := &batchv1.Job{}
+	err := r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: req.Namespace}, job)
+	if err != nil {
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, measurementDevice)
+		return ctrl.Result{}, err
+	}
 
-		// Reload the deployment after the job is complete
-		deployment := &appsv1.Deployment{}
-		err = r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
-		if err != nil {
-			return
-		}
+	if r.isJobComplete(job) {
+		measurementDevice.Status.State = StateCompleted
+		measurementDevice.Status.JobStatus = "Completed"
+		measurementDevice.Status.LastUpdated = time.Now().Format(time.RFC3339)
+		_ = r.Status().Update(ctx, measurementDevice)
+	}
 
-		// Update the deployment to trigger a reload
-		if deployment.Spec.Template.Annotations == nil {
-			deployment.Spec.Template.Annotations = map[string]string{}
-		}
-		deployment.Spec.Template.Annotations["reloadedAt"] = time.Now().Format(time.RFC3339)
-		err = r.Update(ctx, deployment)
-		if err != nil {
-			return
-		}
-	}()
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+}
+
+func (r *MeasurementDeviceReconciler) reloadDeployment(ctx context.Context, measurementDevice *chanticov1alpha1.MeasurementDevice, _ ctrl.Request) (ctrl.Result, error) {
+	deployment := &appsv1.Deployment{}
+	err := r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
+	if err != nil {
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, measurementDevice)
+		return ctrl.Result{}, err
+	}
+
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = map[string]string{}
+	}
+	deployment.Spec.Template.Annotations["reloadedAt"] = time.Now().Format(time.RFC3339)
+	err = r.Update(ctx, deployment)
+	if err != nil {
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, measurementDevice)
+		return ctrl.Result{}, err
+	}
+
+	measurementDevice.Status.State = StateReloaded
+	measurementDevice.Status.JobStatus = "Reloaded"
+	measurementDevice.Status.LastUpdated = time.Now().Format(time.RFC3339)
+	_ = r.Status().Update(ctx, measurementDevice)
 
 	return ctrl.Result{}, nil
 }

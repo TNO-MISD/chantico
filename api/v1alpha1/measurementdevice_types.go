@@ -33,6 +33,12 @@ type MeasurementDeviceSpec struct {
 type MeasurementDeviceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	State        string `json:"state,omitempty"`
+	JobName      string `json:"jobName,omitempty"`
+	JobStatus    string `json:"jobStatus,omitempty"`
+	LastUpdated  string `json:"lastUpdated,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Generation   int64  `json:"generation,omitempty"`
 }
 
 // +kubebuilder:object:root=true
