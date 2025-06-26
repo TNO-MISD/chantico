@@ -8,7 +8,6 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - measurements
-  - pdus
   - physicalmeasurements
   verbs:
   - create
@@ -22,7 +21,6 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - measurements/finalizers
-  - pdus/finalizers
   - physicalmeasurements/finalizers
   verbs:
   - update
@@ -30,7 +28,6 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - measurements/status
-  - pdus/status
   - physicalmeasurements/status
   verbs:
   - get

@@ -144,13 +144,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.PduReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pdu")
-		os.Exit(1)
-	}
 	if err = (&controller.MeasurementReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
