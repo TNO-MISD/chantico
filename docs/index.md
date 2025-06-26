@@ -1,6 +1,8 @@
 # Chantico
 
-This document presents the technical proposal of chantico.
+Streamlining Energy Management for Cloud Operators.
+
+![](assets/logo/chantico.png)
 
 ## Naming
 
