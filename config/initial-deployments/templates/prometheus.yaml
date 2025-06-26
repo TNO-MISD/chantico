@@ -21,11 +21,14 @@ spec:
       - image: prom/prometheus
         name: prometheus
         command: ["prometheus"]
-        args: ["--config.file=/prometheus.yml", "--storage.tsdb.path=/tmp/prometheus-volume", "--storage.tsdb.retention.time={{ .Values.prometheusRetention }}"]
+        args: ["--config.file=/prometheus.yml", "--storage.tsdb.path=/tmp/prometheus-volume", "--storage.tsdb.retention.time={{ .Values.prometheusRetention }}", "--web.enable-lifecycle", "--storage.tsdb.no-lockfile"]
         volumeMounts:
         - mountPath: "/prometheus.yml"
           name: chantico-volume-mount
           subPath: "prometheus/yml/prometheus.yml"
+        - mountPath: "/tmp/prometheus-volume"
+          name: chantico-volume-mount
+          subPath: "prometheus/storage"
         ports:
         - containerPort: 9090
       initContainers:
@@ -39,10 +42,12 @@ spec:
             mkdir -p /tmp/chantico-volume-mount/prometheus/storage;
             mkdir -p /tmp/chantico-volume-mount/prometheus/yml;
             touch /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
-            echo 'global:' > /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
-            echo '  scrape_interval: 5s' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
-            echo '  evaluation_interval: 5s' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
-            echo 'scrape_configs:' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
+            if [ ! -f /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml ]; then
+              echo 'global:' > /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
+              echo '  scrape_interval: 5s' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
+              echo '  evaluation_interval: 5s' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
+              echo 'scrape_configs:' >> /tmp/chantico-volume-mount/prometheus/yml/prometheus.yml;
+            fi
         volumeMounts:
         - mountPath: "/tmp/chantico-volume-mount"
           name: chantico-volume-mount

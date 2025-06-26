@@ -14,15 +14,15 @@ end
 
 group createPDU1
 WorkflowOrchestrator -> WorkflowOrchestrator: Get IP from PPAM
-WorkflowOrchestrator -> Chantico: ServiceId, IP
-Chantico -> Chantico: Start scrapping
+WorkflowOrchestrator -[#green]-> Chantico: ServiceId, IP
+Chantico -[#green]-> Chantico: Start scrapping
 Chantico -> WorkflowOrchestrator: 200 (OK), List outlets
 end createPDU
 
 group createPDU2
 WorkflowOrchestrator -> WorkflowOrchestrator: Get IP from PPAM
-WorkflowOrchestrator -> Chantico: ServiceId, IP
-Chantico -> Chantico: Start scrapping
+WorkflowOrchestrator -[#green]-> Chantico: ServiceId, IP
+Chantico -[#green]-> Chantico: Start scrapping
 Chantico -> WorkflowOrchestrator: 200 (OK), List outlets
 end createPDU
 

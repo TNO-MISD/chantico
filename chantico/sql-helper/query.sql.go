@@ -150,7 +150,7 @@ func (q *Queries) ListMeasurements(ctx context.Context) ([]Measurement, error) {
 }
 
 const updateLastMeasurementTime = `-- name: UpdateLastMeasurementTime :one
-UPDATE measurements 
+UPDATE measurements
 SET last_measurement_time = $2 
 WHERE id = $1
 RETURNING id, name, is_internal, protocol, data_source, query, registration_time, last_measurement_time
@@ -174,5 +174,29 @@ func (q *Queries) UpdateLastMeasurementTime(ctx context.Context, arg UpdateLastM
 		&i.RegistrationTime,
 		&i.LastMeasurementTime,
 	)
+	return i, err
+}
+
+const updatePhysicalMeasurement = `-- name: UpdatePhysicalMeasurement :one
+INSERT INTO physical_measurements (
+    id, service_id
+) VALUES (
+    $1, $2
+)
+ON CONFLICT (service_id) 
+DO UPDATE SET
+    id = EXCLUDED.id
+RETURNING id, service_id
+`
+
+type UpdatePhysicalMeasurementParams struct {
+	ID        pgtype.UUID
+	ServiceID string
+}
+
+func (q *Queries) UpdatePhysicalMeasurement(ctx context.Context, arg UpdatePhysicalMeasurementParams) (PhysicalMeasurement, error) {
+	row := q.db.QueryRow(ctx, updatePhysicalMeasurement, arg.ID, arg.ServiceID)
+	var i PhysicalMeasurement
+	err := row.Scan(&i.ID, &i.ServiceID)
 	return i, err
 }

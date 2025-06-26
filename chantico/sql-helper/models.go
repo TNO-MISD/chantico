@@ -26,3 +26,8 @@ type MeasurementValue struct {
 	TimestampStart pgtype.Timestamp
 	TimestampEnd   pgtype.Timestamp
 }
+
+type PhysicalMeasurement struct {
+	ID        pgtype.UUID
+	ServiceID string
+}
