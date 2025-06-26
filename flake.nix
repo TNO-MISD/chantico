@@ -31,6 +31,7 @@
                 pkgs.plantuml
                 pkgs.goose
                 pkgs.sqlc
+                pkgs.operator-sdk
               ];
             };
           }
