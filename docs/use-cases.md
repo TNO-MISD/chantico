@@ -1,4 +1,4 @@
-# Energy domain controller - Goal
+# Use-cases
 
 ## First use-case
 
@@ -10,6 +10,6 @@ The first considered use case of chantico is a server plugged on two PDU outlets
 
 ### Sequence diagram
 
-The sequence diagram are the interactions between chantico, the workflow orchestrator and the engineer
+The sequence diagram are the interactions between chantico, the workflow orchestrator and the engineer.
 ![](puml/workflows-edc-interactions.png)
 
