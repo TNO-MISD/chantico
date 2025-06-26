@@ -8,5 +8,6 @@ kubectl port-forward -n chantico svc/sshfs-service 8022:22 &2> /dev/null &1> /de
 
 sleep 2s
 
+mkdir -p /tmp/chantico-volume-mount/
 sshfs root@localhost:/data /tmp/chantico-volume-mount/ -p 8022
 
