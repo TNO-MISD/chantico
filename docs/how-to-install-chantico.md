@@ -1,5 +1,7 @@
 ## Installation
 
+> Note this installation does not explain how to deploy the controller and custom resources yet
+
 To install chantico:
 
 1. Create a volume with at least 3Gi of storage. In our current set-up:
