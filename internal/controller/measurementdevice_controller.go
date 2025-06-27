@@ -239,6 +239,10 @@ func (r *MeasurementDeviceReconciler) reloadDeployment(ctx context.Context, meas
 		return ctrl.Result{}, err
 	}
 
+	if deployment.Status.ReadyReplicas < *(deployment.Spec.Replicas) {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
 	if deployment.Spec.Template.Annotations == nil {
 		deployment.Spec.Template.Annotations = map[string]string{}
 	}
