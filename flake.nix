@@ -32,7 +32,7 @@
                 pkgs.goose
                 pkgs.sqlc
                 pkgs.operator-sdk
-                pkgs.helm
+                pkgs.kubernetes-helm
                 pkgs.sshfs
               ];
             };
