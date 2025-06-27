@@ -36,7 +36,6 @@ import (
 )
 
 const (
-	StatePending   = "Pending"
 	StateRunning   = "Running"
 	StateCompleted = "Completed"
 	StateFailed    = "Failed"
@@ -65,7 +64,7 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	fmt.Printf("\n\n==Measurement: %s==\n", measurementDevice.GetName())
+	fmt.Printf("\n\n==MeasurementDevice: %s==\n", measurementDevice.GetName())
 	fmt.Printf("STATE: %s\n", measurementDevice.Status.State)
 	fmt.Printf("Generation: %s\n", strconv.FormatInt(measurementDevice.ObjectMeta.Generation, 10))
 	fmt.Printf("===\n\n")

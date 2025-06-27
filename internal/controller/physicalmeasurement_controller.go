@@ -18,9 +18,9 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +42,13 @@ type PhysicalMeasurementReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	PhysicalMeasurementStateRunning   = "Running"
+	PhysicalMeasurementStateCompleted = "Completed"
+	PhysicalMeasurementStateFailed    = "Failed"
+	PhysicalMeasurementStateReloaded  = "Reloaded"
+)
+
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/finalizers,verbs=update
@@ -56,6 +63,50 @@ type PhysicalMeasurementReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
+	err := r.Get(ctx, req.NamespacedName, physicalMeasurement)
+	if err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
+	fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
+	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
+	fmt.Printf("===\n\n")
+
+	if physicalMeasurement.Status.Generation < physicalMeasurement.ObjectMeta.Generation {
+		physicalMeasurement.Status.State = ""
+	}
+
+	switch physicalMeasurement.Status.State {
+	case "":
+		return r.UpdatePrometheus(ctx, physicalMeasurement, req)
+	case PhysicalMeasurementStateRunning:
+		return r.UpdatePrometheus(ctx, physicalMeasurement, req)
+	case PhysicalMeasurementStateCompleted:
+		return r.reloadDeployment(ctx, physicalMeasurement, req)
+	case PhysicalMeasurementStateFailed:
+		return ctrl.Result{}, nil
+	case PhysicalMeasurementStateReloaded:
+		return ctrl.Result{}, nil
+	default:
+		return ctrl.Result{}, fmt.Errorf("unknown state: %s", physicalMeasurement.Status.State)
+	}
+}
+
+func (r *PhysicalMeasurementReconciler) UpdatePrometheus(ctx context.Context, physicalMeasurement *chanticov1alpha1.PhysicalMeasurement, req ctrl.Request) (ctrl.Result, error) {
+	// Set the status
+	physicalMeasurement.Status.State = PhysicalMeasurementStateRunning
+	physicalMeasurement.Status.Generation = physicalMeasurement.ObjectMeta.Generation
+	physicalMeasurement.Status.ErrorMessage = ""
+	_ = r.Status().Update(ctx, physicalMeasurement)
+
+	fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
+	fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
+	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
+	fmt.Printf("===\n\n")
+
 	// Get the different MeasurementDevices
 	measurementDevices := &chanticov1alpha1.MeasurementDeviceList{}
 	err := r.List(ctx, measurementDevices)
@@ -82,9 +133,6 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 			physicalMeasurement.Spec.Ip,
 		)
 	}
-
-	jsonData, err := json.Marshal(physicalMeasurementMap)
-	fmt.Printf("\n%s\n", jsonData)
 
 	// Generate the scrape config
 	var configLines []string
@@ -113,17 +161,19 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	err = os.WriteFile("/tmp/chantico-volume-mount/prometheus/yml/prometheus.yml", []byte(strings.Join(configLines, "\n")), 0644)
 	if err != nil {
+		physicalMeasurement.Status.State = PhysicalMeasurementStateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, physicalMeasurement)
 		return ctrl.Result{}, err
 	}
 
 	// Save ID / Measurement in postgres
-	physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
-	r.Get(ctx, req.NamespacedName, physicalMeasurement)
-
 	dbUrl := os.Getenv("PG_DBSTRING")
 	db, err := pgx.Connect(ctx, dbUrl)
 	if err != nil {
-		fmt.Printf("PG_DBSTRING: %s\n", dbUrl)
+		physicalMeasurement.Status.State = PhysicalMeasurementStateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, physicalMeasurement)
 		return ctrl.Result{}, err
 	}
 	defer db.Close(ctx)
@@ -141,25 +191,58 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	_, err = queries.UpdatePhysicalMeasurement(ctx, physicalMeasurementParams)
 	if err != nil {
-		fmt.Printf("Could not create the physical measurement %s\n", err)
+		physicalMeasurement.Status.State = PhysicalMeasurementStateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, physicalMeasurement)
+		return ctrl.Result{}, err
+	}
+	physicalMeasurement.Status.State = PhysicalMeasurementStateCompleted
+	_ = r.Status().Update(ctx, physicalMeasurement)
+
+	return r.reloadDeployment(ctx, physicalMeasurement, req)
+}
+
+func (r *PhysicalMeasurementReconciler) reloadDeployment(ctx context.Context, physicalMeasurement *chanticov1alpha1.PhysicalMeasurement, _ ctrl.Request) (ctrl.Result, error) {
+
+	deployment := &appsv1.Deployment{}
+	err := r.Get(ctx, client.ObjectKey{Name: "chantico-prometheus", Namespace: "chantico"}, deployment)
+	if err != nil {
+		fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
+		fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
+		fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
+		fmt.Printf("===")
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, physicalMeasurement)
 		return ctrl.Result{}, err
 	}
 
-	// Update the deployment to trigger a reload
-	deployment := &appsv1.Deployment{}
-	err = r.Get(ctx, client.ObjectKey{Name: "chantico-prometheus", Namespace: "chantico"}, deployment)
-	if err != nil {
-		return ctrl.Result{}, err
+	deployment.Spec.Template.Annotations["reloadedAt"] = time.Now().Format(time.RFC3339)
+	if deployment.Status.CollisionCount != nil && *deployment.Status.CollisionCount > 0 {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	if deployment.Status.ReadyReplicas < *(deployment.Spec.Replicas) {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	if deployment.Spec.Template.Annotations == nil {
 		deployment.Spec.Template.Annotations = map[string]string{}
 	}
-	deployment.Spec.Template.Annotations["reloadedAt"] = time.Now().Format(time.RFC3339)
 	err = r.Update(ctx, deployment)
 	if err != nil {
+		fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
+		fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
+		fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
+		fmt.Printf("===")
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = r.Status().Update(ctx, physicalMeasurement)
+		_ = r.Status().Update(ctx, physicalMeasurement)
 		return ctrl.Result{}, err
 	}
+
+	physicalMeasurement.Status.State = PhysicalMeasurementStateReloaded
+	_ = r.Status().Update(ctx, physicalMeasurement)
 
 	return ctrl.Result{}, nil
 }

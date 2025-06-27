@@ -39,6 +39,9 @@ type PhysicalMeasurementSpec struct {
 type PhysicalMeasurementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	State        string `json:"state,omitempty"`
+	Generation   int64  `json:"generation,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
