@@ -9,6 +9,7 @@ metadata:
 spec:
   walks:
     - sdbDevInKWhTotal
+    - sdbDevOutMtKWhTotal
 ---
 apiVersion: chantico.ci.tno.nl/v1alpha1
 kind: MeasurementDevice
