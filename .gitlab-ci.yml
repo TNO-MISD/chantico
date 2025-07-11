@@ -1,0 +1,24 @@
+image: golang:1.24.5-alpine3.22
+
+stages:
+  - build
+  - release
+
+chantico-fmt:
+  stage: build
+  script:
+    - go fmt ./...
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+release:
+  stage: release
+  image: node:20
+  script:
+    - npm install
+    - npx semantic-release
+  needs:
+    - chantico-fmt
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
