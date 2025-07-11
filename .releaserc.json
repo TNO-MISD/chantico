@@ -1,5 +1,5 @@
 {
-  "branches": ["main"],
+  "branches": ["master"],
   "tagFormat": "v${version}",
   "repositoryUrl": "https://gitlab-ci-token:${GL_TOKEN}@ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/",
   "plugins": [
@@ -13,11 +13,5 @@
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    [
-      "@semantic-release/gitlab",
-      {
-        "branches": ["master"]
-      }
-    ]
-  ]
+    "@semantic-release/gitlab"
 }
