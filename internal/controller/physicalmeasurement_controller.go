@@ -63,6 +63,7 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	return ctrl.Result{}, nil
 
 	physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
 	err := r.Get(ctx, req.NamespacedName, physicalMeasurement)
@@ -211,7 +212,7 @@ func (r *PhysicalMeasurementReconciler) reloadDeployment(ctx context.Context, ph
 		fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
 		fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
 		fmt.Printf("===")
-		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.State = PhysicalMeasurementStateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		_ = r.Status().Update(ctx, physicalMeasurement)
 		return ctrl.Result{}, err
@@ -234,7 +235,7 @@ func (r *PhysicalMeasurementReconciler) reloadDeployment(ctx context.Context, ph
 		fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
 		fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
 		fmt.Printf("===")
-		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.State = PhysicalMeasurementStateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		_ = r.Status().Update(ctx, physicalMeasurement)
 		_ = r.Status().Update(ctx, physicalMeasurement)

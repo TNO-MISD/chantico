@@ -1,5 +1,5 @@
 {
-  description = "MPLI documentation flake";
+  description = "Chantico documentation flake";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
