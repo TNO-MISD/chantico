@@ -9,10 +9,14 @@ chantico-goose:
   stage: docker
   image: docker:24.0.5
   services:
-    - docker:dind
+    - name: docker:dind
+      command: ["--host=tcp://0.0.0.0:2375"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   variables:
   script:
-    - docker build -f Dockerfile.goose -t $CI_REGISTRY_IMAGE/chantico-goose .
+    - docker build -f Dockerfile.migrations -t $CI_REGISTRY_IMAGE/chantico-goose .
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
     - docker push $CI_REGISTRY_IMAGE/chantico-goose
 
