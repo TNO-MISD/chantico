@@ -1,8 +1,20 @@
 image: golang:1.24.5-alpine3.22
 
 stages:
+  - docker
   - build
   - release
+
+chantico-goose:
+  stage: docker
+  image: docker:24.0.5
+  services:
+    - docker:dind
+  variables:
+  script:
+    - docker build -f Dockerfile.goose -t $CI_REGISTRY_IMAGE/chantico-goose .
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/chantico-goose
 
 chantico-fmt:
   stage: build

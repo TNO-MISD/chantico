@@ -1,0 +1,6 @@
+FROM gomicro/goose:2.6.1
+
+COPY chantico/migrations/ ./
+
+ENTRYPOINT ["goose", "postgres", "up", "-dir", "./migrations"]
+
