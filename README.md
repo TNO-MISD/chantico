@@ -31,7 +31,8 @@ echo '{"insecure-registries": ["localhost:5000"]}' > /etc/docker/daemon.json
 **NOTE:** It is required to have access to pull the image from the working environment.
 Make sure you have the proper permission to the registry if the above commands don’t work.
 
-**Install the CRDs into the cluster:**
+**Install the CRDs into the cluster:** Make sure to have Go 1.23+ installed when running this command.
+For example `sudo snap install --classic go`
 
 ```sh
 make install
