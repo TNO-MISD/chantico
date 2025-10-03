@@ -15,5 +15,5 @@ The `master` branch then should at all time only contain production-ready code.
 
 ## Documentation
 
-- Keep the documentation up-to-date whenever a new change is not in there yet. 
-- If you perform any configuration or setup steps from the terminal that you think are important, please document them thoroughly in the issue comments.
+1) Keep the documentation up-to-date whenever a new change is not in there yet. 
+2) If you perform any configuration or setup steps from the terminal that you think are important, please document them thoroughly in the issue comments.
