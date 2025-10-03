@@ -30,7 +30,7 @@ spec:
       securityContext:
         fsGroup: 1000
       containers:
-      - image: postgres
+      - image: postgres:17.6
         name: postgres
         envFrom:
         - configMapRef:
