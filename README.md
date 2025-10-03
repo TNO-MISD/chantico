@@ -23,7 +23,12 @@ make docker-build docker-push IMG=<some-registry>/chantico:tag
 ```
 
 **NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
+For example to run a local docker registry (you may need to be root):
+```sh
+docker run -d -p 5000:5000 --restart always --name registry registry:2
+echo '{"insecure-registries": ["localhost:5000"]}' > /etc/docker/daemon.json
+```
+**NOTE:** It is required to have access to pull the image from the working environment.
 Make sure you have the proper permission to the registry if the above commands don’t work.
 
 **Install the CRDs into the cluster:**
