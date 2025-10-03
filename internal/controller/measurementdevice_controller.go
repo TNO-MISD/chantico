@@ -76,9 +76,12 @@ func (r *MeasurementDeviceReconciler) setFinalizer(ctx context.Context, measurem
 	return ctrl.Result{Requeue: true}, r.Update(ctx, measurementDevice)
 }
 
-// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevice,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevice/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevice/finalizers,verbs=update
+// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=batch,resources=jobs/finalizers,verbs=update
 
 func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
