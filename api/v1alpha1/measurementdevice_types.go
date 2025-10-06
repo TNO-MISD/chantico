@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,12 +35,11 @@ type MeasurementDeviceSpec struct {
 type MeasurementDeviceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	State        string `json:"state,omitempty"`
-	JobName      string `json:"jobName,omitempty"`
-	JobStatus    string `json:"jobStatus,omitempty"`
-	LastUpdated  string `json:"lastUpdated,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Generation   int64  `json:"generation,omitempty"`
+	State            string `json:"state,omitempty"`
+	JobName          string `json:"jobName,omitempty"`
+	UpdateTime       string `json:"lastUpdated,omitempty"`
+	UpdateGeneration int64  `json:"generation,omitempty"`
+	ErrorMessage     string `json:"errorMessage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -64,4 +65,51 @@ type MeasurementDeviceList struct {
 
 func init() {
 	SchemeBuilder.Register(&MeasurementDevice{}, &MeasurementDeviceList{})
+}
+
+const (
+	StateInit                       = "Init"
+	StateEntryPoint                 = "EntryPoint"
+	StateElectedLeader              = "ElectedLeader"
+	StatePendingOnLeader            = "PendingOnLeader"
+	StatePendingSNMPConfigUpdate    = "PendingSNMPConfigUpdate"
+	StateSucceededSNMPConfigUpdate  = "SucceededSNMPConfigUpdate"
+	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
+	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
+	StateFailed                     = "Failed"
+	StateEndPoint                   = "EndPoint"
+)
+
+const (
+	SNMPUpdateFinalizer = "snmp.update.finalizer.chantico.ci.tno.nl"
+)
+
+const (
+	RequeueDelay = 5 * time.Second
+)
+
+const (
+	ActionInitializeFinalizer = iota
+	ActionUpdateFinalizer
+	ActionUpdateModification
+	ActionElectLeader
+	ActionAssessLeader
+	ActionRequeueWithDelay
+	SideEffectUpdateSNMPConfig
+	SideEffectReloadSNMPService
+)
+
+var ActionMap = map[string][]int{
+	StateInit:       {ActionInitializeFinalizer},
+	StateEntryPoint: {SideEffectUpdateSNMPConfig},
+	StateFailed:     {},
+
+	StatePendingSNMPConfigUpdate:   {ActionRequeueWithDelay},
+	StateSucceededSNMPConfigUpdate: {ActionUpdateModification, ActionAssessLeader},
+
+	StatePendingOnLeader: {},
+	StateElectedLeader:   {SideEffectReloadSNMPService},
+
+	StatePendingSNMPServiceUpdate:   {ActionRequeueWithDelay},
+	StateSucceededSNMPServiceUpdate: {ActionUpdateFinalizer, ActionElectLeader},
 }
