@@ -74,3 +74,21 @@ func TestUpdateModification(t *testing.T) {
 		}
 	}
 }
+
+func TestActionMap(t *testing.T) {
+	for state, actions := range ActionMap {
+		for _, action := range actions {
+			switch action.Type {
+			case ActionFunctionPure:
+				if action.IO != nil || action.Pure == nil {
+					t.Errorf("State %s: %#v is not valid", state, action)
+				}
+			case ActionFunctionIO:
+				if action.IO == nil || action.Pure != nil {
+					t.Errorf("State %s: %#v is not valid", state, action)
+				}
+			}
+		}
+	}
+
+}
