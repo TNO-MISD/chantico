@@ -10,16 +10,19 @@ import (
 )
 
 func TestGetState(t *testing.T) {
-	nbTest := 1
-	measurementDevices := make([]chantico.MeasurementDevice, nbTest)
+	nbTest := 2
+	measurementDevices := make([]*chantico.MeasurementDevice, nbTest)
 	measurementDevicesList := make([][]chantico.MeasurementDevice, nbTest)
 	jobs := make([]batchv1.Job, nbTest)
 	deployments := make([]appsv1.Deployment, nbTest)
 	wants := make([]string, nbTest)
 
-	measurementDevices[0] = chantico.MeasurementDevice{}
+	measurementDevices[0] = &chantico.MeasurementDevice{}
 	measurementDevices[0].Status.State = ""
 	wants[0] = StateInit
+
+	measurementDevices[1] = nil
+	wants[1] = StateEndPoint
 
 	for i := range nbTest {
 		measurementDevicesIteration := measurementDevices[i]
@@ -28,7 +31,7 @@ func TestGetState(t *testing.T) {
 		deploymentsIteration := deployments[i]
 		wantsIteration := wants[i]
 		resultIteration := GetState(
-			&measurementDevicesIteration,
+			measurementDevicesIteration,
 			measurementDevicesListIteration,
 			&jobsIteration,
 			&deploymentsIteration,

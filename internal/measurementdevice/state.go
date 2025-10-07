@@ -26,6 +26,10 @@ func GetState(
 	snmpJob *batchv1.Job,
 	snmpExporterDeployment *appsv1.Deployment,
 ) string {
+	if measurementDevice == nil {
+		return StateEndPoint
+	}
+
 	switch measurementDevice.Status.State {
 	case "":
 		return StateInit
