@@ -5,7 +5,7 @@ import (
 	"time"
 
 	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	controller "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/controller"
+	action "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/action"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,7 +34,7 @@ func TestInitializeFinalizer(t *testing.T) {
 	wants[1] = []string{"test", chantico.SNMPUpdateFinalizer}
 
 	for i := range testCases {
-		controller.InitializeFinalizer(testCases[i], nil)
+		action.InitializeFinalizer(testCases[i], nil)
 		if !equalStringSlices(wants[i], testCases[i].ObjectMeta.Finalizers) {
 			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].ObjectMeta.Finalizers)
 		}
@@ -52,7 +52,7 @@ func TestUpdateFinalizer(t *testing.T) {
 	wants[0] = []string{"test"}
 
 	for i := range testCases {
-		controller.UpdateFinalizer(testCases[i], nil)
+		action.UpdateFinalizer(testCases[i], nil)
 		if !equalStringSlices(wants[i], testCases[i].ObjectMeta.Finalizers) {
 			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].ObjectMeta.Finalizers)
 		}
@@ -69,7 +69,7 @@ func TestUpdateModification(t *testing.T) {
 	wants[0] = 5
 
 	for i := range testCases {
-		controller.UpdateModification(testCases[i], nil)
+		action.UpdateModification(testCases[i], nil)
 		if testCases[i].Status.UpdateGeneration != wants[i] {
 			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].Status)
 		}

@@ -18,9 +18,7 @@ package controller
 
 import (
 	"context"
-	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,89 +42,12 @@ func executeActions(actions []int, ctx context.Context, req ctrl.Request) []chan
 	return []chantico.MeasurementDevice{}
 }
 
-func InitializeFinalizer(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	for _, f := range measurementDevice.ObjectMeta.Finalizers {
-		if f == chantico.SNMPUpdateFinalizer {
-			return
-		}
-	}
-	measurementDevice.ObjectMeta.Finalizers = append(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer)
-}
-
-func UpdateFinalizer(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	if measurementDevice.ObjectMeta.DeletionTimestamp.IsZero() {
-		return
-	}
-	accumulator := []string{}
-	for _, f := range measurementDevice.ObjectMeta.Finalizers {
-		if f != chantico.SNMPUpdateFinalizer {
-			accumulator = append(accumulator, f)
-		}
-	}
-	measurementDevice.ObjectMeta.Finalizers = accumulator
-}
-
-func UpdateModification(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	measurementDevice.Status.UpdateTime = metav1.Time{Time: time.Now()}.Format(time.RFC3339)
-	measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
-}
-
-func AssessLeader(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	// TODO
-}
-
-func ElectLeader(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	// TODO
-}
-
-func RequeueWithDelay(
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	// TODO
-}
-
-func UpdateSNMPConfigSideEffect(
-	r *MeasurementDeviceReconciler,
-	ctx context.Context,
-	req ctrl.Request,
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	// TODO
-}
-
-func ReloadSNMPServiceSideEffect(
-	r *MeasurementDeviceReconciler,
-	ctx context.Context,
-	req ctrl.Request,
-	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
-) {
-	// TODO
-}
-
 func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	state := determineState(ctx, req)
-	actions, ok := chantico.ActionMap[state]
-	if !ok {
-		return ctrl.Result{}, nil
-	}
-	executeActions(actions, ctx, req)
+	// state := determineState(ctx, req)
+	// actions, ok := chantico.ActionMap[state]
+	// if !ok {
+	// 	return ctrl.Result{}, nil
+	// }
+	// executeActions(actions, ctx, req)
 	return ctrl.Result{}, nil
 }

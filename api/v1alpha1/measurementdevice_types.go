@@ -36,9 +36,9 @@ type MeasurementDeviceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	State            string `json:"state,omitempty"`
-	JobName          string `json:"jobName,omitempty"`
-	UpdateTime       string `json:"lastUpdated,omitempty"`
-	UpdateGeneration int64  `json:"generation,omitempty"`
+	SnmpJobId        string `json:"snmpJobId,omitempty"`
+	UpdateTime       string `json:"updateTime,omitempty"`
+	UpdateGeneration int64  `json:"updateGeneration,omitempty"`
 	ErrorMessage     string `json:"errorMessage,omitempty"`
 }
 
@@ -68,48 +68,9 @@ func init() {
 }
 
 const (
-	StateInit                       = "Init"
-	StateEntryPoint                 = "EntryPoint"
-	StateElectedLeader              = "ElectedLeader"
-	StatePendingOnLeader            = "PendingOnLeader"
-	StatePendingSNMPConfigUpdate    = "PendingSNMPConfigUpdate"
-	StateSucceededSNMPConfigUpdate  = "SucceededSNMPConfigUpdate"
-	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
-	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
-	StateFailed                     = "Failed"
-	StateEndPoint                   = "EndPoint"
-)
-
-const (
 	SNMPUpdateFinalizer = "snmp.update.finalizer.chantico.ci.tno.nl"
 )
 
 const (
 	RequeueDelay = 5 * time.Second
 )
-
-const (
-	ActionInitializeFinalizer = iota
-	ActionUpdateFinalizer
-	ActionUpdateModification
-	ActionElectLeader
-	ActionAssessLeader
-	ActionRequeueWithDelay
-	SideEffectUpdateSNMPConfig
-	SideEffectReloadSNMPService
-)
-
-var ActionMap = map[string][]int{
-	StateInit:       {ActionInitializeFinalizer},
-	StateEntryPoint: {SideEffectUpdateSNMPConfig},
-	StateFailed:     {},
-
-	StatePendingSNMPConfigUpdate:   {ActionRequeueWithDelay},
-	StateSucceededSNMPConfigUpdate: {ActionUpdateModification, ActionAssessLeader},
-
-	StatePendingOnLeader: {},
-	StateElectedLeader:   {SideEffectReloadSNMPService},
-
-	StatePendingSNMPServiceUpdate:   {ActionRequeueWithDelay},
-	StateSucceededSNMPServiceUpdate: {ActionUpdateFinalizer, ActionElectLeader},
-}
