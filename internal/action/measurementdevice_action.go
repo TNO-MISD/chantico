@@ -6,53 +6,85 @@ import (
 	"time"
 
 	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	controller "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/controller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	ActionInitializeFinalizer = iota
-	ActionUpdateFinalizer
-	ActionUpdateModification
-	ActionElectLeader
-	ActionAssessLeader
-	ActionRequeueWithDelay
-	SideEffectUpdateSNMPConfig
-	SideEffectReloadSNMPService
+	ActionFunctionIO = iota
+	ActionFunctionPure
 )
 
-const (
-	StateInit                       = "Init"
-	StateEntryPoint                 = "EntryPoint"
-	StateElectedLeader              = "ElectedLeader"
-	StatePendingOnLeader            = "PendingOnLeader"
-	StatePendingSNMPConfigUpdate    = "PendingSNMPConfigUpdate"
-	StateSucceededSNMPConfigUpdate  = "SucceededSNMPConfigUpdate"
-	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
-	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
-	StateFailed                     = "Failed"
-	StateEndPoint                   = "EndPoint"
-)
+type ActionFuntion struct {
+	Type int
+	Pure func(
+		*chantico.MeasurementDevice,
+		[]chantico.MeasurementDevice,
+	)
+	IO func(
+		context.Context,
+		ctrl.Request,
+		*chantico.MeasurementDevice,
+		[]chantico.MeasurementDevice,
+	)
+}
 
-var ActionMap = map[string][]int{
-	StateInit:       {ActionInitializeFinalizer},
-	StateEntryPoint: {SideEffectUpdateSNMPConfig},
-	StateFailed:     {},
+var ActionMap = map[string][]ActionFuntion{
+	chantico.StateInit: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+	},
+	chantico.StateEntryPoint: {
+		ActionFuntion{Type: ActionFunctionIO, IO: UpdateSNMPConfig},
+	},
+	chantico.StateFailed: {},
 
-	StatePendingSNMPConfigUpdate:   {ActionRequeueWithDelay},
-	StateSucceededSNMPConfigUpdate: {ActionUpdateModification, ActionAssessLeader},
+	chantico.StatePendingSNMPConfigUpdate: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
+	},
+	chantico.StateSucceededSNMPConfigUpdate: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateModification},
+		ActionFuntion{Type: ActionFunctionPure, Pure: AssessLeader},
+	},
 
-	StatePendingOnLeader: {},
-	StateElectedLeader:   {SideEffectReloadSNMPService},
+	chantico.StatePendingOnLeader: {},
+	chantico.StateElectedLeader: {
+		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
+	},
 
-	StatePendingSNMPServiceUpdate:   {ActionRequeueWithDelay},
-	StateSucceededSNMPServiceUpdate: {ActionUpdateFinalizer, ActionElectLeader},
+	chantico.StatePendingSNMPServiceUpdate: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
+	},
+	chantico.StateSucceededSNMPServiceUpdate: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
+		ActionFuntion{Type: ActionFunctionPure, Pure: ElectLeader},
+	},
+}
+
+func ExecuteActions(
+	state string,
+	ctx context.Context,
+	req ctrl.Request,
+	measurementDevice *chantico.MeasurementDevice,
+	measurementDevices []chantico.MeasurementDevice,
+) {
+	actionFunctions := ActionMap[state]
+	for _, actionFunction := range actionFunctions {
+		switch actionFunction.Type {
+		case ActionFunctionPure:
+			{
+				actionFunction.Pure(measurementDevice, measurementDevices)
+			}
+		case ActionFunctionIO:
+			{
+				actionFunction.IO(ctx, req, measurementDevice, measurementDevices)
+			}
+		}
+	}
 }
 
 func InitializeFinalizer(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	if slices.Contains(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
 		return
@@ -62,7 +94,7 @@ func InitializeFinalizer(
 
 func UpdateFinalizer(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	if measurementDevice.ObjectMeta.DeletionTimestamp.IsZero() {
 		return
@@ -78,7 +110,7 @@ func UpdateFinalizer(
 
 func UpdateModification(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	measurementDevice.Status.UpdateTime = metav1.Time{Time: time.Now()}.Format(time.RFC3339)
 	measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
@@ -86,7 +118,7 @@ func UpdateModification(
 
 func AssessLeader(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	// TODO: Implement the logic of AssessLeader based on and UpdateTime, UpdateGeneration
 	// TODO: Write test associated
@@ -94,7 +126,7 @@ func AssessLeader(
 
 func ElectLeader(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	// TODO: Implement the logic of ElectLeader based on and UpdateTime, UpdateGeneration
 	// TODO: Write test associated
@@ -103,29 +135,27 @@ func ElectLeader(
 
 func RequeueWithDelay(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	// TODO: Figure out requeuing strategy, might need a redesign
 	panic("Not implemented yet")
 }
 
-func UpdateSNMPConfigSideEffect(
-	r *controller.MeasurementDeviceReconciler,
+func UpdateSNMPConfig(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Job launching
 	panic("Not implemented yet")
 }
 
-func ReloadSNMPServiceSideEffect(
-	r *controller.MeasurementDeviceReconciler,
+func ReloadSNMPService(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices [](*chantico.MeasurementDevice),
+	measurementDevices []chantico.MeasurementDevice,
 ) {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Deployment reload
 	panic("Not implemented yet")
