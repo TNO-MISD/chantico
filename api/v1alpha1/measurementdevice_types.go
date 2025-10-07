@@ -36,7 +36,7 @@ type MeasurementDeviceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	State            string `json:"state,omitempty"`
-	SnmpJobId        string `json:"snmpJobId,omitempty"`
+	JobName          string `json:"jobName,omitempty"`
 	UpdateTime       string `json:"updateTime,omitempty"`
 	UpdateGeneration int64  `json:"updateGeneration,omitempty"`
 	ErrorMessage     string `json:"errorMessage,omitempty"`

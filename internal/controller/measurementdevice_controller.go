@@ -19,11 +19,15 @@ package controller
 import (
 	"context"
 
+	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
+	md "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/measurementdevice"
+
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
 )
 
 // MeasurementDeviceReconciler reconciles a MeasurementDevice object
@@ -32,22 +36,21 @@ type MeasurementDeviceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func determineState(ctx context.Context, req ctrl.Request) string {
-	//TODO
-	return ""
-}
-
-func executeActions(actions []int, ctx context.Context, req ctrl.Request) []chantico.MeasurementDevice {
-	//TODO
-	return []chantico.MeasurementDevice{}
-}
-
 func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// state := determineState(ctx, req)
-	// actions, ok := chantico.ActionMap[state]
-	// if !ok {
-	// 	return ctrl.Result{}, nil
-	// }
-	// executeActions(actions, ctx, req)
+	// Get the information needed to determine the state of the MeasurementDevice
+	measurementDevice := &chantico.MeasurementDevice{}
+	_ = r.Get(ctx, req.NamespacedName, measurementDevice)
+
+	measurementDevices := &chantico.MeasurementDeviceList{}
+	_ = r.List(ctx, measurementDevices)
+
+	job := &batchv1.Job{}
+	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
+
+	deployment := &appsv1.Deployment{}
+	_ = r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
+
+	state := md.GetState(measurementDevice, measurementDevices.Items, job, deployment)
+	md.ExecuteActions(state, ctx, req, measurementDevice, measurementDevices.Items)
 	return ctrl.Result{}, nil
 }
