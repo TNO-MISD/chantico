@@ -5,20 +5,49 @@ stages:
   - build
   - release
 
-chantico-goose:
-  stage: docker
-  image: docker:24.0.5
-  services:
-    - name: docker:dind
-      command: ["--host=tcp://0.0.0.0:2375"]
+.buildkit:
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: [""]
+  stage: build
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  variables:
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+  rules:
+    - if: $CI_REGISTRY
+    - if: $CI_REGISTRY_USER
+    - if: $CI_REGISTRY_PASSWORD
+    - if: $BUILD_CONTEXT
+    - if: $BUILD_DOCKERFILE
+    - if: $IMAGE
+    - if: $TAG
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > ~/.docker/config.json
   script:
-    - docker build -f Dockerfile.migrations -t $CI_REGISTRY_IMAGE/chantico-goose .
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE/chantico-goose
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=${BUILD_CONTEXT} \
+        --local dockerfile=${BUILD_DOCKERFILE} \
+        --output type=image,name=$IMAGE:$TAG,push=true \
+        $(for secret in $SECRETS; do printf -- "--secret $secret "; done)
+
+chantico-goose:
+  extends: .buildkit
+  - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    variables:
+      TAG: latest
+  - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+    variables:
+      TAG: $CI_COMMIT_REF_SLUG
+  variables:
+    BUILD_DOCKERFILE: Dockerfile.migrations
+    BUILD_CONTEXT: .
+    IMAGE: "$CI_REGISTRY_IMAGE/chantico-goose"
+    TAG: latest
+    SECRETS: |
+      id=gitlab_token_user,env=CI_TOKEN_USER
+      id=gitlab_token,env=CI_TOKEN
 
 chantico-fmt:
   stage: build
