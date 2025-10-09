@@ -34,12 +34,13 @@ stages:
 
 chantico-goose:
   extends: .buildkit
-  - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-    variables:
-      TAG: latest
-  - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-    variables:
-      TAG: $CI_COMMIT_REF_SLUG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: latest
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: $CI_COMMIT_REF_SLUG
   variables:
     BUILD_DOCKERFILE: Dockerfile.migrations
     BUILD_CONTEXT: .
