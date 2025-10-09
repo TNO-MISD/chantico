@@ -40,7 +40,8 @@ stages:
       buildctl --addr ${BUILDKIT_SOCKET} build \
         --frontend dockerfile.v0 \
         --local context=${BUILD_CONTEXT} \
-        --local dockerfile=${BUILD_DOCKERFILE} \
+        --local dockerfile=${BUILD_DOCKERFILE_CONTEXT:-${BUILD_CONTEXT}} \
+        --opt filename=${BUILD_DOCKERFILE} \
         --output type=image,name=$IMAGE:$TAG,push=true \
         $(for secret in $SECRETS; do printf -- "--secret $secret "; done)
 
