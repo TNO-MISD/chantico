@@ -26,10 +26,6 @@ stages:
     - mkdir -p ~/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > ~/.docker/config.json
   script:
-    # Debugging
-    - unshare -U -r whoami
-    - unshare --user --mount --pid --fork --map-root-user sh -c 'whoami'
-    - ls -l /proc/self/exe
     # Start buildkitd in background with no sandboxing and explicit socket
     - buildkitd ${BUILDKITD_FLAGS} --addr ${BUILDKIT_SOCKET} &
     # Wait for buildkit socket to become available
