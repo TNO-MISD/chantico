@@ -1,7 +1,7 @@
 ## Merge request
 
-- **Title:** Explain in one title what this MR entails
-- **Description**: Short description about the MR
+- **Title:** title
+- **Description**: description
 
 ### How to test?
 
