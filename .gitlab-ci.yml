@@ -2,12 +2,35 @@ image: golang:1.24.5-alpine3.22
 
 stages:
   - build
+  - test
   - release
 
 chantico-fmt:
   stage: build
   script:
     - go fmt ./...
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+go-test:
+  stage: test
+  variables:
+    TESTS: ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/measurementdevice
+  before_script:
+    - apk add --no-cache git
+    - go install github.com/t-yuki/gocover-cobertura@latest
+  script:
+    - go test -v -coverprofile=coverage.out $TESTS
+    - $(go env GOPATH)/bin/gocover-cobertura < coverage.out > coverage.xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+  coverage: '/total:\s+\(statements\)\s+([\d.]+)%/'
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
