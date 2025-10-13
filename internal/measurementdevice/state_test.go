@@ -1,6 +1,7 @@
 package measurementdevice
 
 import (
+	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,19 +26,21 @@ func TestGetState(t *testing.T) {
 	wants[1] = StateEndPoint
 
 	for i := range nbTest {
-		measurementDevicesIteration := measurementDevices[i]
-		measurementDevicesListIteration := measurementDevicesList[i]
-		jobsIteration := jobs[i]
-		deploymentsIteration := deployments[i]
-		wantsIteration := wants[i]
-		resultIteration := GetState(
-			measurementDevicesIteration,
-			measurementDevicesListIteration,
-			&jobsIteration,
-			&deploymentsIteration,
-		)
-		if wantsIteration != resultIteration {
-			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wantsIteration, resultIteration)
-		}
+		t.Run(fmt.Sprintf("%#v", measurementDevices[i]), func(t *testing.T) {
+			measurementDevicesIteration := measurementDevices[i]
+			measurementDevicesListIteration := measurementDevicesList[i]
+			jobsIteration := jobs[i]
+			deploymentsIteration := deployments[i]
+			wantsIteration := wants[i]
+			resultIteration := GetState(
+				measurementDevicesIteration,
+				measurementDevicesListIteration,
+				&jobsIteration,
+				&deploymentsIteration,
+			)
+			if wantsIteration != resultIteration {
+				t.Errorf("GetState(%#v) = %#v, want %#v\n", measurementDevicesIteration, resultIteration, wantsIteration)
+			}
+		})
 	}
 }

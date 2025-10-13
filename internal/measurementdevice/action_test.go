@@ -1,6 +1,7 @@
 package measurementdevice
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -32,11 +33,13 @@ func TestInitializeFinalizer(t *testing.T) {
 	testCases[1].ObjectMeta.Finalizers = []string{"test"}
 	wants[1] = []string{"test", chantico.SNMPUpdateFinalizer}
 
-	for i := range testCases {
-		InitializeFinalizer(testCases[i], nil)
-		if !equalStringSlices(wants[i], testCases[i].ObjectMeta.Finalizers) {
-			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].ObjectMeta.Finalizers)
-		}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%#v", wants[i]), func(t *testing.T) {
+			InitializeFinalizer(tc, nil)
+			if !equalStringSlices(wants[i], tc.ObjectMeta.Finalizers) {
+				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, tc.ObjectMeta.Finalizers, wants[i])
+			}
+		})
 	}
 }
 
@@ -50,11 +53,13 @@ func TestUpdateFinalizer(t *testing.T) {
 
 	wants[0] = []string{"test"}
 
-	for i := range testCases {
-		UpdateFinalizer(testCases[i], nil)
-		if !equalStringSlices(wants[i], testCases[i].ObjectMeta.Finalizers) {
-			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].ObjectMeta.Finalizers)
-		}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%#v", wants[i]), func(t *testing.T) {
+			UpdateFinalizer(tc, nil)
+			if !equalStringSlices(wants[i], tc.ObjectMeta.Finalizers) {
+				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc, tc.ObjectMeta.Finalizers, wants[i])
+			}
+		})
 	}
 }
 
@@ -67,28 +72,31 @@ func TestUpdateModification(t *testing.T) {
 
 	wants[0] = 5
 
-	for i := range testCases {
-		UpdateModification(testCases[i], nil)
-		if testCases[i].Status.UpdateGeneration != wants[i] {
-			t.Errorf("Case %d, TARGET: %#v != OBTAINED: %#v\n", i, wants[i], testCases[i].Status)
-		}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%#v", wants[i]), func(t *testing.T) {
+			UpdateModification(tc, nil)
+			if tc.Status.UpdateGeneration != wants[i] {
+				t.Errorf("UpdateModification(%#v) = %#v, want %#v\n", tc, tc.Status, wants[i])
+			}
+		})
 	}
 }
 
 func TestActionMap(t *testing.T) {
 	for state, actions := range ActionMap {
 		for _, action := range actions {
-			switch action.Type {
-			case ActionFunctionPure:
-				if action.IO != nil || action.Pure == nil {
-					t.Errorf("State %s: %#v is not valid", state, action)
+			t.Run(fmt.Sprintf("%#v in %#v", action, state), func(t *testing.T) {
+				switch action.Type {
+				case ActionFunctionPure:
+					if action.IO != nil || action.Pure == nil {
+						t.Errorf("%#v is not pure", action)
+					}
+				case ActionFunctionIO:
+					if action.IO == nil || action.Pure != nil {
+						t.Errorf("%#v is pure", action)
+					}
 				}
-			case ActionFunctionIO:
-				if action.IO == nil || action.Pure != nil {
-					t.Errorf("State %s: %#v is not valid", state, action)
-				}
-			}
+			})
 		}
 	}
-
 }
