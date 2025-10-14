@@ -80,8 +80,8 @@ func ExecuteActions(
 				result = actionFunction.IO(ctx, req, measurementDevice, measurementDevices)
 			}
 		}
-		if result == nil {
-			return nil
+		if result != nil {
+			return result
 		}
 	}
 	return result
@@ -148,8 +148,7 @@ func RequeueWithDelay(
 	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Figure out requeuing strategy, might need a redesign
-	panic("Not implemented yet")
-	return nil
+	return &ctrl.Result{RequeueAfter: chantico.RequeueDelay}
 }
 
 func UpdateSNMPConfig(

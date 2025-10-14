@@ -103,6 +103,29 @@ func TestUpdateModification(t *testing.T) {
 	}
 }
 
+func TestRequeueWithDelay(t *testing.T) {
+	testCases := map[string]struct {
+		Device   *chantico.MeasurementDevice
+		Devices  []chantico.MeasurementDevice
+		Expected time.Duration
+	}{
+		"default requeue delay": {
+			Device:   nil,
+			Devices:  nil,
+			Expected: chantico.RequeueDelay,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			result := RequeueWithDelay(tc.Device, tc.Devices)
+			if result.RequeueAfter != tc.Expected {
+				t.Errorf("RequeueWithDelay() = %#v, want %#v", result.RequeueAfter, tc.Expected)
+			}
+		})
+	}
+}
+
 func TestActionMap(t *testing.T) {
 	for state, actions := range ActionMap {
 		for _, action := range actions {
