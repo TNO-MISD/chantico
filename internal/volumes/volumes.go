@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	ChanticoVolumeMount    = "chantico-volume-mount"
-	ChanticoVolumeClaimEnv = "CHANTICOVOLUMECLAIMENV"
+	ChanticoVolumeMount       = "chantico-volume-mount"
+	ChanticoVolumeLocationEnv = "CHANTICOVOLUMELOCATIONENV"
+	ChanticoVolumeClaimEnv    = "CHANTICOVOLUMECLAIMENV"
 )
 
 func GetChanticoVolume() (corev1.Volume, error) {
