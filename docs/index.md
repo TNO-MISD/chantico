@@ -77,7 +77,73 @@ Although this is not strictly required this is encouraged to work on the project
 
 ### Testing
 
-So far the code is untested but this is an undesirable state that the development should further investigate.
+#### Philosophy
+
+**Chantico** is designed to serve as the glue between many components that run on and depend on Kubernetes.
+Because of this, integration and end-to-end testing can be costly and significantly slow down the development cycle—due to long-running CI jobs and the complexity of setting up a proper development environment.
+
+To address bugs that go beyond the scope of unit testing, we aim to invest in robust automatic logging that will be explained in its own section.
+
+To keep testing lightweight and efficient, we follow these rules regarding what is allowed and disallowed in tests:
+
+**Allowed in tests:**
+- Creation of temporary directories and files
+- Mocking the Kubernetes client
+- Modifying OS environment variables
+
+**Disallowed in tests:**
+- Spinning up a Kubernetes instance
+- Spinning up service instances (e.g., PostgreSQL, etc.)
+
+#### Table-Driven Testing
+
+In line with Go’s philosophy of simplicity, we use the standard `testing` package from the Go library.
+When appropriate, we design tests using **table-driven testing**, following this format:
+
+```go
+func TestInitializeFinalizer(t *testing.T) {
+    testCases := map[string]struct {
+        Case     *chantico.MeasurementDevice
+        Expected []string
+    }{
+        "empty finalizer": {
+            Case: &chantico.MeasurementDevice{
+                ObjectMeta: metav1.ObjectMeta{
+                    Finalizers: []string{},
+                }},
+            Expected: []string{chantico.SNMPUpdateFinalizer},
+        },
+        "already initialized": {
+            Case: &chantico.MeasurementDevice{
+                ObjectMeta: metav1.ObjectMeta{
+                    Finalizers: []string{"test"},
+                }},
+            Expected: []string{"test", chantico.SNMPUpdateFinalizer},
+        },
+    }
+
+    for name, tc := range testCases {
+        t.Run(name, func(t *testing.T) {
+            InitializeFinalizer(tc.Case, nil)
+            if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
+                t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, tc.Case.ObjectMeta.Finalizers, tc.Expected)
+            }
+        })
+    }
+}
+```
+
+#### Running the tests
+
+To run the tests just launch the following command:
+
+```bash
+ go test -v ./internal/...
+```
+
+### Logging
+
+Coming soon.
 
 ### CI/CD
 
