@@ -24,6 +24,21 @@ stages:
     - buildah bud -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
     - buildah push ${IMAGE}:${TAG}
 
+chantico-docker:
+  extends: .buildah
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: latest
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: $CI_COMMIT_REF_SLUG
+  variables:
+    BUILD_DOCKERFILE: Dockerfile
+    BUILD_CONTEXT: .
+    IMAGE: "$CI_REGISTRY_IMAGE/chantico"
+    TAG: latest
+
 chantico-goose:
   extends: .buildah
   rules:
