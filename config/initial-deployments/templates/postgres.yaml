@@ -81,6 +81,7 @@ metadata:
   name: chantico-postgres-migration
   labels:
     app: chantico
+  namespace: chantico
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
