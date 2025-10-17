@@ -43,11 +43,12 @@ spec:
         - containerPort: 5432
       initContainers:
       - image: busybox
-        name: prometheus-initialization
+        name: postgres-initialization
         command: ["/bin/sh"]
         args:
           - -c
           - mkdir -p /tmp/chantico-volume-mount/postgres/storage;
+          - until nc -z chantico-postgres 5432; do echo waiting for postgres; sleep 2; done;
         volumeMounts:
         - mountPath: /tmp/chantico-volume-mount
           name: chantico-volume-mount
@@ -73,3 +74,27 @@ spec:
     app: postgres
 status:
   loadBalancer: {}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chantico-postgres-migration"
+  labels:
+    app: chantico
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: goose-migrate
+          image: {{ .Values.chanticoGooseImage }}
+          envFrom:
+          - configMapRef:
+              name: chantico-postgres-credentials
+          command: ["goose"]
+          args: [
+            "-dir", "./migrations",
+            "postgres",
+            "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@chantico-postgres:5432/$(POSTGRES_DB)?sslmode=disable",
+            "up"
+          ]
