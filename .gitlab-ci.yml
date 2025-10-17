@@ -5,15 +5,13 @@ stages:
   - build
   - release
 
-.buildkit:
-  image:
-    name: moby/buildkit:rootless
-    entrypoint: [""]
+.buildah:
+  image: quay.io/buildah/stable
   stage: build
   variables:
-    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
-    BUILDKIT_SOCKET_PATH: /tmp/buildkit.sock
-    BUILDKIT_SOCKET: unix://${BUILDKIT_SOCKET_PATH}
+    BUILDAH_ISOLATION: chroot
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login --username "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
   rules:
     - if: $CI_REGISTRY
     - if: $CI_REGISTRY_USER
@@ -22,31 +20,12 @@ stages:
     - if: $BUILD_DOCKERFILE
     - if: $IMAGE
     - if: $TAG
-  before_script:
-    - mkdir -p ~/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > ~/.docker/config.json
   script:
-    # Start buildkitd in background with no sandboxing and explicit socket
-    - buildkitd ${BUILDKITD_FLAGS} --addr ${BUILDKIT_SOCKET} &
-    # Wait for buildkit socket to become available
-    - |
-      for i in $(seq 10); do
-        [ -S ${BUILDKIT_SOCKET_PATH} ] && break
-        echo "Waiting for buildkitd to start..."
-        sleep 1
-      done
-    # Run the build
-    - |
-      buildctl --addr ${BUILDKIT_SOCKET} build \
-        --frontend dockerfile.v0 \
-        --local context=${BUILD_CONTEXT} \
-        --local dockerfile=${BUILD_DOCKERFILE_CONTEXT:-${BUILD_CONTEXT}} \
-        --opt filename=${BUILD_DOCKERFILE} \
-        --output type=image,name=$IMAGE:$TAG,push=true \
-        $(for secret in $SECRETS; do printf -- "--secret $secret "; done)
+    - buildah bud -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
+    - buildah push ${IMAGE}:${TAG}
 
 chantico-goose:
-  extends: .buildkit
+  extends: .buildah
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
@@ -59,9 +38,6 @@ chantico-goose:
     BUILD_CONTEXT: .
     IMAGE: "$CI_REGISTRY_IMAGE/chantico-goose"
     TAG: latest
-    SECRETS: |
-      id=gitlab_token_user,env=CI_TOKEN_USER
-      id=gitlab_token,env=CI_TOKEN
 
 chantico-fmt:
   stage: build
