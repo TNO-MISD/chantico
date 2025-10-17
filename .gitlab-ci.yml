@@ -46,14 +46,3 @@ chantico-fmt:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-
-release:
-  stage: release
-  image: node:20
-  script:
-    - npm install
-    - npx semantic-release
-  needs:
-    - chantico-fmt
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
