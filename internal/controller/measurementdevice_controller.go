@@ -54,3 +54,9 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	md.ExecuteActions(state, ctx, req, measurementDevice, measurementDevices.Items)
 	return ctrl.Result{}, nil
 }
+
+func (r *MeasurementDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&chantico.MeasurementDevice{}).
+		Complete(r)
+}
