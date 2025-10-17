@@ -102,3 +102,5 @@ spec:
             "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@chantico-postgres:5432/$(POSTGRES_DB)?sslmode=disable",
             "up"
           ]
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecretName }}
