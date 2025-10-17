@@ -74,8 +74,8 @@ func GenerateSnmpConfig(measurementDevices []chantico.MeasurementDevice) string 
 	snmpConfig := `
 auths:
   public_v3:
-  version: 3
-  username: guest
+    version: 3
+    username: guest
 modules:
 `
 
