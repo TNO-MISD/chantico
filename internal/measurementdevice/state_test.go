@@ -1,7 +1,6 @@
 package measurementdevice
 
 import (
-	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,35 +10,37 @@ import (
 )
 
 func TestGetState(t *testing.T) {
-	nbTest := 2
-	measurementDevices := make([]*chantico.MeasurementDevice, nbTest)
-	measurementDevicesList := make([][]chantico.MeasurementDevice, nbTest)
-	jobs := make([]batchv1.Job, nbTest)
-	deployments := make([]appsv1.Deployment, nbTest)
-	wants := make([]string, nbTest)
+	testCases := map[string]struct {
+		MeasurementDevice     *chantico.MeasurementDevice
+		MeasurementDeviceList []chantico.MeasurementDevice
+		Job                   batchv1.Job
+		Deployment            appsv1.Deployment
+		Expected              string
+	}{
+		"empty state": {
+			MeasurementDevice: &chantico.MeasurementDevice{
+				Status: chantico.MeasurementDeviceStatus{
+					State: "",
+				},
+			},
+			Expected: StateInit,
+		},
+		"nil device": {
+			MeasurementDevice: nil,
+			Expected:          StateEndPoint,
+		},
+	}
 
-	measurementDevices[0] = &chantico.MeasurementDevice{}
-	measurementDevices[0].Status.State = ""
-	wants[0] = StateInit
-
-	measurementDevices[1] = nil
-	wants[1] = StateEndPoint
-
-	for i := range nbTest {
-		t.Run(fmt.Sprintf("%#v", measurementDevices[i]), func(t *testing.T) {
-			measurementDevicesIteration := measurementDevices[i]
-			measurementDevicesListIteration := measurementDevicesList[i]
-			jobsIteration := jobs[i]
-			deploymentsIteration := deployments[i]
-			wantsIteration := wants[i]
-			resultIteration := GetState(
-				measurementDevicesIteration,
-				measurementDevicesListIteration,
-				&jobsIteration,
-				&deploymentsIteration,
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			result := GetState(
+				tc.MeasurementDevice,
+				tc.MeasurementDeviceList,
+				&tc.Job,
+				&tc.Deployment,
 			)
-			if wantsIteration != resultIteration {
-				t.Errorf("GetState(%#v) = %#v, want %#v\n", measurementDevicesIteration, resultIteration, wantsIteration)
+			if result != tc.Expected {
+				t.Errorf("GetState(%#v) = %#v, want %#v", tc.MeasurementDevice, result, tc.Expected)
 			}
 		})
 	}
