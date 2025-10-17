@@ -15,6 +15,7 @@ stages:
     - echo "$CI_REGISTRY_PASSWORD" | buildah login --username "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
   rules:
     - if: $CI_REGISTRY
+    - if: $CI_REGISTRY_IMAGE
     - if: $CI_REGISTRY_USER
     - if: $CI_REGISTRY_PASSWORD
     - if: $BUILD_CONTEXT
@@ -22,18 +23,13 @@ stages:
     - if: $IMAGE
     - if: $TAG
   script:
-    - buildah bud -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
+    - buildah bud --layers --cache-from $CI_REGISTRY_IMAGE/cache --cache-to $CI_REGISTRY_IMAGE/cache -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
     - buildah push ${IMAGE}:${TAG}
 
 build-chantico:
   extends: .buildah
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: latest
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: $CI_COMMIT_REF_SLUG
   variables:
     BUILD_DOCKERFILE: Dockerfile
     BUILD_CONTEXT: .
@@ -44,11 +40,6 @@ build-chantico-aggregator:
   extends: .buildah
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: latest
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: $CI_COMMIT_REF_SLUG
   variables:
     BUILD_DOCKERFILE: chantico.dockerfile
     BUILD_CONTEXT: .
@@ -103,15 +94,4 @@ go-test:
   coverage: /total:\s+\(statements\)\s+\d+.\d+%/
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-
-release:
-  stage: release
-  image: node:20
-  script:
-    - npm install
-    - npx semantic-release
-  needs:
-    - chantico-fmt
-  rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
