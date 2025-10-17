@@ -1,4 +1,4 @@
-FROM docker.io/gomicro/goose:2.6.1
+FROM docker.io/gomicro/goose:3.25.0
 
 COPY chantico/migrations/ ./
 
