@@ -2,10 +2,13 @@ package measurementdevice
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"slices"
 	"time"
 
 	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
+	vol "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/volumes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -34,6 +37,7 @@ var ActionMap = map[string][]ActionFuntion{
 		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 	},
 	StateEntryPoint: {
+		ActionFuntion{Type: ActionFunctionIO, IO: CreateSNMPGenerator},
 		ActionFuntion{Type: ActionFunctionIO, IO: UpdateSNMPConfig},
 	},
 	StateFailed: {},
@@ -151,6 +155,26 @@ func RequeueWithDelay(
 	return &ctrl.Result{RequeueAfter: chantico.RequeueDelay}
 }
 
+func CreateSNMPGenerator(
+	ctx context.Context,
+	req ctrl.Request,
+	measurementDevice *chantico.MeasurementDevice,
+	measurementDevices []chantico.MeasurementDevice,
+) *ctrl.Result {
+	generatorYaml := GenerateSnmpConfig(measurementDevices)
+	generatorPath := fmt.Sprintf(
+		"%s/%s/generator-%s.yml",
+		os.Getenv(vol.ChanticoVolumeLocationEnv),
+		snmpYmlDir,
+		string(measurementDevice.GetUID()),
+	)
+	err := os.WriteFile(generatorPath, []byte(generatorYaml), 0666)
+	if err != nil {
+		panic(fmt.Sprintf("Could not write to %s", generatorPath))
+	}
+	return nil
+}
+
 func UpdateSNMPConfig(
 	ctx context.Context,
 	req ctrl.Request,
@@ -159,7 +183,6 @@ func UpdateSNMPConfig(
 ) *ctrl.Result {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Job launching
 	panic("Not implemented yet")
-	return nil
 }
 
 func ReloadSNMPService(
@@ -170,5 +193,4 @@ func ReloadSNMPService(
 ) *ctrl.Result {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Deployment reload
 	panic("Not implemented yet")
-	return nil
 }
