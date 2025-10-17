@@ -2,5 +2,5 @@ FROM docker.io/gomicro/goose:2.6.1
 
 COPY chantico/migrations/ ./
 
-ENTRYPOINT ["goose", "postgres", "up", "-dir", "./migrations"]
+ENTRYPOINT ["goose", "postgres", "up", "-dir", "./"]
 

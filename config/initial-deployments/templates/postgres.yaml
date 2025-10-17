@@ -71,7 +71,7 @@ spec:
       protocol: TCP
       targetPort: 5432
   selector:
-    app: postgres
+    app: chantico-postgres
 status:
   loadBalancer: {}
 ---
@@ -97,7 +97,7 @@ spec:
               name: chantico-postgres-credentials
           command: ["goose"]
           args: [
-            "-dir", "./migrations",
+            "-dir", "./",
             "postgres",
             "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@chantico-postgres:5432/$(POSTGRES_DB)?sslmode=disable",
             "up"
