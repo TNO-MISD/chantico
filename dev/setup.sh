@@ -32,3 +32,5 @@ kubectl apply -f dev/pvc.yaml
 kubectl create -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/examples/pod/pod.yaml
 
 # kubectl apply -k config/samples/
+# kind load docker-image localhost:5000/chantico:v0.1.0 --name chantico-cluster
+# make deploy IMG=localhost:5000/chantico:v0.1.0

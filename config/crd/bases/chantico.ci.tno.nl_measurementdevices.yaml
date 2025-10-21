@@ -53,19 +53,17 @@ spec:
             properties:
               errorMessage:
                 type: string
-              generation:
-                format: int64
-                type: integer
               jobName:
-                type: string
-              jobStatus:
-                type: string
-              lastUpdated:
                 type: string
               state:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
                   Important: Run "make" to regenerate code after modifying this file
+                type: string
+              updateGeneration:
+                format: int64
+                type: integer
+              updateTime:
                 type: string
             type: object
         type: object
