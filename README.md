@@ -122,6 +122,19 @@ Access the cluster with adding this to your k8s commands: `--context kind-chanti
 Follow steps to build and push chantico docker image.
 Afterwards load into Kind using: `kind load docker-image <image-name>`.
 
+#### SNMP mocking
+
+```bash
+cd dev
+docker build -t localhost:5000/snmp-mock:latest .
+docker push localhost:5000/snmp-mock:latest
+docker tag localhost:5000/snmp-mock:latest snmp-mock:latest
+docker images | grep snmp-mock
+kind load docker-image snmp-mock:latest --name chantico-cluster
+kubectl apply -f k8s/snmp-mock-deployment.yaml
+kubectl apply -f k8s/snmp-mock-service.yaml
+```
+
 ## License
 
 Copyright 2025.

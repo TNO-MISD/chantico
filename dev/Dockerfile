@@ -1,0 +1,23 @@
+# Stage 1: Build the Go binary
+FROM golang:1.23 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Statically compile the Go binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o snmp-mock mock_snmp.go
+
+# Stage 2: Minimal runtime using distroless
+FROM gcr.io/distroless/static:nonroot
+
+WORKDIR /
+
+COPY --from=builder /app/snmp-mock .
+
+USER 65532:65532
+
+ENTRYPOINT ["/snmp-mock"]
