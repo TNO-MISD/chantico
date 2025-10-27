@@ -10,27 +10,27 @@ spec:
   walks:
     - sdbDevInKWhTotal
     - sdbDevOutMtKWhTotal
-# ---
-# apiVersion: chantico.ci.tno.nl/v1alpha1
-# kind: MeasurementDevice
-# metadata:
-#   labels:
-#     app.kubernetes.io/name: chantico
-#     app.kubernetes.io/managed-by: kustomize
-#   name: schleifenbauer-out
-#   namespace: chantico
-# spec:
-#   walks:
-#     - sdbDevOutMtKWhTotal
-# ---
-# apiVersion: chantico.ci.tno.nl/v1alpha1
-# kind: MeasurementDevice
-# metadata:
-#   labels:
-#     app.kubernetes.io/name: chantico
-#     app.kubernetes.io/managed-by: kustomize
-#   name: schleifenbauer-all-out
-#   namespace: chantico
-# spec:
-#   walks:
-#     - sdbDevOutMtTable
+---
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: MeasurementDevice
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: schleifenbauer-out
+  namespace: chantico
+spec:
+  walks:
+    - sdbDevOutMtKWhTotal
+---
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: MeasurementDevice
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: schleifenbauer-all-out
+  namespace: chantico
+spec:
+  walks:
+    - sdbDevOutMtTable

@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
-  - measurementdevices
+  - measurementdevice
   - physicalmeasurements
   verbs:
   - create
@@ -20,14 +20,14 @@ rules:
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
-  - measurementdevices/finalizers
+  - measurementdevice/finalizers
   - physicalmeasurements/finalizers
   verbs:
   - update
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
-  - measurementdevices/status
+  - measurementdevice/status
   - physicalmeasurements/status
   verbs:
   - get
