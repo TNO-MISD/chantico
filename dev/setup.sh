@@ -28,14 +28,26 @@ kubectl create -f https://raw.githubusercontent.com/rancher/local-path-provision
 
 
 docker run -d -p 5000:5000 --restart always --name registry registry:2
-echo '{"insecure-registries": ["localhost:5000"]}' > /etc/docker/daemon.json
+sudo sh -c 'echo "{\"insecure-registries\": [\"localhost:5000\"]}" > /etc/docker/daemon.json'
+
+# Make chantico docker image
+cd ../
 make docker-build docker-push IMG=localhost:5000/chantico:v0.1.0
 make install
 make deploy IMG=localhost:5000/chantico:v0.1.0
-# kubectl apply -k config/samples/
-# kind load docker-image localhost:5000/chantico:v0.1.0 --name chantico-cluster
-# make deploy IMG=localhost:5000/chantico:v0.1.0
+# docker tag localhost:5000/chantico:v0.1.0 chantico:v0.1.0
 
+# Make snmp-mock docker image
+cd dev
+docker build -t localhost:5000/snmp-mock:latest .
+docker push localhost:5000/snmp-mock:latest
 docker tag localhost:5000/snmp-mock:latest snmp-mock:latest
+
+# Load into kind cluster
 kind load docker-image snmp-mock:latest --name kind
-kind load docker-image chantico:v0.1.0 --name kind
+kind load docker-image localhost:5000/chantico:v0.1.0 --name kind
+
+# Apply to k8s
+kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
+kubectl apply -f k8s/snmp-mock-deployment.yaml
+kubectl apply -f k8s/snmp-mock-service.yaml
