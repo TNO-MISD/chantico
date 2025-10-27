@@ -7,7 +7,7 @@ In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the dei
 
 ## Getting Started
 
-How-to documentation can be found in the `/docs` folder.
+How-to guides can be found in the `/docs` folder.
 
 ### Prerequisites
 - go version v1.23.0+
@@ -15,118 +15,15 @@ How-to documentation can be found in the `/docs` folder.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
-
-```sh
-make docker-build docker-push IMG=<some-registry>/chantico:tag
-```
-
-**NOTE:** This image ought to be published in the personal registry you specified.
-For example to run a local docker registry (you may need to be root):
-```sh
-docker run -d -p 5000:5000 --restart always --name registry registry:2
-echo '{"insecure-registries": ["localhost:5000"]}' > /etc/docker/daemon.json
-```
-**NOTE:** It is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:** Make sure to have Go 1.23+ installed when running this command.
-For example `sudo snap install --classic go`
-
-```sh
-make install
-```
-
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
-make deploy IMG=<some-registry>/chantico:tag
-```
-
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl create namespace chantico
-```
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
-```
-
-**Delete the APIs(CRDs) from the cluster:**
-
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following are the steps to build the installer and distribute this project to users.
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/chantico:tag
-```
-
-NOTE: The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without
-its dependencies.
-
-2. Using the installer
-
-Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/chantico/<tag or branch>/dist/install.yaml
-```
-
 ## Local development (Setup using Kind)
 
 ### Installation & usage
 
-Kind requires go, docker, podman, nerdctl
+Kind is used for testing with a local K8s cluster. Kind requires go, docker, podman, nerdctl
 
-Install Kind and setup cluster by using `setup.sh`.
-
-Access the cluster with adding this to your k8s commands: `--context kind-chantico-cluster`.
-
-Follow steps to build and push chantico docker image.
-Afterwards load into Kind using: `kind load docker-image <image-name>`.
-
-#### SNMP mocking
-
-```bash
-cd dev
-docker build -t localhost:5000/snmp-mock:latest .
-docker push localhost:5000/snmp-mock:latest
-docker tag localhost:5000/snmp-mock:latest snmp-mock:latest
-docker images | grep snmp-mock
-kind load docker-image snmp-mock:latest --name chantico-cluster
-kubectl apply -f k8s/snmp-mock-deployment.yaml
-kubectl apply -f k8s/snmp-mock-service.yaml
-```
+Install Kind and setup Chantico cluster by using `/dev/setup.sh` from `/dev/`. This mocks a SNMP device and exposes this on port `:1000`.
+Verify the pods run correctly after setting up the cluster using the script.
+The mocking is done in `mock_snmp.go` and is a simple TCP server with a fake SNMP signal.
 
 ## Contributing
 
