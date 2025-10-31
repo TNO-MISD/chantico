@@ -160,7 +160,6 @@ Include logs, screenshots, or relevant code snippets to support the bug report.
 }
 
 func (pm *PostMortem) SaveAndQuit() {
-	fmt.Sprintf("%s/bug%d.md", os.Getenv(vol.ChanticoVolumeLocationEnv))
 	filename := fmt.Sprintf("%s/bug%d.md", os.Getenv(vol.ChanticoVolumeLocationEnv), pm.Timestamp.UnixMicro())
 
 	err := os.WriteFile(filename, []byte(pm.Markdown()), 0666)
