@@ -26,6 +26,8 @@
             value.default = pkgs.mkShell {
               packages = [
                 pkgs.go
+                pkgs.kind
+                pkgs.pkgsite
                 pkgs.net-snmp
                 pkgs.gnumake
                 pkgs.plantuml

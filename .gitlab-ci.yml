@@ -26,8 +26,17 @@ stages:
     - buildah bud --layers --cache-from $CI_REGISTRY_IMAGE/cache --cache-to $CI_REGISTRY_IMAGE/cache -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
     - buildah push ${IMAGE}:${TAG}
 
-build-chantico:
+.buildah-sha:
   extends: .buildah
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      script:
+        - buildah bud --layers --cache-from $CI_REGISTRY_IMAGE/cache --cache-to $CI_REGISTRY_IMAGE/cache -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${CI_COMMIT_SHA} ${BUILD_CONTEXT}
+        - buildah push ${IMAGE}:${CI_COMMIT_SHA}
+    - when: always
+
+build-chantico:
+  extends: .buildah-sha
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   variables:
@@ -36,18 +45,8 @@ build-chantico:
     IMAGE: "$CI_REGISTRY_IMAGE/chantico"
     TAG: latest
 
-build-chantico-aggregator:
-  extends: .buildah
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  variables:
-    BUILD_DOCKERFILE: chantico.dockerfile
-    BUILD_CONTEXT: .
-    IMAGE: "$CI_REGISTRY_IMAGE/chantico-aggregator"
-    TAG: latest
-
 build-chantico-goose:
-  extends: .buildah
+  extends: .buildah-sha
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
@@ -59,6 +58,21 @@ build-chantico-goose:
     BUILD_DOCKERFILE: Dockerfile.migrations
     BUILD_CONTEXT: .
     IMAGE: "$CI_REGISTRY_IMAGE/chantico-goose"
+    TAG: latest
+
+build-snmp-mock:
+  extends: .buildah-sha
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: latest
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      variables:
+        TAG: $CI_COMMIT_REF_SLUG
+  variables:
+    BUILD_DOCKERFILE: Dockerfile.snmp-mock
+    BUILD_CONTEXT: .
+    IMAGE: "$CI_REGISTRY_IMAGE/chantico-snmp-mock"
     TAG: latest
 
 chantico-fmt:

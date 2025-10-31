@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snmp-mock
+  namespace: chantico
+  labels:
+    app: snmp-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: snmp-mock
+  template:
+    metadata:
+      labels:
+        app: snmp-mock
+    spec:
+      containers:
+      - name: snmp-mock
+        image: snmp-mock:latest
+        imagePullPolicy: Never
+        args: ["1000"]  # Port(s) to listen on, matches your app’s CLI argument
+        ports:
+        - containerPort: 1000
+          protocol: TCP
