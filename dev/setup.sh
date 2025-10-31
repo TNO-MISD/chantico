@@ -1,11 +1,9 @@
-# get podman
-sudo apt-get -y install podman
+#!/bin/bash -ex
+
+SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
 
 # get kind
 go install sigs.k8s.io/kind@v0.30.0
-
-# nerdctl (not available from apt)
-brew install nerdctl
 
 # If go is not yet added to $PATH:
 #echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
@@ -31,14 +29,15 @@ docker run -d -p 5000:5000 --restart always --name registry registry:2
 sudo sh -c 'echo "{\"insecure-registries\": [\"localhost:5000\"]}" > /etc/docker/daemon.json'
 
 # Make chantico docker image
-cd ../
+pushd "$SCRIPT_DIR/../"
 make docker-build docker-push IMG=localhost:5000/chantico:v0.1.0
 make install
 make deploy IMG=localhost:5000/chantico:v0.1.0
 # docker tag localhost:5000/chantico:v0.1.0 chantico:v0.1.0
+popd
 
 # Make snmp-mock docker image
-cd dev
+pushd "$SCRIPT_DIR"
 docker build -t localhost:5000/snmp-mock:latest .
 docker push localhost:5000/snmp-mock:latest
 docker tag localhost:5000/snmp-mock:latest snmp-mock:latest
@@ -51,3 +50,4 @@ kind load docker-image localhost:5000/chantico:v0.1.0 --name kind
 kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
 kubectl apply -f k8s/snmp-mock-deployment.yaml
 kubectl apply -f k8s/snmp-mock-service.yaml
+popd

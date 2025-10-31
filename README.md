@@ -12,6 +12,8 @@ How-to guides can be found in the `/docs` folder.
 ### Prerequisites
 - go version v1.23.0+
 - docker version 17.03+.
+
+If not using local development using kind:
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
@@ -19,9 +21,11 @@ How-to guides can be found in the `/docs` folder.
 
 ### Installation & usage
 
-Kind is used for testing with a local K8s cluster. Kind requires go, docker, podman, nerdctl
+Kind is used for testing with a local K8s cluster. Kind requires go and docker.
+Podman and nerdctl are alternatives for kind but we use the docker backend.
 
-Install Kind and setup Chantico cluster by using `/dev/setup.sh` from `/dev/`. This mocks a SNMP device and exposes this on port `:1000`.
+Install Kind and setup Chantico cluster by using `./dev/setup.sh` (you need `sudo` rights).
+This mocks a SNMP device and exposes this on port `:1000`.
 Verify the pods run correctly after setting up the cluster using the script.
 The mocking is done in `mock_snmp.go` and is a simple TCP server with a fake SNMP signal.
 
