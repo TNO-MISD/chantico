@@ -7,8 +7,8 @@ import (
 	"slices"
 	"time"
 
-	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	vol "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/volumes"
+	chantico "chantico/api/v1alpha1"
+	vol "chantico/internal/volumes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
