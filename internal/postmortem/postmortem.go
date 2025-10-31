@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
 	vol "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/volumes"
 
-	// chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	// utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,29 +21,31 @@ var (
 	scheme = k8sruntime.NewScheme()
 )
 
-type Info interface {
-	String() (string, error)
-}
-
 type Markdown interface {
 	Markdown()
 }
 
 type ClusterState struct {
-	ClusterInfo []Info
-	CRDStates   []Info
+	CRDStates []any
 }
 
 func (cs *ClusterState) Markdown() string {
-	return "TODO"
+	template := `
+- CRDs state:
+` + "```" + `
+%#v
+` + "```" + `
+`
+	return fmt.Sprintf(template, cs.CRDStates)
 }
 
 type ChanticoState struct {
-	Error        error
-	File         string
-	Line         int
-	FunctionName string
-	Stack        string
+	Error           error
+	File            string
+	Line            int
+	FunctionName    string
+	Stack           string
+	LoggedVariables []any
 }
 
 func (cs *ChanticoState) Markdown() string {
@@ -52,12 +53,20 @@ func (cs *ChanticoState) Markdown() string {
 - File: %s
 - Line: %d
 - FunctionName: %s
-- stack status:
+- Error:
 ` + "```" + `
 %s
 ` + "```" + `
+- Stack:
+` + "```" + `
+%s
+` + "```" + `
+- Logged variables:
+` + "```" + `
+%#v
+` + "```" + `
 `
-	return fmt.Sprintf(template, cs.File, cs.Line, cs.FunctionName, cs.Stack)
+	return fmt.Sprintf(template, cs.File, cs.Line, cs.FunctionName, cs.Error, cs.Stack, cs.LoggedVariables)
 }
 
 type PostMortem struct {
@@ -66,11 +75,11 @@ type PostMortem struct {
 	ChanticoState ChanticoState
 }
 
-func NewPostMortem(err error, stack string) *PostMortem {
+func NewPostMortem(err error, args ...any) *PostMortem {
 	// Get Chantico current state
 	var ok bool
 	var pc uintptr
-	chanticoState := ChanticoState{Error: err, Stack: stack}
+	chanticoState := ChanticoState{Error: err, Stack: string(debug.Stack()), LoggedVariables: args}
 
 	pc, chanticoState.File, chanticoState.Line, ok = runtime.Caller(1)
 	if !ok {
@@ -93,8 +102,11 @@ func NewPostMortem(err error, stack string) *PostMortem {
 	}
 
 	measurementDevices := &chantico.MeasurementDeviceList{}
-	c.List(context.TODO(), measurementDevices, client.InNamespace("chantico"))
-	fmt.Printf("%#v\n", measurementDevices.Items)
+	err = c.List(context.TODO(), measurementDevices, client.InNamespace("chantico"))
+	if err != nil {
+		clusterState.CRDStates = append(clusterState.CRDStates, "Could not find measurementDevices in the chantico namespace")
+	}
+	clusterState.CRDStates = append(clusterState.CRDStates, measurementDevices.Items)
 
 	return &PostMortem{
 		ChanticoState: chanticoState,
@@ -144,10 +156,11 @@ Include logs, screenshots, or relevant code snippets to support the bug report.
 
 ---
 `
-	return fmt.Sprintf(template, pm.ChanticoState.Markdown(), pm.ClusterState.Markdown())
+	return fmt.Sprintf(template, pm.ClusterState.Markdown(), pm.ChanticoState.Markdown())
 }
 
 func (pm *PostMortem) SaveAndQuit() {
+	fmt.Sprintf("%s/bug%d.md", os.Getenv(vol.ChanticoVolumeLocationEnv))
 	filename := fmt.Sprintf("%s/bug%d.md", os.Getenv(vol.ChanticoVolumeLocationEnv), pm.Timestamp.UnixMicro())
 
 	err := os.WriteFile(filename, []byte(pm.Markdown()), 0666)
