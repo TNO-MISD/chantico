@@ -19,8 +19,8 @@ package controller
 import (
 	"context"
 
-	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	md "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/measurementdevice"
+	chantico "chantico/api/v1alpha1"
+	md "chantico/internal/measurementdevice"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
