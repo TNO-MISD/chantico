@@ -26,8 +26,17 @@ stages:
     - buildah bud --layers --cache-from $CI_REGISTRY_IMAGE/cache --cache-to $CI_REGISTRY_IMAGE/cache -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${TAG} ${BUILD_CONTEXT}
     - buildah push ${IMAGE}:${TAG}
 
-build-chantico:
+.buildah-sha:
   extends: .buildah
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      script:
+        - buildah bud --layers --cache-from $CI_REGISTRY_IMAGE/cache --cache-to $CI_REGISTRY_IMAGE/cache -f ${BUILD_DOCKERFILE} -t ${IMAGE}:${CI_COMMIT_SHA} ${BUILD_CONTEXT}
+        - buildah push ${IMAGE}:${CI_COMMIT_SHA}
+    - when: always
+
+build-chantico:
+  extends: .buildah-sha
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   variables:
@@ -37,7 +46,7 @@ build-chantico:
     TAG: latest
 
 build-chantico-goose:
-  extends: .buildah
+  extends: .buildah-sha
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
@@ -52,7 +61,7 @@ build-chantico-goose:
     TAG: latest
 
 build-snmp-mock:
-  extends: .buildah
+  extends: .buildah-sha
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
