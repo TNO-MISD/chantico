@@ -120,6 +120,7 @@ docs:
 
 pages:
   image: "hugomods/hugo:exts"
+  stage: docs
   pages: true
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
