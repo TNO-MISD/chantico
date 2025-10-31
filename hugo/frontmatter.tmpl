@@ -1,0 +1,10 @@
+---
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
+description: {{ with .Package.Synopsis }}{{ printf "%q" . }}{{ else }}""{{ end }}
+type: docs
+weight: {{ .NumChildren }}
+menu:
+  docs:
+    name: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
+    parent: "api"
+---

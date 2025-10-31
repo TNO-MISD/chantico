@@ -1,3 +1,7 @@
+---
+title: "How to install Chantico"
+---
+
 ## Installation
 
 > Note this installation does not explain how to deploy the controller and custom resources yet

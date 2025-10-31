@@ -1,4 +1,6 @@
-## How to register an SNMP device type
+---
+title: "How to register an SNMP device type"
+---
 
 In the current setting, a type of device using SNMP can be configured uploading the MIBS and defining a `MeasurementDevice` custom resource.
 In our First use-case (see `goal.md`) this corresponds to the `registerPDU` phase.

@@ -15,7 +15,7 @@ It therefore felt natural to call the energy domain controller developped within
 
 ## Installation
 
-[Please refer to the following document](docs/how-to-install-chantico.md)
+[Please refer to the following document](how-to-install-chantico.md)
 
 ## Technical proposal
 
@@ -147,14 +147,25 @@ Coming soon.
 
 ### CI/CD
 
-So far, no CI/CD pipeline are inplace, this is an undesirable state that the development should further investigate.
+We use GitLab CI to build Docker images for Chantico components, including the manager, Goose for Postgres migrations and SNMP mock.
+Additionally, formatting, tests and coverage are run. Pages are also deployed from GitLab CI.
 
 
 ## Development style
 
-[Use cases](docs/use-cases.md) are defined by the development team in collaboration with the workflow orchestrator team.
+[Use cases](use-cases.md) are defined by the development team in collaboration with the workflow orchestrator team.
 Relevant features are then developped to support the use case.
 
 ## How to(s)
 
 The file contained in this directory starting by `how-to-...` are there to help the developpers / users using chantico.
+
+Here is an overview:
+
+- [How to install chantico](how-to-install-chantico.md)
+- [How to register a physical SNMP device](how-to-register-a-physical-snmp-device.md)
+- [How to register an SNMP device type](how-to-register-an-snmp-device-type.md)
+
+## API documentation
+
+If this is deployed in GitLab pages then you can find [API documentation here](api/index.html)

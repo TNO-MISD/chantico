@@ -4,6 +4,7 @@ stages:
   - docker
   - build
   - test
+  - docs
   - release
 
 .buildah:
@@ -109,3 +110,24 @@ go-test:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+docs:
+  stage: docs
+  script:
+    - go install go.abhg.dev/doc2go@latest
+    - doc2go -embed -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
+    - cp -r assets docs/assets/
+
+pages:
+  image: "hugomods/hugo:exts"
+  pages: true
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    THEME_URL: "github.com/adityatelange/hugo-PaperMod"
+  dependencies:
+    - docs
+  script:
+    - cd hugo && hugo
+  artifacts:
+    paths:
+      - docs

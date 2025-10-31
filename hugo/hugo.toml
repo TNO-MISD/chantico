@@ -1,0 +1,6 @@
+baseURL = 'https://example.org/'
+languageCode = 'en-us'
+title = 'Chantico'
+theme = 'hugo-PaperMod'
+contentDir = '../docs'
+
