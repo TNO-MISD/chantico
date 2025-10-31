@@ -1,6 +1,8 @@
 #!/bin/bash -ex
 
 SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
+GOOSE_TAG="${GOOSE_TAG:-latest}"
+SNMP_MOCK_TAG="${SNMP_MOCK_TAG:-latest}"
 
 # get kind
 go install sigs.k8s.io/kind@v0.30.0
@@ -8,43 +10,33 @@ go install sigs.k8s.io/kind@v0.30.0
 # If go is not yet added to $PATH:
 #echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
-kind create cluster
-
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-kubectl create namespace monitoring --context kind-kind
-helm install prometheus prometheus-community/prometheus --namespace monitoring
-kubectl get pods -n monitoring --context kind-kind
-# Create Postgres volume
+kind create cluster --config "$SCRIPT_DIR/kind-config.yaml"
 
 kubectl create namespace chantico
 
-# https://github.com/rancher/local-path-provisioner
+# Create storageclass from https://github.com/rancher/local-path-provisioner
 kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.32/deploy/local-path-storage.yaml
-kubectl apply -f dev/k8s/pvc.yaml
-kubectl create -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/examples/pod/pod.yaml
 
+pushd "$SCRIPT_DIR"
 
-docker run -d -p 5000:5000 --restart always --name registry registry:2
-sudo sh -c 'echo "{\"insecure-registries\": [\"localhost:5000\"]}" > /etc/docker/daemon.json'
+# Create PVC
+kubectl apply -f k8s/chantico-pvc.yaml
 
-# Make chantico docker image
-pushd "$SCRIPT_DIR/../"
-make docker-build docker-push IMG=localhost:5000/chantico:v0.1.0
-make install
-make deploy IMG=localhost:5000/chantico:v0.1.0
-# docker tag localhost:5000/chantico:v0.1.0 chantico:v0.1.0
-popd
+# Install chantico dependencies (filebrowser, postgres, prometheus, snmp exporter)
+CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
+GOOSE_IMAGE="$CI_REGISTRY/chantico-goose:$GOOSE_TAG"
+docker pull "$GOOSE_IMAGE"
+kind load docker-image "$GOOSE_IMAGE" --name kind
+helm install chantico ../config/initial-deployments/ --set chanticoGooseImage="$GOOSE_IMAGE" -n chantico
+
+# Install CRDs using kustomize
+make -C "$SCRIPT_DIR/.." install
 
 # Make snmp-mock docker image
-pushd "$SCRIPT_DIR"
-docker build -t localhost:5000/snmp-mock:latest .
-docker push localhost:5000/snmp-mock:latest
-docker tag localhost:5000/snmp-mock:latest snmp-mock:latest
-
-# Load into kind cluster
+SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"
+docker pull "$SNMP_MOCK_IMAGE"
+docker tag "$SNMP_MOCK_IMAGE" snmp-mock:latest
 kind load docker-image snmp-mock:latest --name kind
-kind load docker-image localhost:5000/chantico:v0.1.0 --name kind
 
 # Apply to k8s
 kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml

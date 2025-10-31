@@ -89,6 +89,7 @@ spec:
       containers:
         - name: goose-migrate
           image: {{ .Values.chanticoGooseImage }}
+          imagePullPolicy: IfNotPresent
           envFrom:
           - configMapRef:
               name: chantico-postgres-credentials
