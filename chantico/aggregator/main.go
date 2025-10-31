@@ -1,8 +1,8 @@
 package main
 
 import (
-	prometheus "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico/prometheus"
-	sqlhelper "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico/sql-helper"
+	prometheus "chantico/chantico/prometheus"
+	sqlhelper "chantico/chantico/sql-helper"
 	"context"
 	"flag"
 	"fmt"
