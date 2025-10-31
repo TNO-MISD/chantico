@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: local-path-pvc
+  name: chantico-snmp-prometheus-volume-claim
   namespace: chantico
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path
   resources:
     requests:
-      storage: 1Gi
+      storage: 3Gi

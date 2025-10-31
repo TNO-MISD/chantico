@@ -29,6 +29,12 @@ This mocks a SNMP device and exposes this on port `:1000`.
 Verify the pods run correctly after setting up the cluster using the script.
 The mocking is done in `mock_snmp.go` and is a simple TCP server with a fake SNMP signal.
 
+Also set in an `.envrc`:
+
+```bash
+export CHANTICOVOLUMELOCATIONENV="/tmp/chantico-local-path-data"
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)

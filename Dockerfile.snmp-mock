@@ -1,12 +1,12 @@
 # Stage 1: Build the Go binary
-FROM golang:1.23 AS builder
+FROM docker.io/golang:1.23 AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY dev/go.mod dev/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY dev .
 
 # Statically compile the Go binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o snmp-mock mock_snmp.go
