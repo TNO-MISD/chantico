@@ -6,3 +6,9 @@ contentDir = '../docs'
 
 [params.assets]
   disableFingerprinting = false
+
+[[menu.main]]
+  name = "API Reference"
+  identifier = "api"
+  url = "/api/"
+  weight = 40

@@ -1,3 +1,10 @@
+---
+title: "Chantico"
+menu:
+  main:
+    weight: 100
+---
+
 # Chantico
 
 Streamlining Energy Management for Cloud Operators.

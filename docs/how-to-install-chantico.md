@@ -1,5 +1,8 @@
 ---
 title: "How to install Chantico"
+menu:
+  main:
+    weight: 30
 ---
 
 ## Installation
