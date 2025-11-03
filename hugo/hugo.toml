@@ -4,3 +4,5 @@ title = 'Chantico'
 theme = 'hugo-PaperMod'
 contentDir = '../docs'
 
+[params.assets]
+  disableFingerprinting = false

@@ -120,7 +120,7 @@ docs:
     - cp -r assets docs/assets/
     - mkdir -p docs/assets/css/extended
     - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
-    - 'echo ":root {--main-width: 1024px}" > docs/assets/css/extended/width.css'
+    - 'echo ":root {--main-width: 1024px}.chroma {background-color: #24273a !important}" > docs/assets/css/extended/width.css'
   artifacts:
     paths:
       - docs
