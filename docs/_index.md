@@ -2,7 +2,9 @@
 title: "Chantico"
 menu:
   main:
-    weight: 100
+    weight: -100
+    identifier: "chantico-main"
+    name: "Chantico"
 ---
 
 # Chantico

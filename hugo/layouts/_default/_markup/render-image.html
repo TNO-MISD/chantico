@@ -1,0 +1,12 @@
+{{- if or (strings.HasPrefix .Destination "http://") (strings.HasPrefix .Destination "https://") (strings.HasPrefix .Destination "/") -}}
+  <img src="{{ .Destination | safeURL }}"
+       loading="lazy"
+       alt="{{ .PlainText }}"
+       title="{{ .Title }}">
+{{- else -}}
+{{- $base := .Page.RelPermalink | path.Dir | path.Dir }}
+  <img src="{{ .Destination | path.Join $base | safeURL }}"
+       loading="lazy"
+       alt="{{ .PlainText }}"
+       title="{{ .Title }}">
+{{- end -}}

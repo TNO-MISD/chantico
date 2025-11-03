@@ -2,7 +2,7 @@
 title: "How to register a physical snmp device"
 menu:
   main:
-    weight: 20
+    weight: 30
 ---
 
 In the current setting, a type of device using SNMP can be configured uploading the MIBS and defining a `PhysicalMeasurement` custom resource.
