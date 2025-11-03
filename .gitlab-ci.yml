@@ -5,6 +5,7 @@ stages:
   - build
   - test
   - docs
+  - pages
   - release
 
 .buildah:
@@ -123,7 +124,7 @@ docs:
 
 pages:
   image: "hugomods/hugo:exts"
-  stage: docs
+  stage: pages
   pages:
     publish: hugo/public
   variables:
