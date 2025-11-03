@@ -116,8 +116,11 @@ docs:
   stage: docs
   script:
     - go install go.abhg.dev/doc2go@latest
-    - doc2go -embed -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
+    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
     - cp -r assets docs/assets/
+    - mkdir -p docs/assets/css/extended
+    - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
+    - 'echo ":root {--main-width: 1024px}" > docs/assets/css/extended/width.css'
   artifacts:
     paths:
       - docs

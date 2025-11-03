@@ -1,4 +1,4 @@
-baseURL = 'https://example.org/'
+baseURL = 'https://chantico-300062.ci.tno.nl/'
 languageCode = 'en-us'
 title = 'Chantico'
 theme = 'hugo-PaperMod'
