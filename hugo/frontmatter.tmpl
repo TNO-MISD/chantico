@@ -1,0 +1,12 @@
+---
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
+description: {{ with .Package.Synopsis }}{{ printf "%q" . }}{{ else }}""{{ end }}
+type: docs
+weight: {{ .NumChildren }}
+menu:
+  main:
+    name: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
+    id: "{{ with .Path }}reference.{{ . }}{{ else }}api{{ end }}"
+    parent: "api"
+    weight: {{ .NumChildren }}
+---

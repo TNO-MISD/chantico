@@ -1,0 +1,9 @@
+{{- if or (strings.HasPrefix .Destination "http://") (strings.HasPrefix .Destination "https://") -}}
+  <a href="{{ .Destination | safeURL }}">{{ .Text | safeHTML }}</a>
+{{- else if strings.HasSuffix .Destination ".md" -}}
+  {{- /* strip .md and rewrite to .html or to page permalink */ -}}
+  {{- $trim := replaceRE "\\.md$" "" .Destination -}}
+  <a href="{{ printf "%s/" $trim | relURL }}">{{ .Text | safeHTML }}</a>
+{{- else -}}
+  <a href="{{ .Destination | safeURL }}">{{ .Text | safeHTML }}</a>
+{{- end -}}

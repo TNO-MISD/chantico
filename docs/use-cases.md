@@ -1,4 +1,9 @@
-# Use-cases
+---
+title: "Use-cases"
+menu:
+  main:
+    weight: 10
+---
 
 ## First use-case
 

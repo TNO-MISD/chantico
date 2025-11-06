@@ -1,4 +1,9 @@
-## How to register a physical snmp device
+---
+title: "How to register a physical snmp device"
+menu:
+  main:
+    weight: 30
+---
 
 In the current setting, a type of device using SNMP can be configured uploading the MIBS and defining a `PhysicalMeasurement` custom resource.
 In our First use-case (see `goal.md`) this corresponds to the `createPDU1` and `createPDU2` phases.

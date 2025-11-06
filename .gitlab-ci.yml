@@ -4,6 +4,8 @@ stages:
   - docker
   - build
   - test
+  - docs
+  - pages
   - release
 
 .buildah:
@@ -108,4 +110,34 @@ go-test:
   coverage: /total:\s+\(statements\)\s+\d+.\d+%/
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+docs:
+  stage: docs
+  script:
+    - go install go.abhg.dev/doc2go@latest
+    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
+    - cp -r assets docs/assets/
+    - mkdir -p docs/assets/css/extended
+    - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
+    - 'echo ":root {--main-width: 1024px}.chroma {background-color: #24273a !important}" > docs/assets/css/extended/width.css'
+  artifacts:
+    paths:
+      - docs
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+pages:
+  image: "hugomods/hugo:exts"
+  stage: pages
+  pages:
+    publish: hugo/public
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    THEME_URL: "github.com/adityatelange/hugo-PaperMod"
+  dependencies:
+    - docs
+  script:
+    - cd hugo && hugo
+  rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

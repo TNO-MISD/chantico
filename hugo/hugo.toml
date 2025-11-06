@@ -1,0 +1,14 @@
+baseURL = 'https://chantico-300062.ci.tno.nl/'
+languageCode = 'en-us'
+title = 'Chantico'
+theme = 'hugo-PaperMod'
+contentDir = '../docs'
+
+[params.assets]
+  disableFingerprinting = false
+
+[[menu.main]]
+  name = "API Reference"
+  identifier = "api"
+  url = "/api/"
+  weight = 40

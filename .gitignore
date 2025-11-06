@@ -17,6 +17,15 @@ Dockerfile.cross
 # Go workspace file
 go.work
 
+# Documentation
+# Hugo generated output
+docs/api/
+docs/assets/
+hugo/public/
+hugo/resources/_gen/
+hugo/.hugo_build.lock
+hugo/hugo_stats.json
+
 # Kubernetes Generated files - skip generated files, except for vendored files
 !vendor/**/zz_generated.*
 
