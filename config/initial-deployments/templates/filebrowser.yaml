@@ -36,11 +36,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: filebrowser
+  name: chantico-filebrowser
   namespace: chantico
 spec:
   selector:
-    app: filebrowser
+    app: chantico-filebrowser
   ports:
     - protocol: TCP
       port: 80
