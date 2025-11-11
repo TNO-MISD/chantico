@@ -172,6 +172,7 @@ The file contained in this directory starting by `how-to-...` are there to help 
 Here is an overview:
 
 - [How to install chantico](how-to-install-chantico.md)
+- [How to set-up the local development environment](how-to-setup-the-local-development-environment.md)
 - [How to register a physical SNMP device](how-to-register-a-physical-snmp-device.md)
 - [How to register an SNMP device type](how-to-register-an-snmp-device-type.md)
 
