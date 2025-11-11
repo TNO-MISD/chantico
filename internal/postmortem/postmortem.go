@@ -8,8 +8,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	chantico "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/api/v1alpha1"
-	vol "ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/internal/volumes"
+	chantico "chantico/api/v1alpha1"
+	vol "chantico/internal/volumes"
 
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 
@@ -160,11 +160,17 @@ Include logs, screenshots, or relevant code snippets to support the bug report.
 }
 
 func (pm *PostMortem) SaveAndQuit() {
-	filename := fmt.Sprintf("%s/bug%d.md", os.Getenv(vol.ChanticoVolumeLocationEnv), pm.Timestamp.UnixMicro())
+	dir := fmt.Sprintf("%s/bugs", os.Getenv(vol.ChanticoVolumeLocationEnv))
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		panic(fmt.Sprintf("Could not create post-mortem folder %s", dir))
+	}
 
-	err := os.WriteFile(filename, []byte(pm.Markdown()), 0666)
+	filename := fmt.Sprintf("%s/bug%d.md", dir, pm.Timestamp.UnixMicro())
+	err = os.WriteFile(filename, []byte(pm.Markdown()), 0666)
 	if err != nil {
 		panic(fmt.Sprintf("Could not save postmortem at location %s\nPost mortem content:%s\n", filename, pm.Markdown()))
 	}
+
 	panic(fmt.Sprintf("New postmortem generated and saved at %s", filename))
 }
