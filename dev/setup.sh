@@ -1,4 +1,6 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
+
+set -ex
 
 SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
 GOOSE_TAG="${GOOSE_TAG:-latest}"
