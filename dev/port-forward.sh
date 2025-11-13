@@ -17,7 +17,11 @@ port_forward_loop() {
   local remote_port=$3
   echo "🚀 Starting port-forward: localhost:$local_port → $target:$remote_port"
   while true; do
+    # Do not exit from the backgrounded loop function immediately
+    # Handle errors as a lost forward
+    set +e
     kubectl port-forward -n "$NAMESPACE" "$target" "$local_port:$remote_port"
+    set -e
     echo "⚠️ Port-forwarding for $target lost. Retrying in 2 seconds..."
     sleep 2
   done
