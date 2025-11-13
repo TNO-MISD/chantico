@@ -1,6 +1,6 @@
 ---
 title: "Use-cases"
-menu:
+menus:
   main:
     weight: 10
 ---

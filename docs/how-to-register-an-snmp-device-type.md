@@ -1,7 +1,8 @@
 ---
 title: "How to register an SNMP device type"
-menu:
+menus:
   main:
+    parent: howto
     weight: 30
 ---
 

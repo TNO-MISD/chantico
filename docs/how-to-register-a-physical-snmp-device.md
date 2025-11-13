@@ -1,7 +1,8 @@
 ---
 title: "How to register a physical snmp device"
-menu:
+menus:
   main:
+    parent: howto
     weight: 30
 ---
 

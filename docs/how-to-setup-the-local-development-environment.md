@@ -1,11 +1,12 @@
 ---
-title: "How to set an SNMP device type"
-menu:
+title: "How to set-up the local development environment"
+menus:
   main:
+    parent: howto
     weight: 30
 ---
 
-### Prerequisite
+### Prerequisites
 
 - go version v1.23.0+
 - kind version v0.30.0+
@@ -14,44 +15,49 @@ menu:
 
 ### Installation
 
-- Login you docker client:
+- Login your docker client:
 
-```bash
+  ```bash
 docker login ci.tno.nl
 ```
 
-- To install the kind docker run
+- To install the kind docker cluster, run:
 
-```bash
+  ```bash
 ./dev/setup.sh
 ```
 
-- In a separate terminal setup the port forward
+- In a separate terminal, setup the port forward:
 
-```bash
+  ```bash
 ./dev/port-forward.sh
 ```
+  
+  Redo this command whenever you end it to help developing.
 
 - Set up the following environment variables (this can be automated using [direnv](https://direnv.net/))
 
-```bash
+  ```bash
 export CHANTICO_POSTGRES_SERVICE_HOST="localhost"
 export CHANTICO_POSTGRES_SERVICE_PORT="15432"
 export CHANTICO_POSTGRES_DBSTRING="postgresql://chanticoUser:toulouse@localhost:15432/chantico"
 export CHANTICOVOLUMELOCATIONENV="/tmp/chantico-local-path-data/$(ls -Art /tmp/chantico-local-path-data | tail -n1)"
 ```
 
+  It might take a little while for the volume to show up, so redo the final 
+  export or change the directory back and forth to reapply the direnv.
+
 #### Checks
 
-- Checks that postgres is correctly set-up
+- Check that postgres is correctly set-up:
 
-```bash
+  ```bash
 psql "${CHANTICO_POSTGRES_DBSTRING}" -c '\d'
 ```
 
 ### Teardown
 
-To teardown a local installation of the kind cluster run the script
+To teardown a local installation of the kind cluster, run the script:
 
 ```bash
 ./dev/teardown.sh
