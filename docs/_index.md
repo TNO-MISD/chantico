@@ -1,6 +1,6 @@
 ---
 title: "Chantico"
-menu:
+menus:
   main:
     weight: -100
     identifier: "chantico-main"
@@ -163,15 +163,17 @@ Additionally, formatting, tests and coverage are run. Pages are also deployed fr
 ## Development style
 
 [Use cases](use-cases.md) are defined by the development team in collaboration with the workflow orchestrator team.
-Relevant features are then developped to support the use case.
+Relevant features are then developed to support the use case.
 
 ## How to(s)
 
-The file contained in this directory starting by `how-to-...` are there to help the developpers / users using chantico.
+The file contained in this directory starting with `how-to-...` are there to 
+help the developers / users using chantico.
 
 Here is an overview:
 
 - [How to install chantico](how-to-install-chantico.md)
+- [How to set-up the local development environment](how-to-setup-the-local-development-environment.md)
 - [How to register a physical SNMP device](how-to-register-a-physical-snmp-device.md)
 - [How to register an SNMP device type](how-to-register-an-snmp-device-type.md)
 

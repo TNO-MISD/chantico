@@ -19,7 +19,7 @@ spec:
         runAsUser: 65534
         fsGroup: 1000
       containers:
-      - image: prom/prometheus
+      - image: prom/prometheus:v3.7.3
         name: prometheus
         command: ["prometheus"]
         args: ["--config.file=/tmp/prometheus-volume/yml/prometheus.yml", "--storage.tsdb.path=/tmp/prometheus-volume/storage", "--storage.tsdb.retention.time={{ .Values.prometheusRetention }}", "--web.enable-lifecycle", "--storage.tsdb.no-lockfile"]
@@ -52,4 +52,17 @@ spec:
       - name: chantico-volume-mount
         persistentVolumeClaim:
           claimName: {{ .Values.persistentVolumeClaimName }}
-    restartPolicy: Always
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chantico-prometheus
+  namespace: chantico
+spec:
+  selector:
+    app: chantico-prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090

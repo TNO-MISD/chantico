@@ -7,8 +7,14 @@ contentDir = '../docs'
 [params.assets]
   disableFingerprinting = false
 
-[[menu.main]]
+[[menus.main]]
+  name = "How to(s)"
+  identifier = "howto"
+  url = "/#how-tos"
+  weight = 30
+
+[[menus.main]]
   name = "API Reference"
   identifier = "api"
-  url = "/api/"
+  pageRef = "/api/"
   weight = 40

@@ -17,25 +17,6 @@ If not using local development using kind:
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
-## Local development (Setup using Kind)
-
-### Installation & usage
-
-Kind is used for testing with a local K8s cluster. Kind requires go and docker.
-Podman and nerdctl are alternatives for kind but we use the docker backend.
-
-Install Kind and setup Chantico cluster by using `./dev/setup.sh` (you need to be able to become `sudo` in your user rights).
-This uses images of chantico-goose (for Postgres migrations) and snmp-mock from the CI container registry; change which branch/SHA tags are used by setting the `GOOSE_TAG=...` and/or `SNMP_MOCK_TAG=...` environment variables.
-This mocks a SNMP device and exposes this on port `:1000`.
-Verify the pods run correctly after setting up the cluster using the script.
-The mocking is done in `mock_snmp.go` and is a simple TCP server with a fake SNMP signal.
-
-Also set in an `.envrc`:
-
-```bash
-export CHANTICOVOLUMELOCATIONENV="/tmp/chantico-local-path-data"
-```
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)

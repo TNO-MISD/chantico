@@ -1,7 +1,8 @@
 ---
 title: "How to install Chantico"
-menu:
+menus:
   main:
+    parent: howto
     weight: 20
 ---
 
