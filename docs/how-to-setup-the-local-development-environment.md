@@ -41,7 +41,7 @@ menus:
   export CHANTICO_POSTGRES_SERVICE_HOST="localhost"
   export CHANTICO_POSTGRES_SERVICE_PORT="15432"
   export CHANTICO_POSTGRES_DBSTRING="postgresql://chanticoUser:toulouse@localhost:15432/chantico"
-  export CHANTICOVOLUMELOCATIONENV="/tmp/chantico-local-path-data/$(ls -Art /tmp/chantico-local-path-data | tail -n1)"
+  export CHANTICOVOLUMELOCATIONENV="$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.name=="chantico-snmp-prometheus-volume-claim")]}{.spec.hostPath.path}{"\n"}{end}' | sed 's|/opt/local-path-provisioner|/tmp/chantico-local-path-data|')"
   ```
 
   It might take a little while for the volume to show up, so redo the final 
