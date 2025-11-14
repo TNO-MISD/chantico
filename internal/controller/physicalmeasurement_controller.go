@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -73,6 +74,15 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 		measurementDevices.Items,
 	)
 	return ctrl.Result{}, nil
+}
+
+func (r *PhysicalMeasurementReconciler) CleanUpPhysicalMeasurement(
+	ctx context.Context,
+	pm *chantico.PhysicalMeasurement,
+) error {
+	fmt.Printf("Cleaning up PhysicalMeasurement: %s\n", pm.Name)
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

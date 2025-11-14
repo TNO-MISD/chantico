@@ -1,13 +1,14 @@
 package physicalmeasurement
 
 import (
+	"bytes"
 	chantico "chantico/api/v1alpha1"
 	sqlhelper "chantico/chantico/sql-helper"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,7 +16,32 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
+
+type PrometheusConfig struct {
+	ScrapeConfigs []ScrapeConfig `yaml:"scrape_configs"`
+}
+
+type ScrapeConfig struct {
+	JobName        string              `yaml:"job_name"`
+	StaticConfigs  []StaticConfig      `yaml:"static_configs"`
+	Params         map[string][]string `yaml:"params"`
+	MetricsPath    string              `yaml:"metrics_path"`
+	ScrapeInterval string              `yaml:"scrape_interval"`
+	ScrapeTimeout  string              `yaml:"scrape_timeout"`
+	RelabelConfigs []RelabelConfig     `yaml:"relabel_configs"`
+}
+
+type StaticConfig struct {
+	Targets []string `yaml:"targets"`
+}
+
+type RelabelConfig struct {
+	SourceLabels []string `yaml:"source_labels,omitempty"`
+	TargetLabel  string   `yaml:"target_label"`
+	Replacement  string   `yaml:"replacement,omitempty"`
+}
 
 const (
 	ActionFunctionIO = iota
@@ -115,32 +141,31 @@ func UpdatePrometheus(
 		)
 	}
 
-	// Generate the scrape config
-	var configLines []string
-	configLines = append(configLines, "scrape_configs:")
-	for deviceId, ips := range physicalMeasurementMap {
-		configLines = append(configLines, fmt.Sprintf("  - job_name: \"%s\"", deviceId))
-		configLines = append(configLines, "    static_configs:")
-		configLines = append(configLines, "      - targets:")
-		for _, ip := range ips {
-			configLines = append(configLines, fmt.Sprintf("        - \"%s\"", ip))
+	config := PrometheusConfig{}
+	for deviceID, ips := range physicalMeasurementMap {
+		cfg := ScrapeConfig{
+			JobName: deviceID,
+			StaticConfigs: []StaticConfig{
+				{Targets: ips},
+			},
+			Params: map[string][]string{
+				"module": {deviceID},
+				"auth":   {"public_v3"},
+			},
+			MetricsPath:    "/snmp",
+			ScrapeInterval: "10s",
+			ScrapeTimeout:  "5s",
+			RelabelConfigs: []RelabelConfig{
+				{SourceLabels: []string{"__address__"}, TargetLabel: "__param_target"},
+				{SourceLabels: []string{"__param_target"}, TargetLabel: "instance"},
+				{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
+			},
 		}
-		configLines = append(configLines, "    params:")
-		configLines = append(configLines, fmt.Sprintf("      module: [%s]", deviceId))
-		configLines = append(configLines, "      auth: [public_v3]")
-		configLines = append(configLines, "    metrics_path: \"/snmp\"")
-		configLines = append(configLines, "    scrape_interval: 10s")
-		configLines = append(configLines, "    scrape_timeout: 5s")
-		configLines = append(configLines, "    relabel_configs:")
-		configLines = append(configLines, "      - source_labels: [__address__]")
-		configLines = append(configLines, "        target_label: __param_target")
-		configLines = append(configLines, "      - source_labels: [__param_target]")
-		configLines = append(configLines, "        target_label: instance")
-		configLines = append(configLines, "      - target_label: __addzress__")
-		configLines = append(configLines, "        replacement: chantico-snmp:9116")
+		config.ScrapeConfigs = append(config.ScrapeConfigs, cfg)
 	}
 
-	err := os.WriteFile("/tmp/chantico-volume-mount/prometheus/yml/prometheus.yml", []byte(strings.Join(configLines, "\n")), 0644)
+	yamlBytes, _ := yaml.Marshal(config)
+	err := os.WriteFile("/tmp/chantico-volume-mount/prometheus/yml/prometheus.yml", yamlBytes, 0644)
 	if err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
@@ -180,14 +205,36 @@ func UpdatePrometheus(
 	physicalMeasurement.Status.State = StateCompleted
 	_ = c.Status().Update(ctx, physicalMeasurement)
 
-	return ReloadDeployment(
-		ctx,
-		req,
-		c,
-		physicalMeasurement,
-		physicalMeasurements,
-		measurementDevices,
-	)
+	err = ReloadPrometheus("http://chantico-prometheus.chantico.svc.cluster.local:9090")
+	if err != nil {
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		_ = c.Status().Update(ctx, physicalMeasurement)
+		return &ctrl.Result{}
+	}
+
+	return &ctrl.Result{}
+}
+
+func ReloadPrometheus(prometheusURL string) error {
+	reloadURL := prometheusURL + "/-/reload"
+	req, err := http.NewRequest(http.MethodPost, reloadURL, bytes.NewBuffer(nil))
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("prometheus reload failed: status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func ReloadDeployment(
