@@ -2,7 +2,8 @@ package measurementdevice
 
 import (
 	"fmt"
-	"strings"
+	"go.yaml.in/yaml/v2"
+	"maps"
 
 	chantico "chantico/api/v1alpha1"
 	img "chantico/internal/images"
@@ -69,19 +70,73 @@ func getGeneratorPath(timestamp int) string {
 	return fmt.Sprintf("%s/generator-%d.yml", snmpConfigDir, timestamp)
 }
 
-func GenerateSnmpConfig(measurementDevices []chantico.MeasurementDevice) string {
-	// TODO: This should support multiple authentication methods
-	snmpConfig := `
-auths:
-  public_v3:
-    version: 3
-    username: guest
-modules:
-`
+// type mergeConfiguration struct {
+// 	Auth map[string]any `yaml:"auths"`
+// }
+//
+// type mergedConfiguration struct {
+// 	Auths   map[string]chantico.Auth `yaml:"auths"`
+// 	Modules map[string]module        `yaml:"modules"`
+// }
+//
+// func GenerateSnmpConfig(measurementDevices []chantico.MeasurementDevice) string {
+// 	mergedConfiguration := mergedConfiguration{Auths: map[string]chantico.Auth{}, Modules: map[string]module{}}
+//
+// 	for _, measurementDevice := range measurementDevices {
+// 		// Filter on status
+// 		mergedConfiguration.Auths[measurementDevice.Name] = measurementDevice.Spec.Auth
+// 		mergedConfiguration.Modules[measurementDevice.Name] = module{Walks: measurementDevice.Spec.Walks, Auth: measurementDevice.Name}
+// 	}
+//
+// 	out, err := yaml.Marshal(mergedConfiguration)
+//
+// 	if err != nil {
+// 		pm.NewPostMortem(err, mergedConfiguration).SaveAndQuit()
+// 	}
+//
+// 	return string(out)
+// }
 
-	for _, device := range measurementDevices {
-		walkTemplate := "  %s:\n    walk: [%s]\n    auth: public_v3\n"
-		snmpConfig += fmt.Sprintf(walkTemplate, device.GetName(), strings.Join(device.Spec.Walks, ","))
+type generatorModule struct {
+	walk []string `yaml:"walk"`
+}
+
+type snmpGeneratorConfig struct {
+	Auths   map[string]chantico.Auth   `yaml:"auths"`
+	Modules map[string]generatorModule `yaml:"modules"`
+}
+
+func GenerateSNMPGeneratorConfig(measurementDevice chantico.MeasurementDevice) (string, error) {
+	modules := map[string]generatorModule{}
+	modules[measurementDevice.Name] = generatorModule{walk: measurementDevice.Spec.Walks}
+
+	auths := map[string]chantico.Auth{}
+	auths[measurementDevice.Name] = measurementDevice.Spec.Auth
+	measurementDeviceSNMPConfig := snmpGeneratorConfig{Auths: auths, Modules: modules}
+
+	out, err := yaml.Marshal(measurementDeviceSNMPConfig)
+	return string(out), err
+}
+
+type snmpConfig struct {
+	Auths   map[string]chantico.Auth `yaml:"auths"`
+	Modules map[string]any           `yaml:"modules"`
+}
+
+func MergeSNMPConfigs(fileContents [][]byte) (string, error) {
+	acc := snmpConfig{Auths: map[string]chantico.Auth{}, Modules: map[string]any{}}
+	for _, fileContent := range fileContents {
+		snmpconfig := snmpConfig{Auths: map[string]chantico.Auth{}, Modules: map[string]any{}}
+		err := yaml.Unmarshal(fileContent, &snmpconfig)
+		if err != nil {
+			return "", err
+		}
+		maps.Copy(acc.Auths, snmpconfig.Auths)
+		maps.Copy(acc.Modules, snmpconfig.Modules)
 	}
-	return snmpConfig
+	out, err := yaml.Marshal(acc)
+	if err != nil {
+		return "", err
+	}
+	return string(out), err
 }
