@@ -39,7 +39,7 @@ type ActionFuntion struct {
 }
 
 var ActionMap = map[string][]ActionFuntion{
-	StateEmpty: {
+	StateInit: {
 		ActionFuntion{Type: ActionFunctionIO, IO: UpdatePrometheus},
 	},
 	StateRunning: {

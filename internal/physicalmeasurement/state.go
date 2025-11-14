@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	StateEmpty     = ""
+	StateInit      = "init"
 	StateRunning   = "Running"
 	StateCompleted = "Completed"
 	StateFailed    = "Failed"
@@ -29,12 +29,12 @@ func GetState(
 	fmt.Printf("===\n\n")
 
 	if physicalMeasurement.Status.Generation < physicalMeasurement.ObjectMeta.Generation {
-		physicalMeasurement.Status.State = StateEmpty
+		physicalMeasurement.Status.State = ""
 	}
 
 	switch physicalMeasurement.Status.State {
-	case StateEmpty:
-		return StateRunning
+	case "":
+		return StateInit
 	default:
 		panic("Not implemented yet")
 	}
