@@ -11,13 +11,10 @@ const (
 	StateRunning   = "Running"
 	StateCompleted = "Completed"
 	StateFailed    = "Failed"
-	StateReloaded  = "Reloaded"
 )
 
 func GetState(
 	physicalMeasurement *chantico.PhysicalMeasurement,
-	// job *batchv1.Job,
-	// deployment *appsv1.Deployment,
 ) string {
 	if physicalMeasurement == nil {
 		return StateFailed
