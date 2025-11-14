@@ -2,13 +2,14 @@ package measurementdevice
 
 import (
 	"context"
-	// "fmt"
-	// "os"
+	"fmt"
+	"os"
 	"slices"
 	"time"
 
 	chantico "chantico/api/v1alpha1"
-	// vol "chantico/internal/volumes"
+	pm "chantico/internal/postmortem"
+	vol "chantico/internal/volumes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -161,17 +162,20 @@ func CreateSNMPGenerator(
 	measurementDevice *chantico.MeasurementDevice,
 	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
-	// generatorYaml := GenerateSnmpConfig(measurementDevices)
-	// generatorPath := fmt.Sprintf(
-	// 	"%s/%s/generator-%s.yml",
-	// 	os.Getenv(vol.ChanticoVolumeLocationEnv),
-	// 	snmpYmlDir,
-	// 	string(measurementDevice.GetUID()),
-	// )
-	// err := os.WriteFile(generatorPath, []byte(generatorYaml), 0666)
-	// if err != nil {
-	// 	panic(fmt.Sprintf("Could not write to %s", generatorPath))
-	// }
+	generatorYaml, err := GenerateSNMPGeneratorConfig(*measurementDevice)
+	if err != nil {
+		pm.NewPostMortem(err, measurementDevice)
+	}
+	generatorPath := fmt.Sprintf(
+		"%s/%s/generator-%s.yml",
+		os.Getenv(vol.ChanticoVolumeLocationEnv),
+		snmpYmlDir,
+		string(measurementDevice.GetUID()),
+	)
+	err = os.WriteFile(generatorPath, []byte(generatorYaml), 0666)
+	if err != nil {
+		panic(fmt.Sprintf("Could not write to %s", generatorPath))
+	}
 	return nil
 }
 

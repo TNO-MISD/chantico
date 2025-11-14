@@ -70,33 +70,6 @@ func getGeneratorPath(timestamp int) string {
 	return fmt.Sprintf("%s/generator-%d.yml", snmpConfigDir, timestamp)
 }
 
-// type mergeConfiguration struct {
-// 	Auth map[string]any `yaml:"auths"`
-// }
-//
-// type mergedConfiguration struct {
-// 	Auths   map[string]chantico.Auth `yaml:"auths"`
-// 	Modules map[string]module        `yaml:"modules"`
-// }
-//
-// func GenerateSnmpConfig(measurementDevices []chantico.MeasurementDevice) string {
-// 	mergedConfiguration := mergedConfiguration{Auths: map[string]chantico.Auth{}, Modules: map[string]module{}}
-//
-// 	for _, measurementDevice := range measurementDevices {
-// 		// Filter on status
-// 		mergedConfiguration.Auths[measurementDevice.Name] = measurementDevice.Spec.Auth
-// 		mergedConfiguration.Modules[measurementDevice.Name] = module{Walks: measurementDevice.Spec.Walks, Auth: measurementDevice.Name}
-// 	}
-//
-// 	out, err := yaml.Marshal(mergedConfiguration)
-//
-// 	if err != nil {
-// 		pm.NewPostMortem(err, mergedConfiguration).SaveAndQuit()
-// 	}
-//
-// 	return string(out)
-// }
-
 type generatorModule struct {
 	walk []string `yaml:"walk"`
 }

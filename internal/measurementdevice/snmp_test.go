@@ -36,37 +36,33 @@ func TestMakeJob(t *testing.T) {
 	}
 }
 
-// func TestGenerateSnmpConfig(t *testing.T) {
-// 	testCases := map[string]struct {
-// 		Case []chantico.MeasurementDevice
-// 	}{
-// 		"empty case": {
-// 			Case: []chantico.MeasurementDevice{},
-// 		},
-// 		"single measurement device": {
-// 			Case: []chantico.MeasurementDevice{
-// 				{
-// 					ObjectMeta: metav1.ObjectMeta{Name: "test"},
-// 					Spec:       chantico.MeasurementDeviceSpec{Walks: []string{"foo", "bar"}},
-// 				},
-// 			},
-// 		},
-// 	}
-//
-// 	// Check that the generated yaml is valid
-// 	for name, tc := range testCases {
-// 		t.Run(name, func(t *testing.T) {
-// 			var out any
-// 			generatedYaml := []byte(GenerateSnmpConfig(tc.Case))
-// 			err := yaml.Unmarshal(generatedYaml, &out)
-// 			fmt.Printf("configuration:\n%s\n", generatedYaml)
-// 			if err != nil {
-// 				t.Fatalf("The generated config is not a valid YAML file: \n%s\n", generatedYaml)
-// 			}
-// 		})
-// 	}
-//
-// }
+func TestGenerateSnmpConfig(t *testing.T) {
+	testCases := map[string]struct {
+		Case chantico.MeasurementDevice
+	}{
+		"single measurement device": {
+			Case: chantico.MeasurementDevice{
+				ObjectMeta: metav1.ObjectMeta{Name: "test"},
+				Spec:       chantico.MeasurementDeviceSpec{Walks: []string{"foo", "bar"}},
+			},
+		},
+	}
+
+	// Check that the generated yaml is valid
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var out any
+			generatedYaml, err := GenerateSNMPGeneratorConfig(tc.Case)
+			if err != nil {
+				t.Fatalf("GenerateSNMPGeneratorConfig could not produce a valid yaml file, got err=%s\n", err)
+			}
+			err = yaml.Unmarshal([]byte(generatedYaml), &out)
+			if err != nil {
+				t.Fatalf("The generated config is not a valid YAML file: \n%s\n", generatedYaml)
+			}
+		})
+	}
+}
 
 func TestMergeSNMPConfigs(t *testing.T) {
 	testCases := map[string]struct {
@@ -169,7 +165,7 @@ modules:
 			var mergedYaml any
 			err = yaml.Unmarshal([]byte(mergedYamlString), &mergedYaml)
 			if err != nil {
-				t.Fatalf("MergeSNMPConfigs could not produce a valid yaml file, got err=%s\n", tc.Files)
+				t.Fatalf("MergeSNMPConfigs could not produce a valid yaml file, got err=%s\n", err)
 			}
 
 			var outputYaml any
