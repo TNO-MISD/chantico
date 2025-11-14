@@ -27,7 +27,7 @@ kubectl apply -f k8s/chantico-pvc.yaml
 # Install chantico dependencies (filebrowser, postgres, prometheus, snmp exporter)
 CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
 GOOSE_IMAGE="$CI_REGISTRY/chantico-goose:$GOOSE_TAG"
-docker pull "$GOOSE_IMAGE"
+sudo docker pull "$GOOSE_IMAGE"
 kind load docker-image "$GOOSE_IMAGE" --name kind
 helm install chantico ../config/initial-deployments/ --set chanticoGooseImage="$GOOSE_IMAGE" -n chantico
 

@@ -25,12 +25,14 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chanticov1alpha1 "chantico/api/v1alpha1"
+	chantico "chantico/api/v1alpha1"
 	sqlhelper "chantico/chantico/sql-helper"
+	pm "chantico/internal/physicalmeasurement"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -42,12 +44,12 @@ type PhysicalMeasurementReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-const (
-	PhysicalMeasurementStateRunning   = "Running"
-	PhysicalMeasurementStateCompleted = "Completed"
-	PhysicalMeasurementStateFailed    = "Failed"
-	PhysicalMeasurementStateReloaded  = "Reloaded"
-)
+// const (
+// 	PhysicalMeasurementStateRunning   = "Running"
+// 	PhysicalMeasurementStateCompleted = "Completed"
+// 	PhysicalMeasurementStateFailed    = "Failed"
+// 	PhysicalMeasurementStateReloaded  = "Reloaded"
+// )
 
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/status,verbs=get;update;patch
@@ -63,38 +65,66 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	physicalMeasurement := &chantico.PhysicalMeasurement{}
+	_ = r.Get(ctx, req.NamespacedName, physicalMeasurement)
+
+	physicalMeasurements := &chantico.PhysicalMeasurementList{}
+	_ = r.List(ctx, physicalMeasurements)
+
+	measurementDevices := &chantico.MeasurementDeviceList{}
+	_ = r.List(ctx, measurementDevices)
+
+	job := &batchv1.Job{}
+	deployment := &appsv1.Deployment{}
+	_ = r.Get(ctx, client.ObjectKey{Name: "chantico-prometheus", Namespace: "chantico"}, deployment)
+
+	state := pm.GetState(physicalMeasurement, job, deployment)
+	pm.ExecuteActions(
+		state,
+		ctx,
+		req,
+		*deployment,
+		physicalMeasurement,
+		physicalMeasurements.Items,
+		measurementDevices.Items,
+	)
 	return ctrl.Result{}, nil
 
-	physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
-	err := r.Get(ctx, req.NamespacedName, physicalMeasurement)
-	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+	// 	return ctrl.Result{}, nil
 
-	fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
-	fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
-	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
-	fmt.Printf("===\n\n")
+	// physicalMeasurement := &chanticov1alpha1.PhysicalMeasurement{}
+	// err := r.Get(ctx, req.NamespacedName, physicalMeasurement)
+	// if err != nil {
+	// 	return ctrl.Result{}, client.IgnoreNotFound(err)
+	// }
 
-	if physicalMeasurement.Status.Generation < physicalMeasurement.ObjectMeta.Generation {
-		physicalMeasurement.Status.State = ""
-	}
+	// fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
+	// fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
+	// fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
+	// fmt.Printf("===\n\n")
 
-	switch physicalMeasurement.Status.State {
-	case "":
-		return r.UpdatePrometheus(ctx, physicalMeasurement, req)
-	case PhysicalMeasurementStateRunning:
-		return r.UpdatePrometheus(ctx, physicalMeasurement, req)
-	case PhysicalMeasurementStateCompleted:
-		return r.reloadDeployment(ctx, physicalMeasurement, req)
-	case PhysicalMeasurementStateFailed:
-		return ctrl.Result{}, nil
-	case PhysicalMeasurementStateReloaded:
-		return ctrl.Result{}, nil
-	default:
-		return ctrl.Result{}, fmt.Errorf("unknown state: %s", physicalMeasurement.Status.State)
-	}
+	// if physicalMeasurement.Status.Generation < physicalMeasurement.ObjectMeta.Generation {
+	// 	physicalMeasurement.Status.State = ""
+	// }
+
+	// switch physicalMeasurement.Status.State {
+	// case "":
+	// 	return r.UpdatePrometheus(ctx, physicalMeasurement, req)
+	// case PhysicalMeasurementStateRunning:
+	// 	return r.UpdatePrometheus(ctx, physicalMeasurement, req)
+	// case PhysicalMeasurementStateCompleted:
+	// 	return r.reloadDeployment(ctx, physicalMeasurement, req)
+	// case PhysicalMeasurementStateFailed:
+	// 	return ctrl.Result{}, nil
+	// case PhysicalMeasurementStateReloaded:
+	// 	return ctrl.Result{}, nil
+	// default:
+	// 	return ctrl.Result{}, fmt.Errorf("unknown state: %s", physicalMeasurement.Status.State)
+	// }
+
 }
+
+func (r *PhysicalMeasurementReconciler) GetDeployment(ctx context.Context)
 
 func (r *PhysicalMeasurementReconciler) UpdatePrometheus(ctx context.Context, physicalMeasurement *chanticov1alpha1.PhysicalMeasurement, req ctrl.Request) (ctrl.Result, error) {
 	// Set the status
@@ -251,6 +281,6 @@ func (r *PhysicalMeasurementReconciler) reloadDeployment(ctx context.Context, ph
 // SetupWithManager sets up the controller with the Manager.
 func (r *PhysicalMeasurementReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&chanticov1alpha1.PhysicalMeasurement{}).
+		For(&chantico.PhysicalMeasurement{}).
 		Complete(r)
 }
