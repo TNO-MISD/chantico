@@ -2,10 +2,14 @@ package measurementdevice
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"go.yaml.in/yaml/v2"
+
 	chantico "chantico/api/v1alpha1"
+	vol "chantico/internal/volumes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -148,5 +152,49 @@ func TestActionMap(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestCreateSNMPGenerator(t *testing.T) {
+	testCases := map[string]struct {
+		Case *chantico.MeasurementDevice
+	}{
+		"default requeue delay": {
+			Case: &chantico.MeasurementDevice{ObjectMeta: metav1.ObjectMeta{UID: "8cc3100d-538a-401c-ad5a-49d54fa45e57"}},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Set up the temporary directory
+			tmpDir := t.TempDir()
+			t.Setenv(vol.ChanticoVolumeLocationEnv, tmpDir)
+			tmpSNMPYAMLDir := fmt.Sprintf("%s/%s", tmpDir, snmpYmlDir)
+			err := os.MkdirAll(tmpSNMPYAMLDir, 0755)
+			if err != nil {
+				t.Fatalf("Could not create folder %s\n", tmpSNMPYAMLDir)
+			}
+
+			// Run the function
+			_ = CreateSNMPGenerator(tc.Case)
+
+			// Check that the file exist
+			yamlFile := fmt.Sprintf("%s/generator-%s.yml", tmpSNMPYAMLDir, string(tc.Case.GetUID()))
+			if _, err = os.Stat(yamlFile); err != nil {
+				t.Fatalf("yamlFile: %s does not exist\n", yamlFile)
+			}
+
+			yamlFileBytes, err := os.ReadFile(yamlFile)
+			if err != nil {
+				t.Fatalf("Could not load yamlFile: %s\n", yamlFile)
+			}
+
+			// Check that it is a valid yaml
+			var expected any
+			err = yaml.Unmarshal(yamlFileBytes, &expected)
+			if err != nil {
+				t.Fatalf("The expected yaml is not a valid YAML file: %s\n", yamlFile)
+			}
+		})
 	}
 }
