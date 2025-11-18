@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+// In that context Pure means does not modify the kubernetes cluster resources
 const (
 	ActionFunctionIO = iota
 	ActionFunctionPure
@@ -36,7 +37,7 @@ var ActionMap = map[string][]ActionFuntion{
 		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 	},
 	StateEntryPoint: {
-		ActionFuntion{Type: ActionFunctionIO, IO: CreateSNMPGenerator},
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
 		ActionFuntion{Type: ActionFunctionIO, IO: UpdateSNMPConfig},
 	},
 	StateFailed: {},
@@ -148,8 +149,6 @@ func RequeueWithDelay(
 }
 
 func CreateSNMPGenerator(
-	ctx context.Context,
-	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
 	generatorYaml, err := GenerateSNMPGeneratorConfig(*measurementDevice)
