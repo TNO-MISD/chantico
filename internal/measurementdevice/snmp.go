@@ -86,7 +86,6 @@ func GenerateSNMPGeneratorConfig(measurementDevice chantico.MeasurementDevice) (
 	auths := map[string]chantico.Auth{}
 	auths[measurementDevice.Name] = measurementDevice.Spec.Auth
 	measurementDeviceSNMPConfig := snmpGeneratorConfig{Auths: auths, Modules: modules}
-	fmt.Printf("%v\n", measurementDeviceSNMPConfig.Modules)
 
 	out, err := yaml.Marshal(measurementDeviceSNMPConfig)
 	return string(out), err
