@@ -44,7 +44,7 @@ func TestInitializeFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			InitializeFinalizer(tc.Case, nil)
+			InitializeFinalizer(tc.Case)
 			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
 				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, tc.Case.ObjectMeta.Finalizers, tc.Expected)
 			}
@@ -70,7 +70,7 @@ func TestUpdateFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			UpdateFinalizer(tc.Case, nil)
+			UpdateFinalizer(tc.Case)
 			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
 				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc.Case, tc.Case.ObjectMeta.Finalizers, tc.Expected)
 			}
@@ -95,7 +95,7 @@ func TestUpdateModification(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			UpdateModification(tc.Case, nil)
+			UpdateModification(tc.Case)
 			if tc.Case.Status.UpdateGeneration != tc.Expected {
 				t.Errorf("UpdateModification(%#v) = %#v, want %#v\n", tc.Case, tc.Case.Status.UpdateGeneration, tc.Expected)
 			}
@@ -105,20 +105,18 @@ func TestUpdateModification(t *testing.T) {
 
 func TestRequeueWithDelay(t *testing.T) {
 	testCases := map[string]struct {
-		Device   *chantico.MeasurementDevice
-		Devices  []chantico.MeasurementDevice
+		Case     *chantico.MeasurementDevice
 		Expected time.Duration
 	}{
 		"default requeue delay": {
-			Device:   nil,
-			Devices:  nil,
+			Case:     nil,
 			Expected: chantico.RequeueDelay,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := RequeueWithDelay(tc.Device, tc.Devices)
+			result := RequeueWithDelay(tc.Case)
 			if result.RequeueAfter != tc.Expected {
 				t.Errorf("RequeueWithDelay() = %#v, want %#v", result.RequeueAfter, tc.Expected)
 			}

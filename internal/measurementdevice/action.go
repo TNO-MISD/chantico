@@ -23,13 +23,11 @@ type ActionFuntion struct {
 	Type int
 	Pure func(
 		*chantico.MeasurementDevice,
-		[]chantico.MeasurementDevice,
 	) *ctrl.Result
 	IO func(
 		context.Context,
 		ctrl.Request,
 		*chantico.MeasurementDevice,
-		[]chantico.MeasurementDevice,
 	) *ctrl.Result
 }
 
@@ -70,7 +68,6 @@ func ExecuteActions(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	result := &ctrl.Result{}
 	actionFunctions := ActionMap[state]
@@ -78,11 +75,11 @@ func ExecuteActions(
 		switch actionFunction.Type {
 		case ActionFunctionPure:
 			{
-				result = actionFunction.Pure(measurementDevice, measurementDevices)
+				result = actionFunction.Pure(measurementDevice)
 			}
 		case ActionFunctionIO:
 			{
-				result = actionFunction.IO(ctx, req, measurementDevice, measurementDevices)
+				result = actionFunction.IO(ctx, req, measurementDevice)
 			}
 		}
 		if result != nil {
@@ -94,7 +91,6 @@ func ExecuteActions(
 
 func InitializeFinalizer(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	if slices.Contains(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
 		return nil
@@ -105,7 +101,6 @@ func InitializeFinalizer(
 
 func UpdateFinalizer(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	if measurementDevice.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil
@@ -122,7 +117,6 @@ func UpdateFinalizer(
 
 func UpdateModification(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	measurementDevice.Status.UpdateTime = metav1.Time{Time: time.Now()}.Format(time.RFC3339)
 	measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
@@ -131,7 +125,6 @@ func UpdateModification(
 
 func AssessLeader(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Implement the logic of AssessLeader based on and UpdateTime, UpdateGeneration
 	// TODO: Write test associated
@@ -140,7 +133,6 @@ func AssessLeader(
 
 func ElectLeader(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Implement the logic of ElectLeader based on and UpdateTime, UpdateGeneration
 	// TODO: Write test associated
@@ -150,7 +142,6 @@ func ElectLeader(
 
 func RequeueWithDelay(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Figure out requeuing strategy, might need a redesign
 	return &ctrl.Result{RequeueAfter: chantico.RequeueDelay}
@@ -160,7 +151,6 @@ func CreateSNMPGenerator(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	generatorYaml, err := GenerateSNMPGeneratorConfig(*measurementDevice)
 	if err != nil {
@@ -183,7 +173,6 @@ func UpdateSNMPConfig(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Job launching
 	panic("Not implemented yet")
@@ -193,7 +182,6 @@ func ReloadSNMPService(
 	ctx context.Context,
 	req ctrl.Request,
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Deployment reload
 	panic("Not implemented yet")
