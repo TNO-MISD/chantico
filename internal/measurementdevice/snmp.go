@@ -71,7 +71,7 @@ func getGeneratorPath(timestamp int) string {
 }
 
 type generatorModule struct {
-	walk []string `yaml:"walk"`
+	Walk []string `yaml:"walk"`
 }
 
 type snmpGeneratorConfig struct {
@@ -81,11 +81,12 @@ type snmpGeneratorConfig struct {
 
 func GenerateSNMPGeneratorConfig(measurementDevice chantico.MeasurementDevice) (string, error) {
 	modules := map[string]generatorModule{}
-	modules[measurementDevice.Name] = generatorModule{walk: measurementDevice.Spec.Walks}
+	modules[measurementDevice.Name] = generatorModule{Walk: measurementDevice.Spec.Walks}
 
 	auths := map[string]chantico.Auth{}
 	auths[measurementDevice.Name] = measurementDevice.Spec.Auth
 	measurementDeviceSNMPConfig := snmpGeneratorConfig{Auths: auths, Modules: modules}
+	fmt.Printf("%v\n", measurementDeviceSNMPConfig.Modules)
 
 	out, err := yaml.Marshal(measurementDeviceSNMPConfig)
 	return string(out), err

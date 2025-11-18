@@ -38,13 +38,25 @@ func TestMakeJob(t *testing.T) {
 
 func TestGenerateSnmpConfig(t *testing.T) {
 	testCases := map[string]struct {
-		Case chantico.MeasurementDevice
+		Case     chantico.MeasurementDevice
+		Expected []byte
 	}{
 		"single measurement device": {
 			Case: chantico.MeasurementDevice{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
-				Spec:       chantico.MeasurementDeviceSpec{Walks: []string{"foo", "bar"}},
+				Spec:       chantico.MeasurementDeviceSpec{Auth: chantico.Auth{Version: 3, Username: "guest"}, Walks: []string{"foo", "bar"}},
 			},
+			Expected: []byte(`
+auths:
+  test:
+    version: 3
+    username: guest
+modules:
+  test:
+    walk:
+    - foo
+    - bar
+`),
 		},
 	}
 
@@ -59,6 +71,15 @@ func TestGenerateSnmpConfig(t *testing.T) {
 			err = yaml.Unmarshal([]byte(generatedYaml), &out)
 			if err != nil {
 				t.Fatalf("The generated config is not a valid YAML file: \n%s\n", generatedYaml)
+			}
+
+			var expected any
+			err = yaml.Unmarshal(tc.Expected, &expected)
+			if err != nil {
+				t.Fatalf("The expected yaml is not a valid YAML file: %s\n%s\n", err, tc.Expected)
+			}
+			if !reflect.DeepEqual(expected, out) {
+				t.Fatalf("The GenerateSNMPGeneratorConfig(tc.Case) != tc.Output, \n%s\n, got=%s\n", expected, out)
 			}
 		})
 	}
