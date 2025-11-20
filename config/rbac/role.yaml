@@ -7,6 +7,7 @@ rules:
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
+  - datacenterresources
   - measurementdevices
   - physicalmeasurements
   verbs:
@@ -20,6 +21,7 @@ rules:
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
+  - datacenterresources/finalizers
   - measurementdevices/finalizers
   - physicalmeasurements/finalizers
   verbs:
@@ -27,6 +29,7 @@ rules:
 - apiGroups:
   - chantico.ci.tno.nl
   resources:
+  - datacenterresources/status
   - measurementdevices/status
   - physicalmeasurements/status
   verbs:
