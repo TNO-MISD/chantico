@@ -18,13 +18,22 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	chanticov1alpha1 "chantico/api/v1alpha1"
+	chantico "chantico/api/v1alpha1"
+)
+
+const (
+	DataCenterResourceTypePDU = "pdu"
+	DataCenterResourceTypeBaremetal = "baremetal"
+	DataCenterResourceTypeVM = "vm"
+	DataCenterResourceTypeKubernetes = "kubernetes"
+	DataCenterResourceTypeHeat = "heat"
 )
 
 // DataCenterResourceReconciler reconciles a DataCenterResource object
@@ -39,25 +48,50 @@ type DataCenterResourceReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the DataCenterResource object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.22.4/pkg/reconcile
 func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	datacenterResource := &chantico.DataCenterResource{}
+	_ = r.Get(ctx, req.NamespacedName, datacenterResource)
 
-	return ctrl.Result{}, nil
+	physicalMeasurements := &chantico.PhysicalMeasurementList{}
+	_ = r.List(ctx, physicalMeasurements)
+
+	//parent := &chantico.DataCenterResourceList{}
+	//_ = r.List(ctx, parent client.ObjectKey{Name: datacenterResource.Spec.Parent, Namespace: "chantico"}, parent)
+
+	// TODO(user): do something with the types/links here:
+	// perform operations to make the cluster state reflect the state specified by
+	// the user.
+	// Specifically: register in postgres (or prometheus?) which datacenter resource
+	// is involved for which physical measurement
+	// Also perform validation of parent for directed acyclic graph
+
+	switch datacenterResource.Spec.Type {
+	case "":
+		return ctrl.Result{}, nil
+	case DataCenterResourceTypePDU:
+		return ctrl.Result{}, nil
+	case DataCenterResourceTypeBaremetal:
+		return ctrl.Result{}, nil
+	case DataCenterResourceTypeVM:
+		return ctrl.Result{}, nil
+	case DataCenterResourceTypeKubernetes:
+		return ctrl.Result{}, nil
+	case DataCenterResourceTypeHeat:
+		return ctrl.Result{}, nil
+	default:
+		return ctrl.Result{}, fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DataCenterResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&chanticov1alpha1.DataCenterResource{}).
+		For(&chantico.DataCenterResource{}).
 		Named("datacenterresource").
 		Complete(r)
 }

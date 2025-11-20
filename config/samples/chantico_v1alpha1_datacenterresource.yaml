@@ -1,9 +1,37 @@
+---
 apiVersion: chantico.ci.tno.nl/v1alpha1
 kind: DataCenterResource
 metadata:
   labels:
     app.kubernetes.io/name: chantico
     app.kubernetes.io/managed-by: kustomize
-  name: datacenterresource-sample
+  name: datacenterresource-pdu1
 spec:
-  # TODO(user): Add fields here
+  type: pdu
+  physicalMeasurements:
+    - physicalMeasurement-pdu1-out
+apiVersion: chantico.ci.tno.nl/v1alpha1
+---
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: DataCenterResource
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: datacenterresource-pdu2
+spec:
+  type: pdu
+  physicalMeasurements:
+    - physicalMeasurement-pdu2-out
+---
+kind: DataCenterResource
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: datacenterresource-misd-gbm-01
+spec:
+  type: baremetal
+  parent:
+    - datacenterresource-pdu1
+    - datacenterresource-pdu2

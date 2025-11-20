@@ -32,7 +32,7 @@ type DataCenterResourceSpec struct {
 	// +optional
 	PhysicalMeasurements []string `json:"physicalMeasurements,omitempty"`
 	// +optional
-	Parent string `json:"parent,omitempty"`
+	Parent []string `json:"parent,omitempty"`
 }
 
 // DataCenterResourceStatus defines the observed state of DataCenterResource.
