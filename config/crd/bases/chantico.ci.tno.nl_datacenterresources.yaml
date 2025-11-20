@@ -40,9 +40,13 @@ spec:
           spec:
             description: spec defines the desired state of DataCenterResource
             properties:
+              parent:
+                type: string
+              physicalMeasurements:
+                items:
+                  type: string
+                type: array
               type:
-                description: foo is an example field of DataCenterResource. Edit datacenterresource_types.go
-                  to remove/update
                 type: string
             required:
             - type
