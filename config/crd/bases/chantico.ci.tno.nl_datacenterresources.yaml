@@ -41,7 +41,9 @@ spec:
             description: spec defines the desired state of DataCenterResource
             properties:
               parent:
-                type: string
+                items:
+                  type: string
+                type: array
               physicalMeasurements:
                 items:
                   type: string
