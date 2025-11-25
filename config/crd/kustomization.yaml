@@ -4,6 +4,7 @@
 resources:
 - bases/chantico.ci.tno.nl_measurementdevices.yaml
 - bases/chantico.ci.tno.nl_physicalmeasurements.yaml
+- bases/chantico.ci.tno.nl_datacenterresources.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

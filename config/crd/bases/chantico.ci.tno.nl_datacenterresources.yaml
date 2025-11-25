@@ -4,20 +4,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: measurementdevices.chantico.ci.tno.nl
+  name: datacenterresources.chantico.ci.tno.nl
 spec:
   group: chantico.ci.tno.nl
   names:
-    kind: MeasurementDevice
-    listKind: MeasurementDeviceList
-    plural: measurementdevices
-    singular: measurementdevice
+    kind: DataCenterResource
+    listKind: DataCenterResourceList
+    plural: datacenterresources
+    singular: datacenterresource
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: MeasurementDevice is the Schema for the measurementdevices API
+        description: DataCenterResource is the Schema for the datacenterresources
+          API
         properties:
           apiVersion:
             description: |-
@@ -37,28 +38,27 @@ spec:
           metadata:
             type: object
           spec:
-            description: MeasurementDeviceSpec defines the desired state of MeasurementDevice
+            description: spec defines the desired state of DataCenterResource
             properties:
-              walks:
-                description: Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go
-                  to remove/update
+              parent:
                 items:
                   type: string
                 type: array
+              physicalMeasurements:
+                items:
+                  type: string
+                type: array
+              type:
+                type: string
             required:
-            - walks
+            - type
             type: object
           status:
-            description: MeasurementDeviceStatus defines the observed state of MeasurementDevice
+            description: status defines the observed state of DataCenterResource
             properties:
               errorMessage:
                 type: string
-              jobName:
-                type: string
               state:
-                description: |-
-                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-                  Important: Run "make" to regenerate code after modifying this file
                 type: string
               updateGeneration:
                 format: int64
@@ -66,6 +66,8 @@ spec:
               updateTime:
                 type: string
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -8,10 +8,10 @@ menus:
 
 ### Prerequisites
 
-- go version v1.23.0+
+- go version v1.24.0+
 - kind version v0.30.0+
 - docker version v17.03+
-- psql v17.5+
+- psql version v17.5+
 
 ### Installation
 
@@ -53,6 +53,33 @@ menus:
 
   ```bash
   psql "${CHANTICO_POSTGRES_DBSTRING}" -c '\d'
+  ```
+
+### Creating new resources
+
+- In order to create new resources, you need to install `kubebuilder` as indicated in the [quick start](https://book.kubebuilder.io/quick-start):
+
+  ```bash
+  curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+  chmod +x kubebuilder && sudo mv kubebuilder /usr/local/bin/
+  ```
+
+- Then generate the resource scaffolding using:
+
+  ```bash
+  kubebuilder create api --group chantico --version v1alpha1 --kind <RESOURCE_TYPE>
+  ```
+
+- Remove the generated integration end-to-end tests with kubernetes client:
+
+  ```bash
+  rm internal/controller/suite_test.go internal/controller/<resource_type>_controller_test.go
+  ```
+
+- Make changes to the resource fields, then update the manifests and other generated files:
+
+  ```bash
+  make build
   ```
 
 ### Teardown

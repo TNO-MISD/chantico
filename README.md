@@ -10,7 +10,7 @@ In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the dei
 How-to guides can be found in the `/docs` folder.
 
 ### Prerequisites
-- go version v1.23.0+
+- go version v1.24.0+
 - docker version 17.03+.
 
 If not using local development using kind:
