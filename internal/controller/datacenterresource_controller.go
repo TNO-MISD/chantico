@@ -84,7 +84,9 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	case DataCenterResourceTypeHeat:
 		return ctrl.Result{}, nil
 	default:
-		return ctrl.Result{}, fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
+		err := fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
+		datacenterResource.Status.ErrorMessage = err.Error()
+		return ctrl.Result{}, err
 	}
 }
 
