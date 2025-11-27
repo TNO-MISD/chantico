@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -138,7 +139,6 @@ func ElectLeader(
 	// TODO: Implement the logic of ElectLeader based on and UpdateTime, UpdateGeneration
 	// TODO: Write test associated
 	panic("Not implemented yet")
-	return nil
 }
 
 func RequeueWithDelay(
@@ -158,12 +158,60 @@ func CreateSNMPGenerator(
 	generatorPath := fmt.Sprintf(
 		"%s/%s/generator-%s.yml",
 		os.Getenv(vol.ChanticoVolumeLocationEnv),
-		snmpYmlDir,
+		snmpConfigDir,
 		string(measurementDevice.GetUID()),
 	)
 	err = os.WriteFile(generatorPath, []byte(generatorYaml), 0666)
 	if err != nil {
-		panic(fmt.Sprintf("Could not write to %s", generatorPath))
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = fmt.Sprintf("Could not write to %s", generatorPath)
+	}
+	return nil
+}
+
+func CreateSNMPDeploymentConfig(
+	measurementDevice *chantico.MeasurementDevice,
+) *ctrl.Result {
+	// Find files match the config-*.yml format
+	configFilesGlobPattern := filepath.Join(
+		os.Getenv(vol.ChanticoVolumeLocationEnv),
+		snmpConfigDir,
+		"config_*.yml",
+	)
+	configFilePaths, err := filepath.Glob(configFilesGlobPattern)
+	if err != nil {
+		return nil
+	}
+
+	// Create the file contents structure
+	fileContents := [][]byte{}
+	for _, configFilePath := range configFilePaths {
+		fileContent, err := os.ReadFile(configFilePath)
+		if err != nil {
+			fmt.Printf("Could not load file %s: %s", configFilePath, err)
+		}
+		fileContents = append(fileContents, fileContent)
+	}
+
+	// Merge the data
+	mergedSNMPConfig, err := MergeSNMPConfigs(fileContents)
+	if err != nil {
+		fmt.Printf("Could not create the SNMP deployment config: %s", err)
+		return nil
+	}
+	configSNMPPath := filepath.Join(
+		os.Getenv(vol.ChanticoVolumeLocationEnv),
+		snmpYmlDir,
+		"snmp.yml",
+	)
+	err = os.WriteFile(
+		configSNMPPath,
+		[]byte(mergedSNMPConfig),
+		0666,
+	)
+	if err != nil {
+		fmt.Printf("Could not write to %s: %s", configSNMPPath, err)
+		return nil
 	}
 	return nil
 }

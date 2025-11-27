@@ -32,7 +32,7 @@ func MakeJob(measurementDevice chantico.MeasurementDevice, timestamp int) *batch
 				{
 					Name:      vol.ChanticoVolumeMount,
 					MountPath: "/opt/snmp.yml",
-					SubPath:   fmt.Sprintf("%s/snmp.yml", snmpYmlDir),
+					SubPath:   fmt.Sprintf("%s/snmp.yml", snmpConfigDir),
 				},
 				{
 					Name:      vol.ChanticoVolumeMount,

@@ -2,15 +2,65 @@ package measurementdevice
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 	"time"
+
+	"path/filepath"
 
 	"go.yaml.in/yaml/v2"
 
 	chantico "chantico/api/v1alpha1"
 	vol "chantico/internal/volumes"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var _ = fmt.Printf
+var _ = ioutil.ReadDir
+
+const (
+	yamlSNMPConfigFoo = `
+auths:
+  foo:
+    version: 3
+    username: guest
+modules:
+  foo:
+    walk:
+    - 1.3.6.1.4.1.31034.12.1.1.2.7.2
+    metrics:
+    - name: sdbDevOutMtIndex
+      oid: 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.1
+      type: gauge
+      help: A unique value for each outlet - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.1
+      indexes:
+      - labelname: sdbDevIdIndex
+        type: gauge
+      - labelname: sdbDevOutMtIndex
+        type: gauge`
+
+	yamlSNMPConfigBar = `
+auths:
+  bar:
+    version: 3
+    username: guest
+modules:
+  bar:
+    walk:
+    - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+    metrics:
+    - name: sdbDevOutMtActualVoltage
+      oid: 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+      type: gauge
+      help: Actual voltage on outlet. - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+      indexes:
+      - labelname: sdbDevIdIndex
+        type: gauge
+      - labelname: sdbDevOutMtIndex
+        type: gauge`
 )
 
 func equalStringSlices(a, b []string) bool {
@@ -169,17 +219,17 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			// Set up the temporary directory
 			tmpDir := t.TempDir()
 			t.Setenv(vol.ChanticoVolumeLocationEnv, tmpDir)
-			tmpSNMPYAMLDir := fmt.Sprintf("%s/%s", tmpDir, snmpYmlDir)
-			err := os.MkdirAll(tmpSNMPYAMLDir, 0755)
+			tmpSNMPConfigDir := fmt.Sprintf("%s/%s", tmpDir, snmpConfigDir)
+			err := os.MkdirAll(tmpSNMPConfigDir, 0755)
 			if err != nil {
-				t.Fatalf("Could not create folder %s\n", tmpSNMPYAMLDir)
+				t.Fatalf("Could not create folder %s\n", tmpSNMPConfigDir)
 			}
 
 			// Run the function
 			_ = CreateSNMPGenerator(tc.Case)
 
 			// Check that the file exist
-			yamlFile := fmt.Sprintf("%s/generator-%s.yml", tmpSNMPYAMLDir, string(tc.Case.GetUID()))
+			yamlFile := fmt.Sprintf("%s/generator-%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
 			if _, err = os.Stat(yamlFile); err != nil {
 				t.Fatalf("yamlFile: %s does not exist\n", yamlFile)
 			}
@@ -197,4 +247,125 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateSNMPDeploymentConfig(t *testing.T) {
+	var err error
+
+	testCases := map[string]struct {
+		Case                  [][]byte
+		SnmpMergedConfigBytes []byte
+	}{
+		"Two files case": {
+			Case: [][]byte{
+				[]byte(yamlSNMPConfigFoo),
+				[]byte(yamlSNMPConfigBar),
+			},
+			SnmpMergedConfigBytes: []byte(`
+auths:
+  foo:
+    version: 3
+    username: guest
+  bar:
+    version: 3
+    username: guest
+modules:
+  foo:
+    walk:
+    - 1.3.6.1.4.1.31034.12.1.1.2.7.2
+    metrics:
+    - name: sdbDevOutMtIndex
+      oid: 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.1
+      type: gauge
+      help: A unique value for each outlet - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.1
+      indexes:
+      - labelname: sdbDevIdIndex
+        type: gauge
+      - labelname: sdbDevOutMtIndex
+        type: gauge
+  bar:
+    walk:
+    - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+    metrics:
+    - name: sdbDevOutMtActualVoltage
+      oid: 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+      type: gauge
+      help: Actual voltage on outlet. - 1.3.6.1.4.1.31034.12.1.1.2.7.2.1.7
+      indexes:
+      - labelname: sdbDevIdIndex
+        type: gauge
+      - labelname: sdbDevOutMtIndex
+        type: gauge`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Set up the temporary directory
+			tmpSNMPDir := testCreateTmpSNMPDirectories(t)
+
+			// Save config to disk
+			for i, bytes := range tc.Case {
+				snmpConfigPath := filepath.Join(
+					tmpSNMPDir,
+					snmpConfigDir,
+					fmt.Sprintf("config_%d.yml", i),
+				)
+				err := os.WriteFile(snmpConfigPath, bytes, 0755)
+				if err != nil {
+					t.Fatalf("Could not write %s to disk", snmpConfigPath)
+				}
+			}
+
+			// Create SNMP deployment config
+			_ = CreateSNMPDeploymentConfig(nil)
+
+			snmpMergedConfigPath := filepath.Join(tmpSNMPDir, snmpYmlDir, "snmp.yml")
+
+			_, err = os.Stat(snmpMergedConfigPath)
+			if err != nil {
+				t.Fatalf("%s was not created\n", snmpMergedConfigPath)
+			}
+
+			// Check if the yaml file are similar
+			var snmpMergedConfigGoInterface any
+			snmpMergedConfigBytes, err := os.ReadFile(snmpMergedConfigPath)
+			if err != nil {
+				t.Fatalf("Could not read file %s\n", snmpMergedConfigPath)
+			}
+			err = yaml.Unmarshal(snmpMergedConfigBytes, &snmpMergedConfigGoInterface)
+			if err != nil {
+				t.Fatalf("CreateSNMPDeploymentConfig could not produce a valid yaml file, got err=%s\n", err)
+			}
+
+			var expectYaml any
+			err = yaml.Unmarshal(tc.SnmpMergedConfigBytes, &expectYaml)
+			if err != nil {
+				t.Fatalf("tc.SnmpMergedConfigBytes is not valid yaml: %s\n", string(tc.SnmpMergedConfigBytes))
+			}
+			if !reflect.DeepEqual(snmpMergedConfigGoInterface, expectYaml) {
+				t.Fatalf("CreateSNMPDeploymentConfig(nil) != tc.MergedConfigBytes \n%s,\n got=%s\n", snmpMergedConfigGoInterface, expectYaml)
+			}
+
+		})
+	}
+}
+
+func testCreateTmpSNMPDirectories(t *testing.T) string {
+	t.Helper()
+
+	// Set environment
+	tmpSNMPDir := t.TempDir()
+	t.Setenv(vol.ChanticoVolumeLocationEnv, tmpSNMPDir)
+
+	// Create SNMP sudirectory
+	for _, snmpSubDir := range []string{snmpConfigDir, snmpYmlDir, snmpMibsDir} {
+		snmpSubDirAbsPath := filepath.Join(tmpSNMPDir, snmpSubDir)
+		err := os.MkdirAll(snmpSubDirAbsPath, 0755)
+		if err != nil {
+			t.Fatalf("Could not create directory %s\n", snmpSubDirAbsPath)
+		}
+	}
+
+	return tmpSNMPDir
 }
