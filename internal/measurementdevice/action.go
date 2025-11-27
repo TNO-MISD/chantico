@@ -1,7 +1,6 @@
 package measurementdevice
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,8 +10,11 @@ import (
 	chantico "chantico/api/v1alpha1"
 	pm "chantico/internal/postmortem"
 	vol "chantico/internal/volumes"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // In that context Pure means does not modify the kubernetes cluster resources
@@ -27,8 +29,7 @@ type ActionFuntion struct {
 		*chantico.MeasurementDevice,
 	) *ctrl.Result
 	IO func(
-		context.Context,
-		ctrl.Request,
+		client.Client,
 		*chantico.MeasurementDevice,
 	) *ctrl.Result
 }
@@ -39,7 +40,7 @@ var ActionMap = map[string][]ActionFuntion{
 	},
 	StateEntryPoint: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
-		ActionFuntion{Type: ActionFunctionIO, IO: UpdateSNMPConfig},
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 	},
 	StateFailed: {},
 
@@ -67,8 +68,7 @@ var ActionMap = map[string][]ActionFuntion{
 
 func ExecuteActions(
 	state string,
-	ctx context.Context,
-	req ctrl.Request,
+	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
 	result := &ctrl.Result{}
@@ -81,7 +81,7 @@ func ExecuteActions(
 			}
 		case ActionFunctionIO:
 			{
-				result = actionFunction.IO(ctx, req, measurementDevice)
+				result = actionFunction.IO(kubernetesClient, measurementDevice)
 			}
 		}
 		if result != nil {
@@ -216,18 +216,8 @@ func CreateSNMPDeploymentConfig(
 	return nil
 }
 
-func UpdateSNMPConfig(
-	ctx context.Context,
-	req ctrl.Request,
-	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	// TODO: Separate cleanly the generalizable part of the Kubernetes Job launching
-	panic("Not implemented yet")
-}
-
 func ReloadSNMPService(
-	ctx context.Context,
-	req ctrl.Request,
+	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
 	// TODO: Separate cleanly the generalizable part of the Kubernetes Deployment reload
