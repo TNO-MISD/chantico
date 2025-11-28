@@ -44,3 +44,9 @@ snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:1161 tnoPduEnergyValu
 snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:1161 tnoPduPowerValue
 # Output: TNO-PDU-MIB::tnoPduPowerValue = INTEGER: 68
 ```
+
+## Querying the chantico-snmp-mock running in the development setup
+
+```bash
+snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB :31161 tnoPduEnergyValue
+```
