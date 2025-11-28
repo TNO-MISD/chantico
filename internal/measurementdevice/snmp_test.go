@@ -23,7 +23,7 @@ func TestMakeJob(t *testing.T) {
 	}
 
 	// Create job object
-	job := MakeJob(device, 5)
+	job := MakeJob(device)
 
 	// Create job in fake client
 	_, err := client.BatchV1().Jobs(device.ObjectMeta.Namespace).Create(

@@ -45,7 +45,11 @@ var ActionMap = map[string][]ActionFuntion{
 	},
 	StateEntryPoint: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
+<<<<<<< HEAD
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+=======
+		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
+>>>>>>> 2cd1b9b (Create Schedule SNMP generator job)
 	},
 	StateFailed: {},
 
@@ -54,7 +58,6 @@ var ActionMap = map[string][]ActionFuntion{
 	},
 	StateSucceededSNMPConfigUpdate: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateModification},
-		ActionFuntion{Type: ActionFunctionPure, Pure: AssessLeader},
 	},
 
 	StatePendingOnLeader: {},
@@ -67,7 +70,6 @@ var ActionMap = map[string][]ActionFuntion{
 	},
 	StateSucceededSNMPServiceUpdate: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
-		ActionFuntion{Type: ActionFunctionPure, Pure: ElectLeader},
 	},
 }
 
@@ -129,22 +131,6 @@ func UpdateModification(
 	measurementDevice.Status.UpdateTime = metav1.Time{Time: time.Now()}.Format(time.RFC3339)
 	measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
 	return nil
-}
-
-func AssessLeader(
-	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	// TODO: Implement the logic of AssessLeader based on and UpdateTime, UpdateGeneration
-	// TODO: Write test associated
-	return nil
-}
-
-func ElectLeader(
-	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	// TODO: Implement the logic of ElectLeader based on and UpdateTime, UpdateGeneration
-	// TODO: Write test associated
-	panic("Not implemented yet")
 }
 
 func RequeueWithDelay(
@@ -274,5 +260,22 @@ func ReloadSNMPService(
 		}
 	}()
 
+	return nil
+}
+
+func ScheduleSNMPGeneratorJob(
+	ctx context.Context,
+	kubernetesClient client.Client,
+	measurementDevice *chantico.MeasurementDevice,
+) *ctrl.Result {
+	measurementDevice.Status.JobName = fmt.Sprintf("update_snmp_%s_%d.yml", measurementDevice.Name, int(time.Now().Unix()))
+	measurementDevice.Status.State = StatePendingSNMPConfigUpdate
+
+	updateJob := MakeJob(*measurementDevice)
+	err := kubernetesClient.Create(ctx, updateJob)
+	if err != nil {
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = err.Error()
+	}
 	return nil
 }
