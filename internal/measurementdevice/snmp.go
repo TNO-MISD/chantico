@@ -2,9 +2,10 @@ package measurementdevice
 
 import (
 	"fmt"
-	"go.yaml.in/yaml/v2"
 	"maps"
 	"path/filepath"
+
+	"go.yaml.in/yaml/v2"
 
 	chantico "chantico/api/v1alpha1"
 	img "chantico/internal/images"
