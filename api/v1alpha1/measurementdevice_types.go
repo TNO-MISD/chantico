@@ -86,5 +86,6 @@ const (
 )
 
 const (
-	RequeueDelay = 5 * time.Second
+	RequeueDelay  = 5 * time.Second
+	ReloadTimeout = 3 * time.Minute
 )
