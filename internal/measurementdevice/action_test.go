@@ -1,6 +1,7 @@
 package measurementdevice
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
