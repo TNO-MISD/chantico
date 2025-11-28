@@ -37,7 +37,7 @@ func TestCheckDeploymentAvailability(t *testing.T) {
 
 			isDeploymentAvailable := CheckDeploymentAvailability(deployment)
 			if isDeploymentAvailable != tc.IsExpectedAvailable {
-				t.Fatalf("availability mismatch expected=%t, got=%t", tc.IsExpectedAvailable, isDeploymentAvailable)
+				t.Fatalf("availability mismatch expected=%t, got=%t\n", tc.IsExpectedAvailable, isDeploymentAvailable)
 			}
 		})
 	}
