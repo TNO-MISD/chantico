@@ -8,10 +8,18 @@ enterprises OBJECT IDENTIFIER ::= { iso(1) org(3) dod(6) internet(1) private(4) 
 
 tnoPdu OBJECT IDENTIFIER ::= { enterprises 99999 }
 
-tnoPduValue OBJECT-TYPE
+tnoPduEnergyValue OBJECT-TYPE
     SYNTAX      Integer32
     MAX-ACCESS  read-only
     STATUS      current
-    DESCRIPTION "A random energy value (in W)"
+    DESCRIPTION "A random energy value (in J)"
     ::= { tnoPdu 1 }
+
+tnoPduPowerValue OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A random power value (in W)"
+    ::= { tnoPdu 2 }
+
 END
