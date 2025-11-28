@@ -35,7 +35,7 @@ func TestCheckDeploymentAvailability(t *testing.T) {
 				t.Fatalf("could not unmarshall %s\n", tc.DeploymentJsonPath)
 			}
 
-			isDeploymentAvailable := CheckDeploymentAvailability(deployment, tc.GracePeriod)
+			isDeploymentAvailable := CheckDeploymentAvailability(deployment)
 			if isDeploymentAvailable != tc.IsExpectedAvailable {
 				t.Fatalf("availability mismatch expected=%t, got=%t", tc.IsExpectedAvailable, isDeploymentAvailable)
 			}
