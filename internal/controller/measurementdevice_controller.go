@@ -55,7 +55,7 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	_ = r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
 
 	state := md.GetState(measurementDevice, measurementDevices.Items, job, deployment)
-	md.ExecuteActions(state, ctx, req, measurementDevice, measurementDevices.Items)
+	md.ExecuteActions(state, ctx, req, measurementDevice)
 	return ctrl.Result{}, nil
 }
 

@@ -39,6 +39,28 @@ spec:
           spec:
             description: MeasurementDeviceSpec defines the desired state of MeasurementDevice
             properties:
+              auth:
+                description: 'Courtesy of the snmp_exporter repository: https://github.com/prometheus/snmp_exporter/blob/main/config/config.go'
+                properties:
+                  auth_protocol:
+                    type: string
+                  community:
+                    type: string
+                  context_name:
+                    type: string
+                  password:
+                    type: string
+                  priv_password:
+                    type: string
+                  priv_protocol:
+                    type: string
+                  security_level:
+                    type: string
+                  username:
+                    type: string
+                  version:
+                    type: integer
+                type: object
               walks:
                 description: Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go
                   to remove/update
@@ -46,6 +68,7 @@ spec:
                   type: string
                 type: array
             required:
+            - auth
             - walks
             type: object
           status:

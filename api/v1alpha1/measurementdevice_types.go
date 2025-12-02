@@ -22,13 +22,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Courtesy of the snmp_exporter repository: https://github.com/prometheus/snmp_exporter/blob/main/config/config.go
+type Auth struct {
+	Community     string `yaml:"community,omitempty" json:"community,omitempty"`
+	SecurityLevel string `yaml:"security_level,omitempty" json:"security_level,omitempty"`
+	Username      string `yaml:"username,omitempty" json:"username,omitempty"`
+	Password      string `yaml:"password,omitempty" json:"password,omitempty"`
+	AuthProtocol  string `yaml:"auth_protocol,omitempty" json:"auth_protocol,omitempty"`
+	PrivProtocol  string `yaml:"priv_protocol,omitempty" json:"priv_protocol,omitempty"`
+	PrivPassword  string `yaml:"priv_password,omitempty" json:"priv_password,omitempty"`
+	ContextName   string `yaml:"context_name,omitempty" json:"context_name,omitempty"`
+	Version       int    `yaml:"version,omitempty" json:"version,omitempty"`
+}
+
 // MeasurementDeviceSpec defines the desired state of MeasurementDevice
 type MeasurementDeviceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go to remove/update
-	Walks []string `json:"walks"`
+	Walks []string `yaml:"walks" json:"walks"`
+	Auth  Auth     `yaml:"auth" json:"auth"`
 }
 
 // MeasurementDeviceStatus defines the observed state of MeasurementDevice
