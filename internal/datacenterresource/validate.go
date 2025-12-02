@@ -1,24 +1,20 @@
 package datacenterresource
 
 import (
-	"context"
 	"fmt"
 
 	chantico "chantico/api/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	DataCenterResourceTypePDU = "pdu"
-	DataCenterResourceTypeBaremetal = "baremetal"
-	DataCenterResourceTypeVM = "vm"
+	DataCenterResourceTypePDU        = "pdu"
+	DataCenterResourceTypeBaremetal  = "baremetal"
+	DataCenterResourceTypeVM         = "vm"
 	DataCenterResourceTypeKubernetes = "kubernetes"
-	DataCenterResourceTypeHeat = "heat"
+	DataCenterResourceTypeHeat       = "heat"
 )
 
 func Validate(
-	ctx context.Context,
-	req ctrl.Request,
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
@@ -26,14 +22,14 @@ func Validate(
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]*chantico.DataCenterResource)
 	for _, resource := range datacenterResources {
-		resourcesMap[resource.Name] = &resource
+		resourcesMap[resource.ObjectMeta.Name] = &resource
 	}
 	queue := make([]string, 0)
 	queue = append(queue, datacenterResource.Spec.Parent...)
 	for len(queue) > 0 {
 		current, ok := resourcesMap[queue[0]]
 		if !ok {
-			return fmt.Errorf("could not locate resource: %s", current.Name)
+			return fmt.Errorf("could not locate resource: %s", current.ObjectMeta.Name)
 		}
 		if current == datacenterResource {
 			return fmt.Errorf("cyclic loop detected in data center resources")

@@ -56,7 +56,7 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements)
 
-	err := dcr.Validate(ctx, req, datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
+	err := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
 	if err != nil {
 		datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
 		return ctrl.Result{}, err
