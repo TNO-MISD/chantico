@@ -172,7 +172,7 @@ func CreateSNMPGenerator(
 func CreateSNMPDeploymentConfig(
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
-	// Find files match the config-*.yml format
+	// Find files match the config_*.yml format
 	configFilesGlobPattern := filepath.Join(
 		os.Getenv(vol.ChanticoVolumeLocationEnv),
 		snmpConfigDir,
