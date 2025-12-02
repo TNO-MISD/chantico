@@ -33,7 +33,7 @@ func Validate(
 	for len(queue) > 0 {
 		current, ok := resourcesMap[queue[0]]
 		if !ok {
-			return fmt.Errorf("could not locate resource: %s", current)
+			return fmt.Errorf("could not locate resource: %s", current.Name)
 		}
 		if current == datacenterResource {
 			return fmt.Errorf("cyclic loop detected in data center resources")
