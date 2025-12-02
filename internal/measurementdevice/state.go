@@ -15,9 +15,6 @@ const (
 	StateFailed                    = "Failed"
 	StateEndPoint                  = "End Point"
 	StateDelete                    = "StateDelete"
-
-	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
-	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
 )
 
 func GetState(
