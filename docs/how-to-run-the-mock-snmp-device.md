@@ -7,6 +7,10 @@ menus:
     weight: 20
 ---
 
+## The SNMP mock
+
+The snmp mock is an UDP server mocking a device using SNMP with an mock MIB file (`./dev/TNO-PDU-MIB.txt`) and providing the following metrics `tnoPduEnergyValue` and `tnoPduPowerValue`.
+
 ## Running locally
 
 ### Requirements
@@ -47,6 +51,49 @@ snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:1161 tnoPduPowerValue
 
 ## Querying the chantico-snmp-mock running in the development setup
 
+If the development kind cluster is running the `chantico-snmp-mock` service is a Node Port that visible on port `31161`.
+It can be queried as follow:
+
 ```bash
-snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB :31161 tnoPduEnergyValue
+snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:31161 tnoPduEnergyValue
+```
+
+## Adding the snmp-mock in chantico (in custruction)
+
+- Port forward `chantico-filbrowser`
+```bash
+    kubectl port-forward -n chantico svc/chantico-snmp 80:18888
+```
+- Login in the web UI, `localhost:18888` and Upload `./dev/TNO-PDU-MIB.txt` to `./snmp/mibs/TNO-PDU-MIB.txt`
+
+
+(The following steps are temporary until the MeasurementDevice operator is rolled out)
+
+- In the web UI, Upload the following yaml file at the following location `./snmp/yml/snmp.yml`
+```yaml
+auths:
+  default:
+    community: public
+    version: 2
+modules:
+  init:
+    get:
+    - 1.3.6.1.4.1.99999.1.0
+    metrics:
+    - name: tnoPduEnergyValue
+      oid: 1.3.6.1.4.1.99999.1
+      type: gauge
+      help: A random energy value (in J) - 1.3.6.1.4.1.99999.1
+```
+- Restart `chantico-snmp` service:
+```bash
+kubectl rollout restart -n chantico deployment/chantico-snmp
+```
+- Port forward the snmp_exporter
+```bash
+    kubectl port-forward -n chantico svc/chantico-snmp 9116:9116
+```
+- Curl the module (optionally this can be done via the web UI)
+```bash
+SNMP_MOCK="$(kubectl get -n chantico svc/chantico-snmp-mock -o jsonpath='{.spec.clusterIP}')" curl -X GET 'http://localhost:9116/snmp?target='${SNMP_MOCK}':1161&auth=default&module=init'
 ```
