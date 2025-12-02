@@ -51,26 +51,22 @@ var ActionMap = map[string][]ActionFuntion{
 		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
 >>>>>>> 2cd1b9b (Create Schedule SNMP generator job)
 	},
-	StateFailed: {},
-
 	StatePendingSNMPConfigUpdate: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
 	},
 	StateSucceededSNMPConfigUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateModification},
-	},
-
-	StatePendingOnLeader: {},
-	StateElectedLeader: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
 	},
+	StateDelete: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
+		ActionFuntion{Type: ActionFunctionIO, Pure: UpdateFinalizer},
+	},
 
-	StatePendingSNMPServiceUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
-	},
-	StateSucceededSNMPServiceUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
-	},
+	StateFailed:   {},
+	StateEndPoint: {},
 }
 
 func ExecuteActions(
@@ -158,6 +154,15 @@ func CreateSNMPGenerator(
 		measurementDevice.Status.State = StateFailed
 		measurementDevice.Status.ErrorMessage = fmt.Sprintf("Could not write to %s", generatorPath)
 	}
+	return nil
+}
+
+func DeleteSNMPConfig(
+	measurementDevice *chantico.MeasurementDevice,
+) *ctrl.Result {
+	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
+	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("config_%s.yml", measurementDevice.ObjectMeta.GetUID())))
+	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("generator_%s.yml", measurementDevice.ObjectMeta.GetUID())))
 	return nil
 }
 

@@ -8,16 +8,16 @@ import (
 )
 
 const (
-	StateInit                       = "Init"
-	StateEntryPoint                 = "EntryPoint"
-	StateElectedLeader              = "ElectedLeader"
-	StatePendingOnLeader            = "PendingOnLeader"
-	StatePendingSNMPConfigUpdate    = "PendingSNMPConfigUpdate"
-	StateSucceededSNMPConfigUpdate  = "SucceededSNMPConfigUpdate"
+	StateInit                      = "Init"
+	StateEntryPoint                = "Entry Point"
+	StatePendingSNMPConfigUpdate   = "Pending SNMP Config Update"
+	StateSucceededSNMPConfigUpdate = "SucceededSNMPConfigUpdate"
+	StateFailed                    = "Failed"
+	StateEndPoint                  = "End Point"
+	StateDelete                    = "StateDelete"
+
 	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
 	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
-	StateFailed                     = "Failed"
-	StateEndPoint                   = "EndPoint"
 )
 
 func GetState(
