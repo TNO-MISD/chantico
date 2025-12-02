@@ -62,7 +62,7 @@ var ActionMap = map[string][]ActionFuntion{
 		ActionFuntion{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
-		ActionFuntion{Type: ActionFunctionIO, Pure: UpdateFinalizer},
+		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 	},
 
 	StateFailed:   {},
