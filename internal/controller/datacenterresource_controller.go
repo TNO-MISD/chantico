@@ -26,14 +26,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	chantico "chantico/api/v1alpha1"
-)
-
-const (
-	DataCenterResourceTypePDU = "pdu"
-	DataCenterResourceTypeBaremetal = "baremetal"
-	DataCenterResourceTypeVM = "vm"
-	DataCenterResourceTypeKubernetes = "kubernetes"
-	DataCenterResourceTypeHeat = "heat"
+	dcr "chantico/internal/datacenterresource"
 )
 
 // DataCenterResourceReconciler reconciles a DataCenterResource object
@@ -57,37 +50,25 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	datacenterResource := &chantico.DataCenterResource{}
 	_ = r.Get(ctx, req.NamespacedName, datacenterResource)
 
+	datacenterResources := &chantico.DataCenterResourceList{}
+	_ = r.List(ctx, datacenterResources)
+
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements)
 
-	//parent := &chantico.DataCenterResourceList{}
-	//_ = r.List(ctx, parent client.ObjectKey{Name: datacenterResource.Spec.Parent, Namespace: "chantico"}, parent)
+	err := dcr.Validate(ctx, req, datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
+	if err != nil {
+		datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
+		return ctrl.Result{}, err
+	}
 
-	// TODO(user): do something with the types/links here:
+	// TODO(user): do something with the links here:
 	// perform operations to make the cluster state reflect the state specified by
 	// the user.
 	// Specifically: register in postgres (or prometheus?) which datacenter resource
 	// is involved for which physical measurement
-	// Also perform validation of parent for directed acyclic graph
 
-	switch datacenterResource.Spec.Type {
-	case "":
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypePDU:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeBaremetal:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeVM:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeKubernetes:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeHeat:
-		return ctrl.Result{}, nil
-	default:
-		err := fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
-		datacenterResource.Status.ErrorMessage = err.Error()
-		return ctrl.Result{}, err
-	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
