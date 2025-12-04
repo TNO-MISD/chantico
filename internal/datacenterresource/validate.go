@@ -14,25 +14,40 @@ const (
 	DataCenterResourceTypeHeat       = "heat"
 )
 
+type ErrorResourceNotFound struct {
+	Name string
+}
+
+func (e ErrorResourceNotFound) Error() string {
+	return fmt.Sprintf("could not locate resource: %s", e.Name)
+}
+
+type ErrorCycleDetected struct {
+}
+
+func (e ErrorCycleDetected) Error() string {
+	return "cyclic loop detected in data center resources"
+}
+
 func Validate(
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
 ) error {
 	// Perform validation of parent for directed acyclic graph
-	resourcesMap := make(map[string]*chantico.DataCenterResource)
+	resourcesMap := make(map[string]chantico.DataCenterResource)
 	for _, resource := range datacenterResources {
-		resourcesMap[resource.ObjectMeta.Name] = &resource
+		resourcesMap[resource.ObjectMeta.Name] = resource
 	}
 	queue := make([]string, 0)
 	queue = append(queue, datacenterResource.Spec.Parent...)
 	for len(queue) > 0 {
 		current, ok := resourcesMap[queue[0]]
 		if !ok {
-			return fmt.Errorf("could not locate resource: %s", current.ObjectMeta.Name)
+			return ErrorResourceNotFound{Name: queue[0]}
 		}
-		if current == datacenterResource {
-			return fmt.Errorf("cyclic loop detected in data center resources")
+		if current.ObjectMeta.Name == datacenterResource.ObjectMeta.Name {
+			return ErrorCycleDetected{}
 		}
 		queue = queue[1:]
 		queue = append(queue, current.Spec.Parent...)
