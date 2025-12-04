@@ -41,6 +41,188 @@ scrape_configs:
 	checkEquality(t, cfg, expected)
 }
 
+func TestAddToScrapeConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.2")
+
+	expected := []byte(`
+scrape_configs:
+  - job_name: foo
+    static_configs:
+      - targets:
+        - 10.0.0.1
+        - 10.0.0.2
+    params:
+      module:
+        - foo
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+`)
+
+	checkEquality(t, cfg, expected)
+}
+
+func TestDuplicateAddToScrapeConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.2")
+
+	expected := []byte(`
+scrape_configs:
+  - job_name: foo
+    static_configs:
+      - targets:
+        - 10.0.0.1
+        - 10.0.0.2
+    params:
+      module:
+        - foo
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+`)
+
+	checkEquality(t, cfg, expected)
+}
+
+func TestMultipleDevicesAddToScrapeConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.AddPhysicalMeasurement("bar", "10.0.0.1")
+
+	expected := []byte(`
+scrape_configs:
+  - job_name: foo
+    static_configs:
+      - targets:
+        - 10.0.0.1
+    params:
+      module:
+        - foo
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+  - job_name: bar
+    static_configs:
+      - targets:
+        - 10.0.0.1
+    params:
+      module:
+        - bar
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+`)
+
+	checkEquality(t, cfg, expected)
+}
+
+func TestRemoveEmptyConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
+	expected := []byte(`
+scrape_configs: []
+`)
+	checkEquality(t, cfg, expected)
+}
+
+func TestRemoveOneEntryConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
+	expected := []byte(`
+scrape_configs: []
+`)
+	checkEquality(t, cfg, expected)
+}
+
+func TestRemoveConfig(t *testing.T) {
+	physicalMeasurementMap := map[string][]string{}
+
+	cfg := PrometheusConfig{}
+	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
+	cfg.AddPhysicalMeasurement("bar", "10.0.0.2")
+	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
+	expected := []byte(`
+scrape_configs:
+  - job_name: bar
+    static_configs:
+      - targets:
+        - 10.0.0.2
+    params:
+      module:
+        - bar
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+`)
+	checkEquality(t, cfg, expected)
+}
+
 func checkEquality(t *testing.T, actual PrometheusConfig, expected []byte) {
 	yamlBytes, err := yaml.Marshal(actual)
 	if err != nil {

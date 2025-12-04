@@ -49,9 +49,58 @@ func (c *PrometheusConfig) BuildFromPhysicalMeasurementMap(physicalMeasurementMa
 }
 
 func (c *PrometheusConfig) RemovePhysicalMeasurement(deviceId string, measurementIp string) {
+	for i, cfg := range c.ScrapeConfigs {
+		if cfg.JobName == deviceId {
+			var newTargets []string
+			for _, ip := range cfg.StaticConfigs[0].Targets {
+				if ip != measurementIp {
+					newTargets = append(newTargets, ip)
+				}
+			}
 
+			if len(newTargets) == 0 {
+				c.ScrapeConfigs = append(c.ScrapeConfigs[:i], c.ScrapeConfigs[i+1:]...)
+				return
+			}
+
+			c.ScrapeConfigs[i].StaticConfigs[0].Targets = newTargets
+			return
+		}
+	}
 }
 
 func (c *PrometheusConfig) AddPhysicalMeasurement(deviceId string, measurementIp string) {
+	for i, cfg := range c.ScrapeConfigs {
+		if cfg.JobName == deviceId {
+			for _, ip := range cfg.StaticConfigs[0].Targets {
+				if ip == measurementIp {
+					return // nothing to do
+				}
+			}
 
+			c.ScrapeConfigs[i].StaticConfigs[0].Targets = append(c.ScrapeConfigs[i].StaticConfigs[0].Targets, measurementIp)
+			return
+		}
+	}
+
+	newCfg := ScrapeConfig{
+		JobName: deviceId,
+		StaticConfigs: []StaticConfig{
+			{Targets: []string{measurementIp}},
+		},
+		Params: map[string][]string{
+			"module": {deviceId},
+			"auth":   {"public_v3"},
+		},
+		MetricsPath:    "/snmp",
+		ScrapeInterval: "10s",
+		ScrapeTimeout:  "5s",
+		RelabelConfigs: []RelabelConfig{
+			{SourceLabels: []string{"__address__"}, TargetLabel: "__param_target"},
+			{SourceLabels: []string{"__param_target"}, TargetLabel: "instance"},
+			{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
+		},
+	}
+
+	c.ScrapeConfigs = append(c.ScrapeConfigs, newCfg)
 }
