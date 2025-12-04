@@ -8,10 +8,17 @@ menus:
 
 ### Prerequisites
 
+The development currently supports [WSL2](https://github.com/microsoft/WSL) and UNIX based environment.
+
+It requires the following packages:
+
 - go version v1.24.0+
 - kind version v0.30.0+
 - docker version v17.03+
 - psql version v17.5+
+- helm version 3.19+
+- make version 4.3+
+- kubectl version v0.30.0+
 
 ### Installation
 
