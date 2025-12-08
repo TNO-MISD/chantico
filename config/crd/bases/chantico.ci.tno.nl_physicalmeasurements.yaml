@@ -41,8 +41,6 @@ spec:
             description: PhysicalMeasurementSpec defines the desired state of PhysicalMeasurement
             properties:
               ip:
-                description: Foo is an example field of PhysicalMeasurement. Edit
-                  physicalmeasurement_types.go to remove/update
                 type: string
               measurementDevice:
                 type: string

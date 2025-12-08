@@ -28,7 +28,6 @@ type PhysicalMeasurementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of PhysicalMeasurement. Edit physicalmeasurement_types.go to remove/update
 	Ip                string   `json:"ip"`
 	ServiceId         string   `json:"serviceId"`
 	MeasurementDevice string   `json:"measurementDevice"`
@@ -64,6 +63,10 @@ type PhysicalMeasurementList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PhysicalMeasurement `json:"items"`
 }
+
+const (
+	PhysicalMeasurementFinalizer = "physical_measurement.update.finalizer.chantico.ci.tno.nl"
+)
 
 func init() {
 	SchemeBuilder.Register(&PhysicalMeasurement{}, &PhysicalMeasurementList{})

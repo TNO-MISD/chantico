@@ -56,33 +56,16 @@ type PhysicalMeasurementReconciler struct {
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	physicalMeasurement := &chantico.PhysicalMeasurement{}
 	_ = r.Get(ctx, req.NamespacedName, physicalMeasurement)
-	physicalMeasurements := &chantico.PhysicalMeasurementList{}
-	_ = r.List(ctx, physicalMeasurements)
-
-	measurementDevices := &chantico.MeasurementDeviceList{}
-	_ = r.List(ctx, measurementDevices)
 
 	state := pm.GetState(physicalMeasurement)
 	pm.ExecuteActions(
 		state,
 		ctx,
-		req,
 		r.Client,
 		physicalMeasurement,
-		physicalMeasurements.Items,
-		measurementDevices.Items,
 	)
 	return ctrl.Result{}, nil
 }
-
-// func (r *PhysicalMeasurementReconciler) CleanUpPhysicalMeasurement(
-// 	ctx context.Context,
-// 	pm *chantico.PhysicalMeasurement,
-// ) error {
-// 	fmt.Printf("Cleaning up PhysicalMeasurement: %s\n", pm.Name)
-
-// 	return nil
-// }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PhysicalMeasurementReconciler) SetupWithManager(mgr ctrl.Manager) error {

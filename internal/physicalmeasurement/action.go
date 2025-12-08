@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -26,34 +27,42 @@ type ActionFuntion struct {
 	Type int
 	Pure func(
 		*chantico.PhysicalMeasurement,
-		[]chantico.PhysicalMeasurement,
 	) *ctrl.Result
 	IO func(
 		context.Context,
-		ctrl.Request,
 		client.Client,
 		*chantico.PhysicalMeasurement,
-		[]chantico.PhysicalMeasurement,
-		[]chantico.MeasurementDevice,
 	) *ctrl.Result
 }
 
 var ActionMap = map[string][]ActionFuntion{
 	StateInit: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 		ActionFuntion{Type: ActionFunctionIO, IO: UpdatePrometheus},
 	},
-	StateCompleted: {},
+	StateRunning: {
+		ActionFuntion{Type: ActionFunctionIO, IO: UpdatePrometheus},
+	},
+	StateDeleted: {
+		ActionFuntion{Type: ActionFunctionIO, IO: UpdatePrometheus},
+	},
 	StateFailed:    {},
+	StateCompleted: {},
+}
+
+func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
+	if slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer) {
+		return nil
+	}
+	physicalMeasurement.ObjectMeta.Finalizers = append(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer)
+	return nil
 }
 
 func ExecuteActions(
 	state string,
 	ctx context.Context,
-	req ctrl.Request,
 	c client.Client,
 	physicalMeasurement *chantico.PhysicalMeasurement,
-	physicalMeasurements []chantico.PhysicalMeasurement,
-	measurementDevices []chantico.MeasurementDevice,
 
 ) *ctrl.Result {
 	result := &ctrl.Result{}
@@ -62,11 +71,11 @@ func ExecuteActions(
 		switch actionFunction.Type {
 		case ActionFunctionPure:
 			{
-				result = actionFunction.Pure(physicalMeasurement, physicalMeasurements)
+				result = actionFunction.Pure(physicalMeasurement)
 			}
 		case ActionFunctionIO:
 			{
-				result = actionFunction.IO(ctx, req, c, physicalMeasurement, physicalMeasurements, measurementDevices)
+				result = actionFunction.IO(ctx, c, physicalMeasurement)
 			}
 		}
 		if result != nil {
@@ -79,11 +88,8 @@ func ExecuteActions(
 
 func UpdatePrometheus(
 	ctx context.Context,
-	req ctrl.Request,
 	c client.Client,
 	physicalMeasurement *chantico.PhysicalMeasurement,
-	physicalMeasurements []chantico.PhysicalMeasurement,
-	measurementDevices []chantico.MeasurementDevice,
 ) *ctrl.Result {
 	physicalMeasurement.Status.State = StateRunning
 	physicalMeasurement.Status.Generation = physicalMeasurement.ObjectMeta.Generation
@@ -94,22 +100,14 @@ func UpdatePrometheus(
 	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
 	fmt.Printf("===\n\n")
 
-	// Associates the PhysicalMeasurements to the MeasurementDevices
-	physicalMeasurementMap := make(map[string][]string)
+	newConfig := CreatePhysicalMeasurementConfig(
+		physicalMeasurement.Spec.MeasurementDevice,
+		physicalMeasurement.Spec.ResourceIds,
+	)
+	cfg := MergeWithPrometheusConfig(os.Getenv("PROMETHEUS_CONFIG"), newConfig)
 
-	for _, physicalMeasurement := range physicalMeasurements {
-		deviceId := physicalMeasurement.Spec.MeasurementDevice
-		physicalMeasurementMap[deviceId] = append(
-			physicalMeasurementMap[deviceId],
-			physicalMeasurement.Spec.Ip,
-		)
-	}
-
-	config := PrometheusConfig{}
-	config.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-
-	yamlBytes, _ := yaml.Marshal(config)
-	err := os.WriteFile("/tmp/chantico-volume-mount/prometheus/yml/prometheus.yml", yamlBytes, 0644)
+	yamlBytes, _ := yaml.Marshal(cfg)
+	err := os.WriteFile(os.Getenv("PROMETHEUS_CONFIG"), yamlBytes, 0644)
 	if err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
@@ -160,6 +158,10 @@ func UpdatePrometheus(
 	}
 
 	return &ctrl.Result{}
+}
+
+func DeletePhysicalMeasurementConfig(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
+	return nil
 }
 
 func ReloadPrometheus(prometheusURL string) error {

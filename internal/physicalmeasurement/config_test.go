@@ -1,18 +1,64 @@
 package physicalmeasurement
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"
 )
 
-func TestMakeScrapeConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{
-		"foo": {"10.0.0.1", "10.0.0.2"},
+const (
+	exampleYaml = `
+scrape_configs:
+  - job_name: foo
+    static_configs:
+      - targets:
+        - 10.0.0.1
+        - 10.0.0.2
+    params:
+      module:
+        - foo
+      auth:
+        - public_v3
+    metrics_path: /snmp
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: ["__address__"]
+        target_label: "__param_target"
+      - source_labels: ["__param_target"]
+        target_label: "instance"
+      - target_label: "__addzress__"
+        replacement: chantico-snmp:9116
+`
+)
+
+func writeConfigToFile(t *testing.T, config []byte, filename string) (*string, error) {
+	filePath := filepath.Join(t.TempDir(), filename)
+	err := os.WriteFile(filePath, config, 0644)
+
+	if err != nil {
+		return nil, err
 	}
+	return &filePath, nil
+}
+
+func TestMakeScrapeConfig(t *testing.T) {
+	device_id := "foo"
+	measurement_ips := []string{"10.0.0.1", "10.0.0.2"}
 	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
+	scrape := CreatePhysicalMeasurementConfig(device_id, measurement_ips)
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrape)
+
+	checkEquality(t, cfg, []byte(exampleYaml))
+}
+
+func TestMergeToConfigExistingJob(t *testing.T) {
+	yml, _ := writeConfigToFile(t, []byte(exampleYaml), "test_cfg.yaml")
+	scrape_cfg := CreatePhysicalMeasurementConfig("foo", []string{"10.0.0.3", "10.0.0.4"})
+	cfg := MergeWithPrometheusConfig(*yml, scrape_cfg)
 
 	expected := []byte(`
 scrape_configs:
@@ -21,6 +67,8 @@ scrape_configs:
       - targets:
         - 10.0.0.1
         - 10.0.0.2
+        - 10.0.0.3
+        - 10.0.0.4
     params:
       module:
         - foo
@@ -41,13 +89,10 @@ scrape_configs:
 	checkEquality(t, cfg, expected)
 }
 
-func TestAddToScrapeConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.2")
+func TestMergeToConfigNewJob(t *testing.T) {
+	yml, _ := writeConfigToFile(t, []byte(exampleYaml), "test_cfg.yaml")
+	scrape_cfg := CreatePhysicalMeasurementConfig("bar", []string{"10.0.0.3", "10.0.0.4"})
+	cfg := MergeWithPrometheusConfig(*yml, scrape_cfg)
 
 	expected := []byte(`
 scrape_configs:
@@ -56,76 +101,6 @@ scrape_configs:
       - targets:
         - 10.0.0.1
         - 10.0.0.2
-    params:
-      module:
-        - foo
-      auth:
-        - public_v3
-    metrics_path: /snmp
-    scrape_interval: 10s
-    scrape_timeout: 5s
-    relabel_configs:
-      - source_labels: ["__address__"]
-        target_label: "__param_target"
-      - source_labels: ["__param_target"]
-        target_label: "instance"
-      - target_label: "__addzress__"
-        replacement: chantico-snmp:9116
-`)
-
-	checkEquality(t, cfg, expected)
-}
-
-func TestDuplicateAddToScrapeConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.2")
-
-	expected := []byte(`
-scrape_configs:
-  - job_name: foo
-    static_configs:
-      - targets:
-        - 10.0.0.1
-        - 10.0.0.2
-    params:
-      module:
-        - foo
-      auth:
-        - public_v3
-    metrics_path: /snmp
-    scrape_interval: 10s
-    scrape_timeout: 5s
-    relabel_configs:
-      - source_labels: ["__address__"]
-        target_label: "__param_target"
-      - source_labels: ["__param_target"]
-        target_label: "instance"
-      - target_label: "__addzress__"
-        replacement: chantico-snmp:9116
-`)
-
-	checkEquality(t, cfg, expected)
-}
-
-func TestMultipleDevicesAddToScrapeConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.AddPhysicalMeasurement("bar", "10.0.0.1")
-
-	expected := []byte(`
-scrape_configs:
-  - job_name: foo
-    static_configs:
-      - targets:
-        - 10.0.0.1
     params:
       module:
         - foo
@@ -144,7 +119,8 @@ scrape_configs:
   - job_name: bar
     static_configs:
       - targets:
-        - 10.0.0.1
+        - 10.0.0.3
+        - 10.0.0.4
     params:
       module:
         - bar
@@ -162,64 +138,6 @@ scrape_configs:
         replacement: chantico-snmp:9116
 `)
 
-	checkEquality(t, cfg, expected)
-}
-
-func TestRemoveEmptyConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
-	expected := []byte(`
-scrape_configs: []
-`)
-	checkEquality(t, cfg, expected)
-}
-
-func TestRemoveOneEntryConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
-	expected := []byte(`
-scrape_configs: []
-`)
-	checkEquality(t, cfg, expected)
-}
-
-func TestRemoveConfig(t *testing.T) {
-	physicalMeasurementMap := map[string][]string{}
-
-	cfg := PrometheusConfig{}
-	cfg.BuildFromPhysicalMeasurementMap(physicalMeasurementMap)
-	cfg.AddPhysicalMeasurement("foo", "10.0.0.1")
-	cfg.AddPhysicalMeasurement("bar", "10.0.0.2")
-	cfg.RemovePhysicalMeasurement("foo", "10.0.0.1")
-	expected := []byte(`
-scrape_configs:
-  - job_name: bar
-    static_configs:
-      - targets:
-        - 10.0.0.2
-    params:
-      module:
-        - bar
-      auth:
-        - public_v3
-    metrics_path: /snmp
-    scrape_interval: 10s
-    scrape_timeout: 5s
-    relabel_configs:
-      - source_labels: ["__address__"]
-        target_label: "__param_target"
-      - source_labels: ["__param_target"]
-        target_label: "instance"
-      - target_label: "__addzress__"
-        replacement: chantico-snmp:9116
-`)
 	checkEquality(t, cfg, expected)
 }
 

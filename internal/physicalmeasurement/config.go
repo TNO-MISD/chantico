@@ -1,5 +1,11 @@
 package physicalmeasurement
 
+import (
+	"os"
+
+	"gopkg.in/yaml.v2"
+)
+
 type PrometheusConfig struct {
 	ScrapeConfigs []ScrapeConfig `yaml:"scrape_configs"`
 }
@@ -24,72 +30,16 @@ type RelabelConfig struct {
 	Replacement  string   `yaml:"replacement,omitempty"`
 }
 
-func (c *PrometheusConfig) BuildFromPhysicalMeasurementMap(physicalMeasurementMap map[string][]string) {
-	for deviceID, ips := range physicalMeasurementMap {
-		cfg := ScrapeConfig{
-			JobName: deviceID,
-			StaticConfigs: []StaticConfig{
-				{Targets: ips},
-			},
-			Params: map[string][]string{
-				"module": {deviceID},
-				"auth":   {"public_v3"},
-			},
-			MetricsPath:    "/snmp",
-			ScrapeInterval: "10s",
-			ScrapeTimeout:  "5s",
-			RelabelConfigs: []RelabelConfig{
-				{SourceLabels: []string{"__address__"}, TargetLabel: "__param_target"},
-				{SourceLabels: []string{"__param_target"}, TargetLabel: "instance"},
-				{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
-			},
-		}
-		c.ScrapeConfigs = append(c.ScrapeConfigs, cfg)
-	}
-}
+// Get rid of building -> do merging and create physical measurement map for single one.
 
-func (c *PrometheusConfig) RemovePhysicalMeasurement(deviceId string, measurementIp string) {
-	for i, cfg := range c.ScrapeConfigs {
-		if cfg.JobName == deviceId {
-			var newTargets []string
-			for _, ip := range cfg.StaticConfigs[0].Targets {
-				if ip != measurementIp {
-					newTargets = append(newTargets, ip)
-				}
-			}
-
-			if len(newTargets) == 0 {
-				c.ScrapeConfigs = append(c.ScrapeConfigs[:i], c.ScrapeConfigs[i+1:]...)
-				return
-			}
-
-			c.ScrapeConfigs[i].StaticConfigs[0].Targets = newTargets
-			return
-		}
-	}
-}
-
-func (c *PrometheusConfig) AddPhysicalMeasurement(deviceId string, measurementIp string) {
-	for i, cfg := range c.ScrapeConfigs {
-		if cfg.JobName == deviceId {
-			for _, ip := range cfg.StaticConfigs[0].Targets {
-				if ip == measurementIp {
-					return // nothing to do
-				}
-			}
-
-			c.ScrapeConfigs[i].StaticConfigs[0].Targets = append(c.ScrapeConfigs[i].StaticConfigs[0].Targets, measurementIp)
-			return
-		}
-	}
-
-	newCfg := ScrapeConfig{
-		JobName: deviceId,
+func CreatePhysicalMeasurementConfig(device_id string, measurementIps []string) ScrapeConfig {
+	cfg := ScrapeConfig{
+		JobName: device_id,
 		StaticConfigs: []StaticConfig{
-			{Targets: []string{measurementIp}},
+			{Targets: measurementIps},
 		},
 		Params: map[string][]string{
-			"module": {deviceId},
+			"module": {device_id},
 			"auth":   {"public_v3"},
 		},
 		MetricsPath:    "/snmp",
@@ -101,6 +51,55 @@ func (c *PrometheusConfig) AddPhysicalMeasurement(deviceId string, measurementIp
 			{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
 		},
 	}
+	return cfg
+}
 
-	c.ScrapeConfigs = append(c.ScrapeConfigs, newCfg)
+func MergeWithPrometheusConfig(prometheus_yaml string, newEntry ScrapeConfig) PrometheusConfig {
+	cfg, _ := loadPrometheusConfig(prometheus_yaml)
+	for _, scrape := range cfg.ScrapeConfigs {
+		if scrape.JobName == newEntry.JobName {
+			for _, target := range newEntry.StaticConfigs[0].Targets {
+				if !contains(scrape.StaticConfigs[0].Targets, target) {
+					scrape.StaticConfigs[0].Targets = append(scrape.StaticConfigs[0].Targets, target)
+				}
+			}
+			return *cfg
+		}
+	}
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newEntry)
+	return *cfg
+}
+
+func RemoveFromPrometheusConfig(prometheus_yaml string, device_id string) PrometheusConfig {
+	cfg, _ := loadPrometheusConfig(prometheus_yaml)
+	newCfg := PrometheusConfig{}
+	for _, scrape := range cfg.ScrapeConfigs {
+		if scrape.JobName != device_id {
+			newCfg.ScrapeConfigs = append(newCfg.ScrapeConfigs, scrape)
+		}
+	}
+	return newCfg
+}
+
+func contains(list []string, item string) bool {
+	for _, v := range list {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func loadPrometheusConfig(path string) (*PrometheusConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg PrometheusConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
