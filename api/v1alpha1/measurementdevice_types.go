@@ -86,6 +86,7 @@ const (
 )
 
 const (
-	RequeueDelay  = 5 * time.Second
-	ReloadTimeout = 3 * time.Minute
+	RequeueDelay   = 5 * time.Second
+	ReloadTimeout  = 3 * time.Minute
+	SNMPJobTimeout = 3 * time.Minute
 )
