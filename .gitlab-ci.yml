@@ -151,6 +151,8 @@ hugo-preview:
 
 stop-review:
   stage: pages
+  script:
+    - echo "Stopping review app for hugo-preview"
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     action: stop
