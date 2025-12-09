@@ -45,11 +45,8 @@ var ActionMap = map[string][]ActionFuntion{
 	},
 	StateEntryPoint: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
-<<<<<<< HEAD
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-=======
 		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
->>>>>>> 2cd1b9b (Create Schedule SNMP generator job)
 	},
 	StatePendingSNMPConfigUpdate: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},

@@ -1,7 +1,6 @@
 package measurementdevice
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"os"
