@@ -20,9 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = fmt.Printf
-var _ = ioutil.ReadDir
-
 const (
 	yamlSNMPConfigFoo = `
 auths:
