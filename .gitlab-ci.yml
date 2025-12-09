@@ -142,7 +142,7 @@ hugo-preview:
   dependencies:
     - docs
   script:
-    - cd hugo && hugo --baseURL="$ARTIFACT_URL" --config "config.toml,config.preview.toml"
+    - cd hugo && hugo --baseURL="$ARTIFACT_URL" --config "hugo.toml,hugo.preview.toml"
     - echo PREVIEW_URL="$ARTIFACT_URL/index.html" >> preview.env
   rules:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
