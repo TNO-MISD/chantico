@@ -125,7 +125,40 @@ docs:
     paths:
       - docs
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: always
+
+hugo-preview:
+  image: "hugomods/hugo:exts"
+  stage: pages
+  artifacts:
+    paths:
+      - hugo/public
+    reports:
+      dotenv: hugo/preview.env
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    url: "$ARTIFACT_URL/index.html"
+    on_stop: stop-review
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    THEME_URL: "github.com/adityatelange/hugo-PaperMod"
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/hugo/public/"
+  dependencies:
+    - docs
+  script:
+    - cd hugo && hugo --baseURL="$ARTIFACT_URL" --config "hugo.toml,hugo.preview.toml"
+    - echo PREVIEW_URL="$ARTIFACT_URL/index.html" >> preview.env
+  rules:
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+
+stop-review:
+  stage: pages
+  script:
+    - echo "Stopping review app for hugo-preview"
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    action: stop
+  when: manual
 
 pages:
   image: "hugomods/hugo:exts"
