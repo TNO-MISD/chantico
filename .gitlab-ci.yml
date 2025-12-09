@@ -115,7 +115,7 @@ go-test:
 docs:
   stage: docs
   script:
-    - go install go.abhg.dev/doc2go@latest
+    - go install go.abhg.dev/doc2go@v0.11.0
     - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
     - cp -r assets docs/assets/
     - mkdir -p docs/assets/css/extended
