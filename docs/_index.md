@@ -172,11 +172,7 @@ help the developers / users using chantico.
 
 Here is an overview:
 
-- [How to install chantico](how-to-install-chantico.md)
-- [How to set-up the local development environment](how-to-setup-the-local-development-environment.md)
-- [How to register a physical SNMP device](how-to-register-a-physical-snmp-device.md)
-- [How to register an SNMP device type](how-to-register-an-snmp-device-type.md)
-- [How to run the mock SNMP device](how-to-run-the-mock-snmp-device.md)
+{{% howtos %}}
 
 ## API documentation
 
