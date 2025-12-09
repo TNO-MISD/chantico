@@ -134,7 +134,7 @@ hugo-preview:
     paths:
       - hugo/public
     reports:
-      dotenv: preview.env
+      dotenv: hugo/preview.env
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
     THEME_URL: "github.com/adityatelange/hugo-PaperMod"
