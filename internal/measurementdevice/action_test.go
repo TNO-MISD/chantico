@@ -2,7 +2,7 @@ package measurementdevice
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"reflect"
 	"testing"
@@ -17,9 +17,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var _ = fmt.Printf
-var _ = ioutil.ReadDir
 
 const (
 	yamlSNMPConfigFoo = `
@@ -244,6 +241,70 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			err = yaml.Unmarshal(yamlFileBytes, &expected)
 			if err != nil {
 				t.Fatalf("The expected yaml is not a valid YAML file: %s\n", yamlFile)
+			}
+		})
+	}
+}
+
+func TestDeleteSNMPConfig(t *testing.T) {
+	testCases := map[string]struct {
+		BeforeDeletionFiles []string
+		MeasurementDevice   *chantico.MeasurementDevice
+		AfterDeletionFiles  []string
+	}{
+		"files present": {
+			BeforeDeletionFiles: []string{
+				"snmp/config/generator_18ac6360-39e7-4ee3-a9b8-58992958e29a.yml",
+				"snmp/config/config_18ac6360-39e7-4ee3-a9b8-58992958e29a.yml",
+				"snmp/config/generator_36eab0e9-60f9-4fa9-beb3-f68834322f6b.yml",
+				"snmp/config/config_36eab0e9-60f9-4fa9-beb3-f68834322f6b.yml",
+			},
+			MeasurementDevice: &chantico.MeasurementDevice{ObjectMeta: metav1.ObjectMeta{UID: "18ac6360-39e7-4ee3-a9b8-58992958e29a"}},
+			AfterDeletionFiles: []string{
+				"snmp/config/generator_36eab0e9-60f9-4fa9-beb3-f68834322f6b.yml",
+				"snmp/config/config_36eab0e9-60f9-4fa9-beb3-f68834322f6b.yml",
+			},
+		},
+		"file non-present": {
+			BeforeDeletionFiles: []string{},
+			MeasurementDevice:   &chantico.MeasurementDevice{ObjectMeta: metav1.ObjectMeta{UID: "18ac6360-39e7-4ee3-a9b8-58992958e29a"}},
+			AfterDeletionFiles:  []string{},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Create temporary directory
+			tmpSNMPDir := testCreateTmpSNMPDirectories(t)
+			// Create files
+			for _, beforeDeletionFile := range tc.BeforeDeletionFiles {
+				os.WriteFile(
+					filepath.Join(tmpSNMPDir, beforeDeletionFile),
+					[]byte{},
+					0755,
+				)
+			}
+
+			// Call function
+			_ = DeleteSNMPConfig(tc.MeasurementDevice)
+
+			// Check that the file exist
+			for _, afterDeletionFile := range tc.AfterDeletionFiles {
+				afterDeletionAbsPath := filepath.Join(tmpSNMPDir, afterDeletionFile)
+				_, err := os.Stat(afterDeletionAbsPath)
+				if err != nil {
+					t.Fatalf("Error with file %s\n", afterDeletionAbsPath)
+				}
+			}
+			observedAfterDeletionFiles := []string{}
+			filepath.Walk(filepath.Join(tmpSNMPDir, snmpConfigDir), func(path string, info fs.FileInfo, err error) error {
+				if path != filepath.Join(tmpSNMPDir, snmpConfigDir) {
+					observedAfterDeletionFiles = append(observedAfterDeletionFiles, path)
+				}
+				return nil
+			})
+			if len(observedAfterDeletionFiles) != len(tc.AfterDeletionFiles) {
+				t.Fatalf("Mismatch after deletion files expected: %v, got %v\n", tc.AfterDeletionFiles, observedAfterDeletionFiles)
 			}
 		})
 	}

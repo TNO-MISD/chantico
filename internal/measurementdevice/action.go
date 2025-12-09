@@ -46,29 +46,24 @@ var ActionMap = map[string][]ActionFuntion{
 	StateEntryPoint: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
 	},
-	StateFailed: {},
-
 	StatePendingSNMPConfigUpdate: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
 	},
 	StateSucceededSNMPConfigUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateModification},
-		ActionFuntion{Type: ActionFunctionPure, Pure: AssessLeader},
-	},
-
-	StatePendingOnLeader: {},
-	StateElectedLeader: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
 	},
-
-	StatePendingSNMPServiceUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
-	},
-	StateSucceededSNMPServiceUpdate: {
+	StateDelete: {
+		ActionFuntion{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
 		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
-		ActionFuntion{Type: ActionFunctionPure, Pure: ElectLeader},
 	},
+
+	StateFailed:   {},
+	StateEndPoint: {},
 }
 
 func ExecuteActions(
@@ -131,22 +126,6 @@ func UpdateModification(
 	return nil
 }
 
-func AssessLeader(
-	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	// TODO: Implement the logic of AssessLeader based on and UpdateTime, UpdateGeneration
-	// TODO: Write test associated
-	return nil
-}
-
-func ElectLeader(
-	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	// TODO: Implement the logic of ElectLeader based on and UpdateTime, UpdateGeneration
-	// TODO: Write test associated
-	panic("Not implemented yet")
-}
-
 func RequeueWithDelay(
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
@@ -172,6 +151,15 @@ func CreateSNMPGenerator(
 		measurementDevice.Status.State = StateFailed
 		measurementDevice.Status.ErrorMessage = fmt.Sprintf("Could not write to %s", generatorPath)
 	}
+	return nil
+}
+
+func DeleteSNMPConfig(
+	measurementDevice *chantico.MeasurementDevice,
+) *ctrl.Result {
+	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
+	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("config_%s.yml", measurementDevice.ObjectMeta.GetUID())))
+	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("generator_%s.yml", measurementDevice.ObjectMeta.GetUID())))
 	return nil
 }
 
@@ -274,5 +262,22 @@ func ReloadSNMPService(
 		}
 	}()
 
+	return nil
+}
+
+func ScheduleSNMPGeneratorJob(
+	ctx context.Context,
+	kubernetesClient client.Client,
+	measurementDevice *chantico.MeasurementDevice,
+) *ctrl.Result {
+	measurementDevice.Status.JobName = fmt.Sprintf("update_snmp_%s_%d.yml", measurementDevice.Name, int(time.Now().Unix()))
+	measurementDevice.Status.State = StatePendingSNMPConfigUpdate
+
+	updateJob := MakeJob(*measurementDevice)
+	err := kubernetesClient.Create(ctx, updateJob)
+	if err != nil {
+		measurementDevice.Status.State = StateFailed
+		measurementDevice.Status.ErrorMessage = err.Error()
+	}
 	return nil
 }

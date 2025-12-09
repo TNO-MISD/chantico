@@ -37,8 +37,8 @@ make -C "$SCRIPT_DIR/.." install
 # Make snmp-mock docker image
 SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"
 docker pull "$SNMP_MOCK_IMAGE"
-docker tag "$SNMP_MOCK_IMAGE" snmp-mock:latest
-kind load docker-image snmp-mock:latest --name kind
+docker tag "$SNMP_MOCK_IMAGE" chantico-snmp-mock:latest
+kind load docker-image chantico-snmp-mock:latest --name kind
 
 # Apply to k8s
 kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml

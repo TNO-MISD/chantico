@@ -2,8 +2,10 @@ package measurementdevice
 
 import (
 	"fmt"
-	"go.yaml.in/yaml/v2"
 	"maps"
+	"path/filepath"
+
+	"go.yaml.in/yaml/v2"
 
 	chantico "chantico/api/v1alpha1"
 	img "chantico/internal/images"
@@ -21,7 +23,7 @@ const (
 	snmpMibsDir   = "snmp/mibs"
 )
 
-func MakeJob(measurementDevice chantico.MeasurementDevice, timestamp int) *batchv1.Job {
+func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
 	volume, _ := vol.GetChanticoVolume()
 
 	containers := []corev1.Container{
@@ -32,12 +34,12 @@ func MakeJob(measurementDevice chantico.MeasurementDevice, timestamp int) *batch
 				{
 					Name:      vol.ChanticoVolumeMount,
 					MountPath: "/opt/snmp.yml",
-					SubPath:   fmt.Sprintf("%s/snmp.yml", snmpConfigDir),
+					SubPath:   getConfigPath(measurementDevice),
 				},
 				{
 					Name:      vol.ChanticoVolumeMount,
 					MountPath: "/opt/generator.yml",
-					SubPath:   getGeneratorPath(timestamp),
+					SubPath:   getGeneratorPath(measurementDevice),
 				},
 				{
 					Name:      vol.ChanticoVolumeMount,
@@ -66,8 +68,18 @@ func MakeJob(measurementDevice chantico.MeasurementDevice, timestamp int) *batch
 	}
 }
 
-func getGeneratorPath(timestamp int) string {
-	return fmt.Sprintf("%s/generator-%d.yml", snmpConfigDir, timestamp)
+func getGeneratorPath(measurementDevice chantico.MeasurementDevice) string {
+	return filepath.Join(
+		snmpConfigDir,
+		fmt.Sprintf("generator_%s.yml", measurementDevice.Name),
+	)
+}
+
+func getConfigPath(measurementDevice chantico.MeasurementDevice) string {
+	return filepath.Join(
+		snmpConfigDir,
+		fmt.Sprintf("config_%s.yml", measurementDevice.Name),
+	)
 }
 
 type generatorModule struct {
