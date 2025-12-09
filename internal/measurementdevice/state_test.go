@@ -11,11 +11,10 @@ import (
 
 func TestGetState(t *testing.T) {
 	testCases := map[string]struct {
-		MeasurementDevice     *chantico.MeasurementDevice
-		MeasurementDeviceList []chantico.MeasurementDevice
-		Job                   batchv1.Job
-		Deployment            appsv1.Deployment
-		Expected              string
+		MeasurementDevice *chantico.MeasurementDevice
+		Job               batchv1.Job
+		Deployment        appsv1.Deployment
+		Expected          string
 	}{
 		"empty state": {
 			MeasurementDevice: &chantico.MeasurementDevice{
@@ -35,7 +34,6 @@ func TestGetState(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			result := GetState(
 				tc.MeasurementDevice,
-				tc.MeasurementDeviceList,
 				&tc.Job,
 				&tc.Deployment,
 			)

@@ -22,7 +22,6 @@ const (
 
 func GetState(
 	measurementDevice *chantico.MeasurementDevice,
-	measurementDevices []chantico.MeasurementDevice,
 	snmpJob *batchv1.Job,
 	snmpExporterDeployment *appsv1.Deployment,
 ) string {
