@@ -15,14 +15,10 @@ const (
 	StateSucceededSNMPConfigUpdate = "SucceededSNMPConfigUpdate"
 	StateFailed                    = "Failed"
 	StateEndPoint                  = "End Point"
-<<<<<<< HEAD
 	StateDelete                    = "StateDelete"
 
 	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
 	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
-=======
-	StateDelete                    = "Delete"
->>>>>>> 83edcdf (Change GetState to UpdateState)
 )
 
 func UpdateState(

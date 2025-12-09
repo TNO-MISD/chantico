@@ -226,7 +226,7 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			_ = CreateSNMPGenerator(tc.Case)
 
 			// Check that the file exist
-			yamlFile := fmt.Sprintf("%s/generator-%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
+			yamlFile := fmt.Sprintf("%s/generator_%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
 			if _, err = os.Stat(yamlFile); err != nil {
 				t.Fatalf("yamlFile: %s does not exist\n", yamlFile)
 			}
