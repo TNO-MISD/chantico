@@ -124,6 +124,8 @@ docs:
   artifacts:
     paths:
       - docs
+  rules:
+    - when: always
 
 hugo-preview:
   image: "hugomods/hugo:exts"
