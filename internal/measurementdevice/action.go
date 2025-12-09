@@ -254,7 +254,7 @@ func ReloadSNMPService(
 		}
 
 		// Poll to check if the deployment is ready
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(chantico.RequeueDelay)
 		defer ticker.Stop()
 		for {
 			select {
