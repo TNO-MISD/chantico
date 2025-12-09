@@ -1,10 +1,11 @@
 package measurementdevice
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
+	"fmt"
+	"time"
 
 	chantico "chantico/api/v1alpha1"
+	batchv1 "k8s.io/api/batch/v1"
 )
 
 const (
@@ -14,25 +15,69 @@ const (
 	StateSucceededSNMPConfigUpdate = "SucceededSNMPConfigUpdate"
 	StateFailed                    = "Failed"
 	StateEndPoint                  = "End Point"
+<<<<<<< HEAD
 	StateDelete                    = "StateDelete"
 
 	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
 	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
+=======
+	StateDelete                    = "Delete"
+>>>>>>> 83edcdf (Change GetState to UpdateState)
 )
 
-func GetState(
+func UpdateState(
 	measurementDevice *chantico.MeasurementDevice,
 	snmpJob *batchv1.Job,
-	snmpExporterDeployment *appsv1.Deployment,
-) string {
+) {
+	// Covers the initialization pathological cases
 	if measurementDevice == nil {
-		return StateEndPoint
+		return
+	}
+	fmt.Printf("I come here\n")
+	if measurementDevice.Status.UpdateGeneration == 0 {
+		measurementDevice.Status.UpdateGeneration = 1
 	}
 
+	// Covers lifecycle related changes
+	switch {
+	case measurementDevice.Status.UpdateGeneration < measurementDevice.ObjectMeta.Generation:
+		measurementDevice.Status.State = StateEntryPoint
+		break
+	case measurementDevice.ObjectMeta.GetDeletionTimestamp() != nil:
+		measurementDevice.Status.State = StateDelete
+		break
+	}
+
+	// Realize the update
 	switch measurementDevice.Status.State {
-	case "":
-		return StateInit
+	case "", StateInit:
+		measurementDevice.Status.State = StateInit
+		measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
+		return
+	case StateEntryPoint:
+		measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
+		return
+
+	case StatePendingSNMPConfigUpdate:
+		if snmpJob.Status.Succeeded == 1 {
+			measurementDevice.Status.State = StateSucceededSNMPConfigUpdate
+		} else if snmpJob.Status.Failed == 1 {
+			measurementDevice.Status.State = StateFailed
+		} else {
+			startTime := snmpJob.Status.StartTime
+			if startTime == nil {
+				break
+			}
+			now := time.Now()
+			if startTime.Time.Add(chantico.SNMPJobTimeout).After(now) {
+				measurementDevice.Status.State = StateFailed
+			}
+		}
+		return
+	case StateEndPoint, StateFailed, StateDelete:
+		return
 	default:
-		panic("Not implemented yet")
+		measurementDevice.Status.State = StateFailed
+		return
 	}
 }

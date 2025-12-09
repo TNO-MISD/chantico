@@ -22,7 +22,6 @@ import (
 	chantico "chantico/api/v1alpha1"
 	md "chantico/internal/measurementdevice"
 
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,11 +47,8 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
-	deployment := &appsv1.Deployment{}
-	_ = r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
-
-	state := md.GetState(measurementDevice, job, deployment)
-	md.ExecuteActions(state, ctx, r.Client, measurementDevice)
+	md.UpdateState(measurementDevice, job)
+	md.ExecuteActions(ctx, r.Client, measurementDevice)
 	return ctrl.Result{}, nil
 }
 
