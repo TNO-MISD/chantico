@@ -1,0 +1,5 @@
+relativeURLs = true
+canonifyURLs = false
+
+[params]
+uglyURLs = true

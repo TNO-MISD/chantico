@@ -3,7 +3,14 @@
 {{- else if strings.HasSuffix .Destination ".md" -}}
   {{- /* strip .md and rewrite to .html or to page permalink */ -}}
   {{- $trim := replaceRE "\\.md$" "" .Destination -}}
-  <a href="{{ printf "%s/" $trim | relURL }}">{{ .Text | safeHTML }}</a>
+  {{- $ugly := .Page.Site.Params.uglyURLs | default false -}}
+  {{- if $ugly -}}
+      {{- /* ugly URLs: link to index.html inside the directory */ -}}
+      <a href="{{ printf "%s/index.html" $trim | relURL }}">{{ .Text | safeHTML }}</a>
+  {{- else -}}
+      {{- /* pretty URLs: directory style URL */ -}}
+      <a href="{{ printf "%s/" $trim | relURL }}">{{ .Text | safeHTML }}</a>
+  {{- end -}}
 {{- else -}}
   <a href="{{ .Destination | safeURL }}">{{ .Text | safeHTML }}</a>
 {{- end -}}
