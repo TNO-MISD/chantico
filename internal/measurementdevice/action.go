@@ -42,6 +42,8 @@ type ActionFuntion struct {
 var ActionMap = map[string][]ActionFuntion{
 	StateInit: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
+		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
 	},
 	StateEntryPoint: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
@@ -67,13 +69,12 @@ var ActionMap = map[string][]ActionFuntion{
 }
 
 func ExecuteActions(
-	state string,
 	ctx context.Context,
 	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
 ) *ctrl.Result {
 	result := &ctrl.Result{}
-	actionFunctions := ActionMap[state]
+	actionFunctions := ActionMap[measurementDevice.Status.State]
 	for _, actionFunction := range actionFunctions {
 		switch actionFunction.Type {
 		case ActionFunctionPure:
@@ -141,7 +142,7 @@ func CreateSNMPGenerator(
 		pm.NewPostMortem(err, measurementDevice)
 	}
 	generatorPath := fmt.Sprintf(
-		"%s/%s/generator-%s.yml",
+		"%s/%s/generator_%s.yml",
 		os.Getenv(vol.ChanticoVolumeLocationEnv),
 		snmpConfigDir,
 		string(measurementDevice.GetUID()),
