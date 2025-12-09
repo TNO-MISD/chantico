@@ -60,9 +60,9 @@ snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:31161 tnoPduEnergyVal
 
 ## Adding the snmp-mock in chantico (in custruction)
 
-- Port forward `chantico-filbrowser`
+- Port forward `chantico-filebrowser`
 ```bash
-    kubectl port-forward -n chantico svc/chantico-snmp 80:18888
+    kubectl port-forward -n chantico svc/chantico-filebrowser 18888:80
 ```
 - Login in the web UI, `localhost:18888` and Upload `./dev/TNO-PDU-MIB.txt` to `./snmp/mibs/TNO-PDU-MIB.txt`
 
@@ -95,5 +95,5 @@ kubectl rollout restart -n chantico deployment/chantico-snmp
 ```
 - Curl the module (optionally this can be done via the web UI)
 ```bash
-SNMP_MOCK="$(kubectl get -n chantico svc/chantico-snmp-mock -o jsonpath='{.spec.clusterIP}')" curl -X GET 'http://localhost:9116/snmp?target='${SNMP_MOCK}':1161&auth=default&module=init'
+curl -X GET 'http://localhost:9116/snmp?target='$(kubectl get -n chantico svc/chantico-snmp-mock -o jsonpath='{.spec.clusterIP}')':1161&auth=default&module=init'
 ```
