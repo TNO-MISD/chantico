@@ -112,6 +112,21 @@ go-test:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
+osv_scanner:
+  stage: test
+  rules: 
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'  
+  image:
+    name: ghcr.io/google/osv-scanner:v2.3.1
+    entrypoint: [""] # Override entry point
+  script: # osv-scanner recursively scans the project for dependencies
+    - /osv-scanner --format json --call-analysis -r . --output json:osv-scanner-report.json,html:osv-scanner-report.html
+  artifacts:
+    paths:
+      - osv-scanner-report.json
+      - osv-scanner-report.html
+    expire_in: 7 days
+
 docs:
   stage: docs
   script:
