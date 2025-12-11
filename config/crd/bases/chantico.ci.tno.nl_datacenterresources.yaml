@@ -58,6 +58,8 @@ spec:
             properties:
               errorMessage:
                 type: string
+              errorType:
+                type: string
               state:
                 type: string
               updateGeneration:

@@ -35,6 +35,15 @@ type DataCenterResourceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	StateInit                    = "Init"
+	StateValidationFailed        = "Validation Failed"
+	StatePendingPostgresUpdate   = "Pending Postgres Update"
+	StateSucceededPostgresUpdate = "Successful Postgres Update"
+	StateDelete                  = "Delete"
+	StateEnd                     = "End point"
+)
+
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=datacenterresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=datacenterresources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=datacenterresources/finalizers,verbs=update
@@ -58,8 +67,11 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	err := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
 	if err != nil {
+		datacenterResource.Status.State = StateValidationFailed
 		datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
-		return ctrl.Result{}, err
+		datacenterResource.Status.ErrorType = fmt.Sprintf("%T", err)
+		_ = r.Status().Update(ctx, datacenterResource)
+		return ctrl.Result{}, nil
 	}
 
 	// TODO(user): do something with the links here:
