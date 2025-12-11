@@ -112,7 +112,7 @@ go-test:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
-osv_scanner:
+osv-scanner:
   stage: test
   rules: 
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'  
@@ -120,12 +120,27 @@ osv_scanner:
     name: ghcr.io/google/osv-scanner:v2.3.1
     entrypoint: [""] # Override entry point
   script: # osv-scanner recursively scans the project for dependencies
-    - /osv-scanner --format json --call-analysis -r . --output json:osv-scanner-report.json,html:osv-scanner-report.html
+    - /osv-scanner --call-analysis -r . --output json:osv-scanner-report.json,html:osv-scanner-report.html
   artifacts:
     paths:
       - osv-scanner-report.json
       - osv-scanner-report.html
     expire_in: 7 days
+  environment:
+    name: scan/$CI_COMMIT_REF_SLUG
+    url: "$ARTIFACT_URL/osv-scanner-report.html"
+    on_stop: stop-scan-review
+  variables:
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/"
+
+stop-scan-review:
+  stage: pages
+  script:
+    - echo "Stopping review app for osv-scanner"
+  environment:
+    name: scan/$CI_COMMIT_REF_SLUG
+    action: stop
+  when: manual
 
 docs:
   stage: docs
