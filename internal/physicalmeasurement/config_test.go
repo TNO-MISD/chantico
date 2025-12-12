@@ -45,20 +45,9 @@ func writeConfigToFile(t *testing.T, config []byte, filename string) (*string, e
 	return &filePath, nil
 }
 
-func TestMakeScrapeConfig(t *testing.T) {
-	device_id := "foo"
-	measurement_ips := []string{"10.0.0.1", "10.0.0.2"}
-	cfg := PrometheusConfig{}
-	scrape := CreatePhysicalMeasurementConfig(device_id, measurement_ips)
-	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrape)
-
-	checkEquality(t, cfg, []byte(exampleYaml))
-}
-
 func TestMergeToConfigExistingJob(t *testing.T) {
 	yml, _ := writeConfigToFile(t, []byte(exampleYaml), "test_cfg.yaml")
-	scrape_cfg := CreatePhysicalMeasurementConfig("foo", []string{"10.0.0.3", "10.0.0.4"})
-	cfg := MergeWithPrometheusConfig(*yml, scrape_cfg)
+	cfg := MergeWithPrometheusConfig(*yml, "foo", []string{"10.0.0.3", "10.0.0.4"})
 
 	expected := []byte(`
 scrape_configs:
@@ -91,8 +80,7 @@ scrape_configs:
 
 func TestMergeToConfigNewJob(t *testing.T) {
 	yml, _ := writeConfigToFile(t, []byte(exampleYaml), "test_cfg.yaml")
-	scrape_cfg := CreatePhysicalMeasurementConfig("bar", []string{"10.0.0.3", "10.0.0.4"})
-	cfg := MergeWithPrometheusConfig(*yml, scrape_cfg)
+	cfg := MergeWithPrometheusConfig(*yml, "bar", []string{"10.0.0.3", "10.0.0.4"})
 
 	expected := []byte(`
 scrape_configs:

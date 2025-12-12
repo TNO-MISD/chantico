@@ -100,11 +100,7 @@ func UpdatePrometheus(
 	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
 	fmt.Printf("===\n\n")
 
-	newConfig := CreatePhysicalMeasurementConfig(
-		physicalMeasurement.Spec.MeasurementDevice,
-		physicalMeasurement.Spec.ResourceIds,
-	)
-	cfg := MergeWithPrometheusConfig(os.Getenv("PROMETHEUS_CONFIG"), newConfig)
+	cfg := MergeWithPrometheusConfig(os.Getenv("PROMETHEUS_CONFIG"), physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.ResourceIds)
 
 	yamlBytes, _ := yaml.Marshal(cfg)
 	err := os.WriteFile(os.Getenv("PROMETHEUS_CONFIG"), yamlBytes, 0644)

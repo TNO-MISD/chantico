@@ -32,7 +32,7 @@ type RelabelConfig struct {
 
 // Get rid of building -> do merging and create physical measurement map for single one.
 
-func CreatePhysicalMeasurementConfig(device_id string, measurementIps []string) ScrapeConfig {
+func newPhysicalMeasurementConfig(device_id string, measurementIps []string) ScrapeConfig {
 	cfg := ScrapeConfig{
 		JobName: device_id,
 		StaticConfigs: []StaticConfig{
@@ -54,11 +54,11 @@ func CreatePhysicalMeasurementConfig(device_id string, measurementIps []string) 
 	return cfg
 }
 
-func MergeWithPrometheusConfig(prometheus_yaml string, newEntry ScrapeConfig) PrometheusConfig {
+func MergeWithPrometheusConfig(prometheus_yaml string, deviceId string, measurementIps []string) PrometheusConfig {
 	cfg, _ := loadPrometheusConfig(prometheus_yaml)
 	for _, scrape := range cfg.ScrapeConfigs {
-		if scrape.JobName == newEntry.JobName {
-			for _, target := range newEntry.StaticConfigs[0].Targets {
+		if scrape.JobName == deviceId {
+			for _, target := range measurementIps {
 				if !contains(scrape.StaticConfigs[0].Targets, target) {
 					scrape.StaticConfigs[0].Targets = append(scrape.StaticConfigs[0].Targets, target)
 				}
@@ -66,7 +66,7 @@ func MergeWithPrometheusConfig(prometheus_yaml string, newEntry ScrapeConfig) Pr
 			return *cfg
 		}
 	}
-	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newEntry)
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newPhysicalMeasurementConfig(deviceId, measurementIps))
 	return *cfg
 }
 
