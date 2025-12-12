@@ -18,9 +18,9 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	types "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,15 +34,6 @@ type DataCenterResourceReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
-
-const (
-	StateInit                    = "Init"
-	StateValidationFailed        = "Validation Failed"
-	StatePendingPostgresUpdate   = "Pending Postgres Update"
-	StateSucceededPostgresUpdate = "Successful Postgres Update"
-	StateDelete                  = "Delete"
-	StateEnd                     = "End point"
-)
 
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=datacenterresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=datacenterresources/status,verbs=get;update;patch
@@ -65,13 +56,19 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements)
 
-	err := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
+	visited, err := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
 	if err != nil {
-		datacenterResource.Status.State = StateValidationFailed
-		datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
-		datacenterResource.Status.ErrorType = fmt.Sprintf("%T", err)
-		_ = r.Status().Update(ctx, datacenterResource)
-		return ctrl.Result{}, nil
+		dcr.SetValidationError(datacenterResource, err)
+	} else {
+		dcr.ClearValidationError(datacenterResource)
+		for _, node := range visited {
+			resource := &chantico.DataCenterResource{}
+			_ = r.Get(ctx, types.NamespacedName{Namespace: "chantico", Name: node}, resource)
+			dcr.ClearValidationError(resource)
+		}
+	}
+	err = r.Status().Update(ctx, datacenterResource)
+	if err != nil {
 	}
 
 	// TODO(user): do something with the links here:
@@ -80,7 +77,7 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Specifically: register in postgres (or prometheus?) which datacenter resource
 	// is involved for which physical measurement
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.

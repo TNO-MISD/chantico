@@ -74,7 +74,7 @@ func TestValidate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := Validate(tc.Resource, tc.Resources, []chantico.PhysicalMeasurement{})
+			_, err := Validate(tc.Resource, tc.Resources, []chantico.PhysicalMeasurement{})
 			if !errors.Is(err, tc.Expected) {
 				t.Errorf("Validate(%#v) = %#v, want %#v\n)", tc, err, tc.Expected)
 			}

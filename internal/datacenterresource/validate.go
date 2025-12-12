@@ -33,7 +33,7 @@ func Validate(
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
-) error {
+) ([]string, error) {
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]chantico.DataCenterResource)
 	for _, resource := range datacenterResources {
@@ -41,15 +41,16 @@ func Validate(
 	}
 	queue := make([]string, 0)
 	queue = append(queue, datacenterResource.Spec.Parent...)
+	visited := 0
 	for len(queue) > 0 {
 		current, ok := resourcesMap[queue[0]]
 		if !ok {
-			return ErrorResourceNotFound{Name: queue[0]}
+			return queue[0:visited], ErrorResourceNotFound{Name: queue[0]}
 		}
 		if current.ObjectMeta.Name == datacenterResource.ObjectMeta.Name {
-			return ErrorCycleDetected{}
+			return queue[0:visited], ErrorCycleDetected{}
 		}
-		queue = queue[1:]
+		visited = visited + 1
 		queue = append(queue, current.Spec.Parent...)
 	}
 
@@ -59,19 +60,9 @@ func Validate(
 
 	// Check type of resource
 	switch datacenterResource.Spec.Type {
-	case "":
-		return nil
-	case DataCenterResourceTypePDU:
-		return nil
-	case DataCenterResourceTypeBaremetal:
-		return nil
-	case DataCenterResourceTypeVM:
-		return nil
-	case DataCenterResourceTypeKubernetes:
-		return nil
-	case DataCenterResourceTypeHeat:
-		return nil
+	case "", DataCenterResourceTypePDU, DataCenterResourceTypeBaremetal, DataCenterResourceTypeVM, DataCenterResourceTypeKubernetes, DataCenterResourceTypeHeat:
+		return queue[:visited], nil
 	default:
-		return fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
+		return queue[:visited], fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
 	}
 }
