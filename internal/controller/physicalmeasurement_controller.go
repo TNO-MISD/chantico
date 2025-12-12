@@ -57,9 +57,8 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 	physicalMeasurement := &chantico.PhysicalMeasurement{}
 	_ = r.Get(ctx, req.NamespacedName, physicalMeasurement)
 
-	state := pm.GetState(physicalMeasurement)
+	pm.UpdateState(physicalMeasurement)
 	pm.ExecuteActions(
-		state,
 		ctx,
 		r.Client,
 		physicalMeasurement,

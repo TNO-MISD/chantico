@@ -2,34 +2,44 @@ package physicalmeasurement
 
 import (
 	chantico "chantico/api/v1alpha1"
-	"fmt"
-	"strconv"
 )
 
 const (
-	StateInit      = "init"
-	StateRunning   = "Running"
-	StateDeleted   = "Deleted"
-	StateFailed    = "Failed"
-	StateCompleted = "Completed"
+	StateInit    = "init"
+	StateRunning = "Running"
+	StateDelete  = "Delete"
+	StateFailed  = "Failed"
 )
 
-func GetState(
+func UpdateState(
 	physicalMeasurement *chantico.PhysicalMeasurement,
-) string {
+) {
 	if physicalMeasurement == nil {
-		return StateCompleted
+		return
+	}
+	if physicalMeasurement.Status.UpdateGeneration == 0 {
+		physicalMeasurement.Status.UpdateGeneration = 1
 	}
 
-	fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
-	fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
-	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
-	fmt.Printf("===\n\n")
+	// Covers lifecycle related changes
+	switch {
+	case physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation:
+		physicalMeasurement.Status.State = StateInit
+		break
+	case physicalMeasurement.ObjectMeta.GetDeletionTimestamp() != nil:
+		physicalMeasurement.Status.State = StateDelete
+		break
+	}
 
 	switch physicalMeasurement.Status.State {
-	case "":
-		return StateInit
+	case "", StateInit:
+		physicalMeasurement.Status.State = StateInit
+		physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
+		return
+	case StateRunning, StateDelete, StateFailed:
+		return
 	default:
-		panic("Not implemented yet")
+		physicalMeasurement.Status.State = StateFailed
+		return
 	}
 }
