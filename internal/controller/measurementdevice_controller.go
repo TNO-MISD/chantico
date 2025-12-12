@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"log"
 
 	chantico "chantico/api/v1alpha1"
 	md "chantico/internal/measurementdevice"
@@ -43,12 +44,29 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Get the information needed to determine the state of the MeasurementDevice
 	measurementDevice := &chantico.MeasurementDevice{}
 	_ = r.Get(ctx, req.NamespacedName, measurementDevice)
+	log.Printf("Object status: %#v\n", (*measurementDevice).Status.State)
 
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
 	md.UpdateState(measurementDevice, job)
-	md.ExecuteActions(ctx, r.Client, measurementDevice)
+	log.Printf("Object post-update status: %#v\n", (*measurementDevice).Status.State)
+	result := md.ExecuteActions(ctx, r.Client, measurementDevice)
+	log.Printf("Finished executing actions\n")
+	if result != nil {
+		log.Printf("Result not-nil: %#v\n", *result)
+		return *result, nil
+	}
+	err := r.Status().Update(ctx, measurementDevice)
+	if err != nil {
+		log.Printf("Error is not nil, err: %s\n", err)
+	}
+	err = r.Client.Update(ctx, measurementDevice)
+	if err != nil {
+		log.Printf("Error is not nil, err: %s\n", err)
+	} else {
+		log.Printf("Could update resource\n", (*measurementDevice))
+	}
 	return ctrl.Result{}, nil
 }
 

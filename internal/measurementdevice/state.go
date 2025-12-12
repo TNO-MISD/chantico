@@ -1,7 +1,7 @@
 package measurementdevice
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	chantico "chantico/api/v1alpha1"
@@ -12,13 +12,12 @@ const (
 	StateInit                      = "Init"
 	StateEntryPoint                = "Entry Point"
 	StatePendingSNMPConfigUpdate   = "Pending SNMP Config Update"
-	StateSucceededSNMPConfigUpdate = "SucceededSNMPConfigUpdate"
+	StateSucceededSNMPConfigUpdate = "Succeeded SNMP Config Update"
+	StatePendingSNMPReload         = "Pending SNMP Config Reload"
 	StateFailed                    = "Failed"
-	StateEndPoint                  = "End Point"
-	StateDelete                    = "StateDelete"
 
-	StatePendingSNMPServiceUpdate   = "PendingSNMPServiceUpdate"
-	StateSucceededSNMPServiceUpdate = "StateSucceededSNMPServiceUpdate"
+	StateEndPoint = "End Point"
+	StateDelete   = "StateDelete"
 )
 
 func UpdateState(
@@ -29,7 +28,6 @@ func UpdateState(
 	if measurementDevice == nil {
 		return
 	}
-	fmt.Printf("I come here\n")
 	if measurementDevice.Status.UpdateGeneration == 0 {
 		measurementDevice.Status.UpdateGeneration = 1
 	}
@@ -57,18 +55,22 @@ func UpdateState(
 	case StatePendingSNMPConfigUpdate:
 		if snmpJob.Status.Succeeded == 1 {
 			measurementDevice.Status.State = StateSucceededSNMPConfigUpdate
-		} else if snmpJob.Status.Failed == 1 {
+		} else if snmpJob.Status.Failed > 0 {
 			measurementDevice.Status.State = StateFailed
+			log.Fatalf("JOB: %#v", snmpJob)
 		} else {
 			startTime := snmpJob.Status.StartTime
 			if startTime == nil {
 				break
 			}
 			now := time.Now()
-			if startTime.Time.Add(chantico.SNMPJobTimeout).After(now) {
+			if startTime.Time.Add(chantico.SNMPJobTimeout).Before(now) {
 				measurementDevice.Status.State = StateFailed
+				log.Fatalf("JOB: %v, %v", startTime.Time, now)
 			}
 		}
+		return
+	case StateSucceededSNMPConfigUpdate, StatePendingSNMPReload:
 		return
 	case StateEndPoint, StateFailed, StateDelete:
 		return
