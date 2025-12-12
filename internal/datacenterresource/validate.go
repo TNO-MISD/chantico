@@ -29,6 +29,14 @@ func (e ErrorCycleDetected) Error() string {
 	return "cyclic loop detected in data center resources"
 }
 
+type ErrorUnknownType struct {
+	Type string
+}
+
+func (e ErrorUnknownType) Error() string {
+	return fmt.Sprintf("unknown type: %s", e.Type)
+}
+
 func Validate(
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
@@ -43,9 +51,9 @@ func Validate(
 	queue = append(queue, datacenterResource.Spec.Parent...)
 	visited := 0
 	for len(queue) > 0 {
-		current, ok := resourcesMap[queue[0]]
+		current, ok := resourcesMap[queue[visited]]
 		if !ok {
-			return queue[0:visited], ErrorResourceNotFound{Name: queue[0]}
+			return queue[0:visited], ErrorResourceNotFound{Name: queue[visited]}
 		}
 		if current.ObjectMeta.Name == datacenterResource.ObjectMeta.Name {
 			return queue[0:visited], ErrorCycleDetected{}
@@ -63,6 +71,6 @@ func Validate(
 	case "", DataCenterResourceTypePDU, DataCenterResourceTypeBaremetal, DataCenterResourceTypeVM, DataCenterResourceTypeKubernetes, DataCenterResourceTypeHeat:
 		return queue[:visited], nil
 	default:
-		return queue[:visited], fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
+		return queue[:visited], ErrorUnknownType{Type: datacenterResource.Spec.Type}
 	}
 }

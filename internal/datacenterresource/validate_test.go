@@ -2,6 +2,7 @@ package datacenterresource
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	chantico "chantico/api/v1alpha1"
@@ -11,9 +12,10 @@ import (
 
 func TestValidate(t *testing.T) {
 	testCases := map[string]struct {
-		Resource  *chantico.DataCenterResource
-		Resources []chantico.DataCenterResource
-		Expected  error
+		Resource        *chantico.DataCenterResource
+		Resources       []chantico.DataCenterResource
+		ExpectedVisited []string
+		ExpectedError   error
 	}{
 		"creates resource if empty": {
 			Resource: &chantico.DataCenterResource{
@@ -25,8 +27,9 @@ func TestValidate(t *testing.T) {
 					Parent: []string{},
 				},
 			},
-			Resources: []chantico.DataCenterResource{},
-			Expected:  nil,
+			Resources:       []chantico.DataCenterResource{},
+			ExpectedVisited: []string{},
+			ExpectedError:   nil,
 		},
 		"gives error if a resource is not found": {
 			Resource: &chantico.DataCenterResource{
@@ -38,8 +41,9 @@ func TestValidate(t *testing.T) {
 					Parent: []string{"bar"},
 				},
 			},
-			Resources: []chantico.DataCenterResource{},
-			Expected:  ErrorResourceNotFound{Name: "bar"},
+			Resources:       []chantico.DataCenterResource{},
+			ExpectedVisited: []string{},
+			ExpectedError:   ErrorResourceNotFound{Name: "bar"},
 		},
 		"gives error if a cycle is found": {
 			Resource: &chantico.DataCenterResource{
@@ -68,15 +72,30 @@ func TestValidate(t *testing.T) {
 					Parent: []string{"foo"},
 				},
 			}},
-			Expected: ErrorCycleDetected{},
+			ExpectedVisited: []string{"bar"},
+			ExpectedError:   ErrorCycleDetected{},
+		},
+		"gives error if unknown type is found": {
+			Resource: &chantico.DataCenterResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "perpetuummobile",
+					Parent: []string{},
+				},
+			},
+			Resources:       []chantico.DataCenterResource{},
+			ExpectedVisited: []string{},
+			ExpectedError:   ErrorUnknownType{Type: "perpetuummobile"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			_, err := Validate(tc.Resource, tc.Resources, []chantico.PhysicalMeasurement{})
-			if !errors.Is(err, tc.Expected) {
-				t.Errorf("Validate(%#v) = %#v, want %#v\n)", tc, err, tc.Expected)
+			visited, err := Validate(tc.Resource, tc.Resources, []chantico.PhysicalMeasurement{})
+			if !reflect.DeepEqual(visited, tc.ExpectedVisited) || !errors.Is(err, tc.ExpectedError) {
+				t.Errorf("Validate(%#v) = %#v, %#v, want %#v, %#v\n)", tc, visited, err, tc.ExpectedVisited, tc.ExpectedError)
 			}
 		})
 	}
