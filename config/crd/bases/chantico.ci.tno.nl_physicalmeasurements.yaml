@@ -60,14 +60,14 @@ spec:
             properties:
               errorMessage:
                 type: string
-              generation:
-                format: int64
-                type: integer
               state:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
                   Important: Run "make" to regenerate code after modifying this file
                 type: string
+              updateGeneration:
+                format: int64
+                type: integer
             type: object
         type: object
     served: true
