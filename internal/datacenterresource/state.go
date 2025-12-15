@@ -67,7 +67,7 @@ func UpdateState(
 	case StateEnd, StateValidationFailed, StateDelete:
 		return
 	default:
-		SetValidationError(datacenterResource, fmt.Errorf("unknown state"))
+		SetValidationError(datacenterResource, fmt.Errorf("unknown state"), "")
 		return
 	}
 }
@@ -75,15 +75,19 @@ func UpdateState(
 func SetValidationError(
 	datacenterResource *chantico.DataCenterResource,
 	err error,
+	involvedResource string,
 ) {
 	datacenterResource.Status.State = StateValidationFailed
 	datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
 	datacenterResource.Status.ErrorType = fmt.Sprintf("%T", err)
+	datacenterResource.Status.InvolvedResource = involvedResource
 }
 
 func ClearValidationError(
 	datacenterResource *chantico.DataCenterResource,
 ) {
+	datacenterResource.Status.State = StateInit
 	datacenterResource.Status.ErrorMessage = ""
 	datacenterResource.Status.ErrorType = ""
+	datacenterResource.Status.InvolvedResource = ""
 }

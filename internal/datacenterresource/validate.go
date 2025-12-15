@@ -2,6 +2,7 @@ package datacenterresource
 
 import (
 	"fmt"
+	"slices"
 
 	chantico "chantico/api/v1alpha1"
 )
@@ -15,18 +16,19 @@ const (
 )
 
 type ErrorResourceNotFound struct {
-	Name string
+	InvolvedResource string
 }
 
 func (e ErrorResourceNotFound) Error() string {
-	return fmt.Sprintf("could not locate resource: %s", e.Name)
+	return fmt.Sprintf("could not locate resource: %s", e.InvolvedResource)
 }
 
 type ErrorCycleDetected struct {
+	InvolvedResource string
 }
 
 func (e ErrorCycleDetected) Error() string {
-	return "cyclic loop detected in data center resources"
+	return fmt.Sprintf("cyclic loop detected in data center resources from child %s", e.InvolvedResource)
 }
 
 type ErrorUnknownType struct {
@@ -41,7 +43,7 @@ func Validate(
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
-) ([]string, error) {
+) ([]string, error, string) {
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]chantico.DataCenterResource)
 	for _, resource := range datacenterResources {
@@ -50,13 +52,13 @@ func Validate(
 	queue := make([]string, 0)
 	queue = append(queue, datacenterResource.Spec.Parent...)
 	visited := 0
-	for len(queue) > 0 {
+	for len(queue) > visited {
 		current, ok := resourcesMap[queue[visited]]
 		if !ok {
-			return queue[0:visited], ErrorResourceNotFound{Name: queue[visited]}
+			return queue[0:visited], ErrorResourceNotFound{InvolvedResource: queue[visited]}, queue[visited]
 		}
-		if current.ObjectMeta.Name == datacenterResource.ObjectMeta.Name {
-			return queue[0:visited], ErrorCycleDetected{}
+		if slices.Contains(current.Spec.Parent, datacenterResource.ObjectMeta.Name) {
+			return queue[0:visited], ErrorCycleDetected{InvolvedResource: queue[visited]}, queue[visited]
 		}
 		visited = visited + 1
 		queue = append(queue, current.Spec.Parent...)
@@ -69,8 +71,8 @@ func Validate(
 	// Check type of resource
 	switch datacenterResource.Spec.Type {
 	case "", DataCenterResourceTypePDU, DataCenterResourceTypeBaremetal, DataCenterResourceTypeVM, DataCenterResourceTypeKubernetes, DataCenterResourceTypeHeat:
-		return queue[:visited], nil
+		return queue[:visited], nil, ""
 	default:
-		return queue[:visited], ErrorUnknownType{Type: datacenterResource.Spec.Type}
+		return queue[:visited], ErrorUnknownType{Type: datacenterResource.Spec.Type}, ""
 	}
 }

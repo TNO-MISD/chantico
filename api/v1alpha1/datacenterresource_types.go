@@ -45,6 +45,7 @@ type DataCenterResourceStatus struct {
 	UpdateGeneration int64  `json:"updateGeneration,omitempty"`
 	ErrorMessage     string `json:"errorMessage,omitempty"`
 	ErrorType        string `json:"errorType,omitempty"`
+	InvolvedResource string `json:"involvedResource,omitempty"`
 }
 
 // +kubebuilder:object:root=true

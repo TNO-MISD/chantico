@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"log"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	types "k8s.io/apimachinery/pkg/types"
@@ -56,20 +57,35 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements)
 
-	visited, err := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
+	// Update state of the resource
+	log.Printf("Updating state of data center resource %s\n", datacenterResource.Name)
+	dcr.UpdateState(datacenterResource)
+
+	// Perform validation and clear other visited node validation errors if needed
+	// This brings those into a reconciliation loop as well
+	visited, err, involvedResource := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
 	if err != nil {
-		dcr.SetValidationError(datacenterResource, err)
+		log.Printf("Setting validation error of data center resource %s: %s\n", datacenterResource.Name, err)
+		dcr.SetValidationError(datacenterResource, err, involvedResource)
 	} else {
+		log.Printf("Clearing validation errors of data center resource %s", datacenterResource.Name)
 		dcr.ClearValidationError(datacenterResource)
 		for _, node := range visited {
+			log.Printf("Checking visited node %s\n", visited)
 			resource := &chantico.DataCenterResource{}
 			_ = r.Get(ctx, types.NamespacedName{Namespace: "chantico", Name: node}, resource)
 			dcr.ClearValidationError(resource)
+			r.UpdateStatus(ctx, resource)
+		}
+		if datacenterResource.Status.InvolvedResource != "" {
+			log.Printf("Checking involved resource %s\n", visited)
+			resource := &chantico.DataCenterResource{}
+			_ = r.Get(ctx, types.NamespacedName{Namespace: "chantico", Name: datacenterResource.Status.InvolvedResource}, resource)
+			dcr.ClearValidationError(resource)
+			r.UpdateStatus(ctx, resource)
 		}
 	}
-	err = r.Status().Update(ctx, datacenterResource)
-	if err != nil {
-	}
+	r.UpdateStatus(ctx, datacenterResource)
 
 	// TODO(user): do something with the links here:
 	// perform operations to make the cluster state reflect the state specified by
@@ -77,7 +93,17 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Specifically: register in postgres (or prometheus?) which datacenter resource
 	// is involved for which physical measurement
 
-	return ctrl.Result{}, err
+	return ctrl.Result{}, nil
+}
+
+func (r *DataCenterResourceReconciler) UpdateStatus(
+	ctx context.Context,
+	datacenterResource *chantico.DataCenterResource,
+) {
+	err := r.Status().Update(ctx, datacenterResource)
+	if err != nil {
+		log.Printf("Error is not nil, err: %s\n", err)
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

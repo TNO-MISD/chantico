@@ -19,6 +19,18 @@ func TestUpdateState(t *testing.T) {
 			},
 			Expected: StateInit,
 		},
+		"nil rsource": {
+			Resource: nil,
+			Expected: StateEnd,
+		},
+		"unknown state": {
+			Resource: &chantico.DataCenterResource{
+				Status: chantico.DataCenterResourceStatus{
+					State: "quantum",
+				},
+			},
+			Expected: StateValidationFailed,
+		},
 	}
 
 	for name, tc := range testCases {

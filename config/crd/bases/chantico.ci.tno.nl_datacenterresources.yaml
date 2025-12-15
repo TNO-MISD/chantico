@@ -60,6 +60,8 @@ spec:
                 type: string
               errorType:
                 type: string
+              involvedResource:
+                type: string
               state:
                 type: string
               updateGeneration:
