@@ -33,16 +33,22 @@ const (
 	ActionFunctionPure
 )
 
+type ActionResult struct {
+	ctrl.Result
+	UpdateSpec   bool
+	UpdateStatus bool
+}
+
 type ActionFuntion struct {
 	Type int
 	Pure func(
 		*chantico.DataCenterResource,
-	) *ctrl.Result
+	) *ActionResult
 	IO func(
 		context.Context,
 		client.Client,
 		*chantico.DataCenterResource,
-	) *ctrl.Result
+	) *ActionResult
 }
 
 var ActionMap = map[string][]ActionFuntion{
@@ -66,8 +72,8 @@ func ExecuteActions(
 	ctx context.Context,
 	kubernetesClient client.Client,
 	datacenterResource *chantico.DataCenterResource,
-) *ctrl.Result {
-	var result *ctrl.Result
+) *ActionResult {
+	var result *ActionResult
 	result = nil
 	actionFunctions := ActionMap[datacenterResource.Status.State]
 	for i, actionFunction := range actionFunctions {
@@ -88,18 +94,18 @@ func ExecuteActions(
 
 func InitializeFinalizer(
 	datacenterResource *chantico.DataCenterResource,
-) *ctrl.Result {
+) *ActionResult {
 	if slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
 		return nil
 	}
 	datacenterResource.ObjectMeta.Finalizers = append(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
 	log.Printf("Added finalizer: %#v", datacenterResource.ObjectMeta.Finalizers)
-	return nil
+	return &ActionResult{UpdateSpec: true}
 }
 
 func UpdateFinalizer(
 	datacenterResource *chantico.DataCenterResource,
-) *ctrl.Result {
+) *ActionResult {
 	if datacenterResource.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil
 	}
@@ -110,5 +116,5 @@ func UpdateFinalizer(
 		}
 	}
 	datacenterResource.ObjectMeta.Finalizers = accumulator
-	return nil
+	return &ActionResult{UpdateSpec: true}
 }

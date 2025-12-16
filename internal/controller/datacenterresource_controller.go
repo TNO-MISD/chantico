@@ -28,6 +28,7 @@ import (
 
 	chantico "chantico/api/v1alpha1"
 	dcr "chantico/internal/datacenterresource"
+	ph "chantico/internal/patch"
 )
 
 // DataCenterResourceReconciler reconciles a DataCenterResource object
@@ -58,16 +59,28 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements, listOptions...)
 
+	patch := ph.Initialize(ctx, r.Client, datacenterResource)
+
 	// Update state of the resource
 	log.Printf("Updating state of data center resource %s\n", datacenterResource.Name)
 	dcr.UpdateState(datacenterResource)
+	patch.PatchStatus()
 
 	log.Printf("Object post-update status: %#v\n", datacenterResource.Status.State)
 	result := dcr.ExecuteActions(ctx, r.Client, datacenterResource)
 	log.Printf("Finished executing actions\n")
 	if result != nil {
-		log.Printf("Result not-nil: %#v\n", *result)
-		return *result, nil
+		if result.Requeue || result.RequeueAfter > 0 {
+			return result.Result, nil
+		}
+		if result.UpdateSpec {
+			log.Printf("Patch spec\n")
+			patch.PatchSpec()
+		}
+		if result.UpdateStatus {
+			log.Printf("Patch status\n")
+			patch.PatchStatus()
+		}
 	}
 
 	// Perform validation and clear other visited node validation errors if needed
@@ -81,30 +94,21 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log.Printf("Previous status: %#v", datacenterResource.Status)
 		for _, node := range visited {
 			log.Printf("Checking visited node %s\n", node)
-			resource := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: node}, resource)
-			dcr.ClearValidationError(resource)
-			r.UpdateStatus(ctx, resource)
+			r.ClearReferencedValidation(ctx, req, node)
 		}
 		references := &chantico.DataCenterResourceList{}
 		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": datacenterResource.Name})...)
 		for _, reference := range references.Items {
 			log.Printf("Checking referenced node %s\n", reference.Name)
-			resource := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: reference.Name}, resource)
-			dcr.ClearValidationError(resource)
-			r.UpdateStatus(ctx, resource)
+			r.ClearReferencedValidation(ctx, req, reference.Name)
 		}
 		if datacenterResource.Status.InvolvedResource != "" {
 			log.Printf("Checking involved resource %s\n", datacenterResource.Status.InvolvedResource)
-			resource := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: datacenterResource.Status.InvolvedResource}, resource)
-			dcr.ClearValidationError(resource)
-			r.UpdateStatus(ctx, resource)
+			r.ClearReferencedValidation(ctx, req, datacenterResource.Status.InvolvedResource)
 		}
 		dcr.ClearValidationError(datacenterResource)
 	}
-	r.UpdateStatus(ctx, datacenterResource)
+	patch.PatchStatus()
 
 	// TODO(user): do something with the links here:
 	// perform operations to make the cluster state reflect the state specified by
@@ -115,14 +119,16 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *DataCenterResourceReconciler) UpdateStatus(
+func (r *DataCenterResourceReconciler) ClearReferencedValidation(
 	ctx context.Context,
-	datacenterResource *chantico.DataCenterResource,
+	req ctrl.Request,
+	node string,
 ) {
-	err := r.Status().Update(ctx, datacenterResource)
-	if err != nil {
-		log.Printf("Error is not nil, err: %s\n", err)
-	}
+	resource := &chantico.DataCenterResource{}
+	_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: node}, resource)
+	patch := ph.Initialize(ctx, r.Client, resource)
+	dcr.ClearValidationError(resource)
+	patch.PatchStatus()
 }
 
 // SetupWithManager sets up the controller with the Manager.
