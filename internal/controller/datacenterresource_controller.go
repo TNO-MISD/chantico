@@ -62,6 +62,14 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	log.Printf("Updating state of data center resource %s\n", datacenterResource.Name)
 	dcr.UpdateState(datacenterResource)
 
+	log.Printf("Object post-update status: %#v\n", datacenterResource.Status.State)
+	result := dcr.ExecuteActions(ctx, r.Client, datacenterResource)
+	log.Printf("Finished executing actions\n")
+	if result != nil {
+		log.Printf("Result not-nil: %#v\n", *result)
+		return *result, nil
+	}
+
 	// Perform validation and clear other visited node validation errors if needed
 	// This brings those into a reconciliation loop as well
 	visited, err, involvedResource := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)

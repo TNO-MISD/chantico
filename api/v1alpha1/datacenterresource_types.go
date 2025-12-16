@@ -80,3 +80,8 @@ type DataCenterResourceList struct {
 func init() {
 	SchemeBuilder.Register(&DataCenterResource{}, &DataCenterResourceList{})
 }
+
+const (
+	DataCenterResourceGraphFinalizer    = "datacenterresource.graph.finalizer.chantico.ci.tno.nl"
+	DataCenterResourcePostgresFinalizer = "datacenterresource.postgres.finalizer.chantico.ci.tno.nl"
+)
