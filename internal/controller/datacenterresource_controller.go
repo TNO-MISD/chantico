@@ -51,11 +51,12 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	datacenterResource := &chantico.DataCenterResource{}
 	_ = r.Get(ctx, req.NamespacedName, datacenterResource)
 
+	listOptions := []client.ListOption{client.InNamespace(req.NamespacedName.Namespace)}
 	datacenterResources := &chantico.DataCenterResourceList{}
-	_ = r.List(ctx, datacenterResources)
+	_ = r.List(ctx, datacenterResources, listOptions...)
 
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
-	_ = r.List(ctx, physicalMeasurements)
+	_ = r.List(ctx, physicalMeasurements, listOptions...)
 
 	// Update state of the resource
 	log.Printf("Updating state of data center resource %s\n", datacenterResource.Name)
@@ -69,21 +70,31 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 		dcr.SetValidationError(datacenterResource, err, involvedResource)
 	} else {
 		log.Printf("Clearing validation errors of data center resource %s", datacenterResource.Name)
-		dcr.ClearValidationError(datacenterResource)
+		log.Printf("Previous status: %#v", datacenterResource.Status)
 		for _, node := range visited {
-			log.Printf("Checking visited node %s\n", visited)
+			log.Printf("Checking visited node %s\n", node)
 			resource := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: "chantico", Name: node}, resource)
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: node}, resource)
+			dcr.ClearValidationError(resource)
+			r.UpdateStatus(ctx, resource)
+		}
+		references := &chantico.DataCenterResourceList{}
+		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": datacenterResource.Name})...)
+		for _, reference := range references.Items {
+			log.Printf("Checking referenced node %s\n", reference.Name)
+			resource := &chantico.DataCenterResource{}
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: reference.Name}, resource)
 			dcr.ClearValidationError(resource)
 			r.UpdateStatus(ctx, resource)
 		}
 		if datacenterResource.Status.InvolvedResource != "" {
-			log.Printf("Checking involved resource %s\n", visited)
+			log.Printf("Checking involved resource %s\n", datacenterResource.Status.InvolvedResource)
 			resource := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: "chantico", Name: datacenterResource.Status.InvolvedResource}, resource)
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: datacenterResource.Status.InvolvedResource}, resource)
 			dcr.ClearValidationError(resource)
 			r.UpdateStatus(ctx, resource)
 		}
+		dcr.ClearValidationError(datacenterResource)
 	}
 	r.UpdateStatus(ctx, datacenterResource)
 
