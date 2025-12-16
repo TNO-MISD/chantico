@@ -39,15 +39,28 @@ func (e ErrorUnknownType) Error() string {
 	return fmt.Sprintf("unknown type: %s", e.Type)
 }
 
+func GetFromMap(
+	resourcesMap map[string]chantico.DataCenterResource,
+	nodes []string,
+) []chantico.DataCenterResource {
+	result := make([]chantico.DataCenterResource, len(nodes))
+	for index, node := range nodes {
+		result[index] = resourcesMap[node]
+	}
+	return result
+}
+
 func Validate(
 	datacenterResource *chantico.DataCenterResource,
 	datacenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
-) ([]string, error, string) {
+) ([]chantico.DataCenterResource, error, string) {
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]chantico.DataCenterResource)
 	for _, resource := range datacenterResources {
-		resourcesMap[resource.ObjectMeta.Name] = resource
+		if resource.Status.State != StateDelete {
+			resourcesMap[resource.ObjectMeta.Name] = resource
+		}
 	}
 	queue := make([]string, 0)
 	queue = append(queue, datacenterResource.Spec.Parent...)
@@ -55,10 +68,10 @@ func Validate(
 	for len(queue) > visited {
 		current, ok := resourcesMap[queue[visited]]
 		if !ok {
-			return queue[0:visited], ErrorResourceNotFound{InvolvedResource: queue[visited]}, queue[visited]
+			return GetFromMap(resourcesMap, queue[0:visited]), ErrorResourceNotFound{InvolvedResource: queue[visited]}, queue[visited]
 		}
 		if slices.Contains(current.Spec.Parent, datacenterResource.ObjectMeta.Name) {
-			return queue[0:visited], ErrorCycleDetected{InvolvedResource: queue[visited]}, queue[visited]
+			return GetFromMap(resourcesMap, queue[0:visited]), ErrorCycleDetected{InvolvedResource: queue[visited]}, queue[visited]
 		}
 		visited = visited + 1
 		queue = append(queue, current.Spec.Parent...)
@@ -71,8 +84,8 @@ func Validate(
 	// Check type of resource
 	switch datacenterResource.Spec.Type {
 	case "", DataCenterResourceTypePDU, DataCenterResourceTypeBaremetal, DataCenterResourceTypeVM, DataCenterResourceTypeKubernetes, DataCenterResourceTypeHeat:
-		return queue[:visited], nil, ""
+		return GetFromMap(resourcesMap, queue[0:visited]), nil, ""
 	default:
-		return queue[:visited], ErrorUnknownType{Type: datacenterResource.Spec.Type}, ""
+		return GetFromMap(resourcesMap, queue[0:visited]), ErrorUnknownType{Type: datacenterResource.Spec.Type}, ""
 	}
 }

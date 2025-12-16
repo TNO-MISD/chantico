@@ -14,7 +14,7 @@ func TestValidate(t *testing.T) {
 	testCases := map[string]struct {
 		Resource                 *chantico.DataCenterResource
 		Resources                []chantico.DataCenterResource
-		ExpectedVisited          []string
+		ExpectedVisited          []chantico.DataCenterResource
 		ExpectedError            error
 		ExpectedInvolvedResource string
 	}{
@@ -29,7 +29,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			Resources:                []chantico.DataCenterResource{},
-			ExpectedVisited:          []string{},
+			ExpectedVisited:          []chantico.DataCenterResource{},
 			ExpectedError:            nil,
 			ExpectedInvolvedResource: "",
 		},
@@ -60,7 +60,7 @@ func TestValidate(t *testing.T) {
 					Parent: []string{},
 				},
 			}},
-			ExpectedVisited:          []string{},
+			ExpectedVisited:          []chantico.DataCenterResource{},
 			ExpectedError:            nil,
 			ExpectedInvolvedResource: "",
 		},
@@ -75,7 +75,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			Resources:                []chantico.DataCenterResource{},
-			ExpectedVisited:          []string{},
+			ExpectedVisited:          []chantico.DataCenterResource{},
 			ExpectedError:            ErrorResourceNotFound{InvolvedResource: "bar"},
 			ExpectedInvolvedResource: "bar",
 		},
@@ -106,7 +106,7 @@ func TestValidate(t *testing.T) {
 					Parent: []string{"foo"},
 				},
 			}},
-			ExpectedVisited:          []string{},
+			ExpectedVisited:          []chantico.DataCenterResource{},
 			ExpectedError:            ErrorCycleDetected{InvolvedResource: "bar"},
 			ExpectedInvolvedResource: "bar",
 		},
@@ -121,7 +121,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			Resources:                []chantico.DataCenterResource{},
-			ExpectedVisited:          []string{},
+			ExpectedVisited:          []chantico.DataCenterResource{},
 			ExpectedError:            ErrorUnknownType{Type: "perpetuummobile"},
 			ExpectedInvolvedResource: "",
 		},

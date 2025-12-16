@@ -92,21 +92,26 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	} else {
 		log.Printf("Clearing validation errors of data center resource %s", datacenterResource.Name)
 		log.Printf("Previous status: %#v", datacenterResource.Status)
-		for _, node := range visited {
-			log.Printf("Checking visited node %s\n", node)
-			r.ClearReferencedValidation(ctx, req, node)
-		}
+
 		references := &chantico.DataCenterResourceList{}
 		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": datacenterResource.Name})...)
-		for _, reference := range references.Items {
-			log.Printf("Checking referenced node %s\n", reference.Name)
-			r.ClearReferencedValidation(ctx, req, reference.Name)
-		}
+		children := &chantico.DataCenterResourceList{}
+		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parent": datacenterResource.Name})...)
 		if datacenterResource.Status.InvolvedResource != "" {
-			log.Printf("Checking involved resource %s\n", datacenterResource.Status.InvolvedResource)
-			r.ClearReferencedValidation(ctx, req, datacenterResource.Status.InvolvedResource)
+			involved := &chantico.DataCenterResource{}
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: datacenterResource.Status.InvolvedResource}, involved)
+			visited = append(visited, *involved)
+		}
+		log.Printf("Visited nodes: %#v", visited)
+		log.Printf("Referencing resources: %#v", references.Items)
+		log.Printf("Children: %#v", children.Items)
+		items := MergeUnique(visited, references.Items, children.Items)
+
+		for _, item := range items {
+			r.ClearReferencedValidation(ctx, req, datacenterResource, &item)
 		}
 		dcr.ClearValidationError(datacenterResource)
+		datacenterResource.Status.State = dcr.StateEntry
 	}
 	patch.PatchStatus()
 
@@ -119,20 +124,60 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+func MergeUnique(
+	lists ...[]chantico.DataCenterResource,
+) []chantico.DataCenterResource {
+	seen := make(map[string]chantico.DataCenterResource)
+
+	for _, list := range lists {
+		for _, item := range list {
+			seen[item.Name] = item
+		}
+	}
+
+	result := make([]chantico.DataCenterResource, 0, len(seen))
+	for _, v := range seen {
+		result = append(result, v)
+	}
+	return result
+}
+
 func (r *DataCenterResourceReconciler) ClearReferencedValidation(
 	ctx context.Context,
 	req ctrl.Request,
-	node string,
+	datacenterResource *chantico.DataCenterResource,
+	referenced *chantico.DataCenterResource,
 ) {
-	resource := &chantico.DataCenterResource{}
-	_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: node}, resource)
-	patch := ph.Initialize(ctx, r.Client, resource)
-	dcr.ClearValidationError(resource)
-	patch.PatchStatus()
+	// Revalidate if previously failed or current item is being removed
+	if referenced.Status.State == dcr.StateValidationFailed || datacenterResource.Status.State == dcr.StateDelete {
+		patch := ph.Initialize(ctx, r.Client, referenced)
+		dcr.ClearValidationError(referenced)
+		patch.PatchStatus()
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DataCenterResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	ctx := context.Background()
+
+	// Create a one-to-many index for parent field
+	err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&chantico.DataCenterResource{},
+		"spec.parent",
+		func(rawObj client.Object) []string {
+			dcr := rawObj.(*chantico.DataCenterResource)
+
+			if dcr.Spec.Parent == nil {
+				return nil
+			}
+			return dcr.Spec.Parent
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.DataCenterResource{}).
 		Named("datacenterresource").
