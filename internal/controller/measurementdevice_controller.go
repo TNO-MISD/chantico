@@ -38,34 +38,42 @@ type MeasurementDeviceReconciler struct {
 
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/finalizers,verbs=create;update;patch
 
 func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Get the information needed to determine the state of the MeasurementDevice
 	measurementDevice := &chantico.MeasurementDevice{}
-	_ = r.Get(ctx, req.NamespacedName, measurementDevice)
-	log.Printf("Object status: %#v\n", (*measurementDevice).Status.State)
+	err := r.Get(ctx, req.NamespacedName, measurementDevice)
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
 
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
 	md.UpdateState(measurementDevice, job)
-	log.Printf("Object post-update status: %#v\n", (*measurementDevice).Status.State)
 	result := md.ExecuteActions(ctx, r.Client, measurementDevice)
-	log.Printf("Finished executing actions\n")
 	if result != nil {
-		log.Printf("Result not-nil: %#v\n", *result)
 		return *result, nil
 	}
-	err := r.Status().Update(ctx, measurementDevice)
-	if err != nil {
-		log.Printf("Error is not nil, err: %s\n", err)
+
+	// TODO This is a bit hacky and need some cleanup
+	updatedDevice := measurementDevice.DeepCopy()
+	if err := r.Patch(ctx, measurementDevice, client.MergeFrom(updatedDevice)); err != nil {
+		log.Fatalf("ERR PATCH FINALIZER: %s\n", err)
+		return ctrl.Result{}, err
 	}
-	err = r.Client.Update(ctx, measurementDevice)
+
+	measurementDevice = &chantico.MeasurementDevice{}
+	err = r.Get(ctx, req.NamespacedName, measurementDevice)
 	if err != nil {
-		log.Printf("Error is not nil, err: %s\n", err)
-	} else {
-		log.Printf("Could update resource\n", (*measurementDevice))
+		log.Fatalf("ERR GET: %s\n", err)
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.Status().Patch(ctx, measurementDevice, client.MergeFrom(updatedDevice)); err != nil {
+		log.Fatalf("ERR STATUS UPDATE: %s\n", err)
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
