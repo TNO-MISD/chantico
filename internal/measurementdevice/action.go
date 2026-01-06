@@ -19,17 +19,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	ph "chantico/internal/patch"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // In that context Pure means does not modify the kubernetes cluster resources
+type ActionFunctionType int
+
 const (
 	ActionFunctionIO = iota
 	ActionFunctionPure
 )
 
-type ActionFuntion struct {
-	Type int
+type ActionFunction struct {
+	Type ActionFunctionType
 	Pure func(
 		*chantico.MeasurementDevice,
 	) *ctrl.Result
@@ -40,58 +44,88 @@ type ActionFuntion struct {
 	) *ctrl.Result
 }
 
-var ActionMap = map[string][]ActionFuntion{
+type StateActions struct {
+	ActionFunctions []ActionFunction
+	PatchType       ph.PatchType
+}
+
+var ActionMap = map[string]StateActions{
 	StateInit: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
-		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
-		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+		},
+		PatchType: ph.PatchObject,
 	},
 	StateEntryPoint: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
-		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		ActionFuntion{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
+			{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
+		},
+		PatchType: ph.PatchObjectStatus,
 	},
-	StatePendingSNMPConfigUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: RequeueWithDelay},
+	StatePendingSNMPConfigUpdate: StateActions{
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: RequeueWithDelay},
+		},
+		PatchType: ph.PatchObjectNone,
 	},
-	StateSucceededSNMPConfigUpdate: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
+	StateSucceededSNMPConfigUpdate: StateActions{
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: ActionFunctionIO, IO: ReloadSNMPService},
+		},
+		PatchType: ph.PatchObjectStatus,
 	},
-	StateDelete: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
-		ActionFuntion{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		ActionFuntion{Type: ActionFunctionIO, IO: ReloadSNMPService},
-		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
+	StateDelete: StateActions{
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
+			{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: ActionFunctionIO, IO: ReloadSNMPService},
+		},
+		PatchType: ph.PatchObjectStatus,
+	},
+	StateRemove: StateActions{
+		ActionFunctions: []ActionFunction{{Type: ActionFunctionPure, Pure: UpdateFinalizer}},
+		PatchType:       ph.PatchObject,
 	},
 
-	StatePendingSNMPReload: {},
-	StateFailed:            {},
-	StateEndPoint:          {},
+	StatePendingSNMPReload: {
+		ActionFunctions: []ActionFunction{},
+		PatchType:       ph.PatchObjectNone,
+	},
+	StateFailed: {
+		ActionFunctions: []ActionFunction{},
+		PatchType:       ph.PatchObjectNone,
+	},
+	StateEndPoint: {
+		ActionFunctions: []ActionFunction{},
+		PatchType:       ph.PatchObjectNone,
+	},
 }
 
 func ExecuteActions(
 	ctx context.Context,
 	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
-) *ctrl.Result {
-	var result *ctrl.Result
-	result = nil
-	actionFunctions := ActionMap[measurementDevice.Status.State]
-	for i, actionFunction := range actionFunctions {
+) ph.ResultToPatch {
+	var patchResult ph.ResultToPatch
+	stateActions := ActionMap[measurementDevice.Status.State]
+	patchResult.PatchType = stateActions.PatchType
+	for i, actionFunction := range stateActions.ActionFunctions {
 		log.Printf("Start step %d, status: %s\n", i, measurementDevice.Status.State)
 		switch actionFunction.Type {
 		case ActionFunctionPure:
-			result = actionFunction.Pure(measurementDevice)
+			patchResult.Result = actionFunction.Pure(measurementDevice)
 		case ActionFunctionIO:
-			result = actionFunction.IO(ctx, kubernetesClient, measurementDevice)
+			patchResult.Result = actionFunction.IO(ctx, kubernetesClient, measurementDevice)
 		}
 
-		if result != nil || measurementDevice.Status.State == StateFailed {
+		if patchResult.Result != nil || measurementDevice.Status.State == StateFailed {
 			break
 		}
 	}
-	return result
+	return patchResult
 }
 
 func InitializeFinalizer(

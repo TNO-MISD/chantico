@@ -176,8 +176,8 @@ func TestRequeueWithDelay(t *testing.T) {
 }
 
 func TestActionMap(t *testing.T) {
-	for state, actions := range ActionMap {
-		for _, action := range actions {
+	for state, stateActions := range ActionMap {
+		for _, action := range stateActions.ActionFunctions {
 			t.Run(fmt.Sprintf("action %#v in state %#v", action.Type, state), func(t *testing.T) {
 				switch action.Type {
 				case ActionFunctionPure:
