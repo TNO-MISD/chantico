@@ -5,10 +5,11 @@ import (
 )
 
 const (
-	StateInit    = "init"
-	StateRunning = "Running"
-	StateDelete  = "Delete"
-	StateFailed  = "Failed"
+	StateInit      = "init"
+	StateRunning   = "Running"
+	StateDelete    = "Delete"
+	StateCompleted = "Completed"
+	StateFailed    = "Failed"
 )
 
 func UpdateState(

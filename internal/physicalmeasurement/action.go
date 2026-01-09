@@ -1,30 +1,34 @@
 package physicalmeasurement
 
 import (
-	"bytes"
 	chantico "chantico/api/v1alpha1"
-	sqlhelper "chantico/chantico/sql-helper"
+	ph "chantico/internal/patch"
 	"context"
-	"fmt"
-	"net/http"
+	"log"
 	"os"
 	"slices"
-	"strconv"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	vol "chantico/internal/volumes"
+
+	"go.yaml.in/yaml/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
+
+type ActionFunctionType int
 
 const (
 	ActionFunctionIO = iota
 	ActionFunctionPure
 )
 
-type ActionFuntion struct {
-	Type int
+type StateActions struct {
+	ActionFunctions []ActionFunction
+	PatchType       ph.PatchType
+}
+
+type ActionFunction struct {
+	Type ActionFunctionType
 	Pure func(
 		*chantico.PhysicalMeasurement,
 	) *ctrl.Result
@@ -35,136 +39,103 @@ type ActionFuntion struct {
 	) *ctrl.Result
 }
 
-var ActionMap = map[string][]ActionFuntion{
+var ActionMap = map[string]StateActions{
 	StateInit: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+			{Type: ActionFunctionPure, Pure: WritePrometheusConfig},
+			{Type: ActionFunctionPure, Pure: ReloadPrometheus},
+		},
+		PatchType: ph.PatchObject,
 	},
 	StateRunning: {
-		ActionFuntion{Type: ActionFunctionIO, IO: UpdatePrometheus},
-		ActionFuntion{Type: ActionFunctionIO, Pure: ReloadPrometheus},
+		ActionFunctions: []ActionFunction{},
+		PatchType:       ph.PatchObjectStatus,
 	},
 	StateDelete: {
-		ActionFuntion{Type: ActionFunctionPure, Pure: DeletePhysicalMeasurementConfig},
-		ActionFuntion{Type: ActionFunctionIO, Pure: ReloadPrometheus},
+		ActionFunctions: []ActionFunction{
+			{Type: ActionFunctionPure, Pure: DeletePhysicalMeasurementConfig},
+			{Type: ActionFunctionPure, Pure: ReloadPrometheus},
+		},
+		PatchType: ph.PatchObject,
 	},
-	StateFailed: {},
+	StateCompleted: {},
+	StateFailed:    {},
 }
 
 func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
 	if slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer) {
 		return nil
 	}
+	log.Printf("Adding finalizer to PhysicalMeasurement %s\n", physicalMeasurement.Name)
 	physicalMeasurement.ObjectMeta.Finalizers = append(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer)
 	return nil
 }
+
+// RemoveFinalizer
 
 func ExecuteActions(
 	ctx context.Context,
 	c client.Client,
 	physicalMeasurement *chantico.PhysicalMeasurement,
 
-) *ctrl.Result {
-	result := &ctrl.Result{}
-	actionFunctions := ActionMap[physicalMeasurement.Status.State]
-	for _, actionFunction := range actionFunctions {
+) ph.ResultToPatch {
+	var patchResult ph.ResultToPatch
+	stateActions := ActionMap[string(physicalMeasurement.Status.State)]
+	patchResult.PatchType = stateActions.PatchType
+	for _, actionFunction := range stateActions.ActionFunctions {
 		switch actionFunction.Type {
 		case ActionFunctionPure:
-			{
-				result = actionFunction.Pure(physicalMeasurement)
-			}
+			patchResult.Result = actionFunction.Pure(physicalMeasurement)
 		case ActionFunctionIO:
-			{
-				result = actionFunction.IO(ctx, c, physicalMeasurement)
-			}
+			patchResult.Result = actionFunction.IO(ctx, c, physicalMeasurement)
 		}
-		if result != nil {
-			return result
+		if patchResult.Result != nil || physicalMeasurement.Status.State == StateFailed {
+			break
 		}
 	}
-
-	return result
+	return patchResult
 }
 
-func UpdatePrometheus(
-	ctx context.Context,
-	c client.Client,
+func WritePrometheusConfig(
 	physicalMeasurement *chantico.PhysicalMeasurement,
 ) *ctrl.Result {
-	physicalMeasurement.Status.State = StateRunning
-	physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
-	physicalMeasurement.Status.ErrorMessage = ""
+	// physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
+	cfg := CreatePrometheusConfig(physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.ResourceIds)
 
-	fmt.Printf("\n\n==PhysicalMeasurement: %s==\n", physicalMeasurement.GetName())
-	fmt.Printf("STATE: %s\n", physicalMeasurement.Status.State)
-	fmt.Printf("Generation: %s\n", strconv.FormatInt(physicalMeasurement.ObjectMeta.Generation, 10))
-	fmt.Printf("===\n\n")
-
-	cfg := MergeWithPrometheusConfig(os.Getenv("PROMETHEUS_CONFIG"), physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.ResourceIds)
+	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
+	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
 
 	yamlBytes, _ := yaml.Marshal(cfg)
-	err := os.WriteFile(os.Getenv("PROMETHEUS_CONFIG"), yamlBytes, 0644)
+	err := os.WriteFile(configPath, yamlBytes, 0644)
 	if err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		_ = c.Status().Update(ctx, physicalMeasurement)
+		log.Printf("%v", err)
 		return &ctrl.Result{}
 	}
-
-	// Save ID / Measurement in postgres
-	dbUrl := os.Getenv("PG_DBSTRING")
-	db, err := pgx.Connect(ctx, dbUrl)
-	if err != nil {
-		physicalMeasurement.Status.State = StateFailed
-		physicalMeasurement.Status.ErrorMessage = err.Error()
-		_ = c.Status().Update(ctx, physicalMeasurement)
-		return &ctrl.Result{}
-	}
-	defer db.Close(ctx)
-
-	queries := sqlhelper.New(db)
-	var uuid pgtype.UUID
-	err = uuid.Scan(string(physicalMeasurement.UID))
-	if err != nil {
-		fmt.Printf("UID: %s\n", string(physicalMeasurement.UID))
-		return &ctrl.Result{}
-	}
-	physicalMeasurementParams := sqlhelper.UpdatePhysicalMeasurementParams{
-		ID:        uuid,
-		ServiceID: physicalMeasurement.Spec.ServiceId,
-	}
-	_, err = queries.UpdatePhysicalMeasurement(ctx, physicalMeasurementParams)
-	if err != nil {
-		physicalMeasurement.Status.State = StateFailed
-		physicalMeasurement.Status.ErrorMessage = err.Error()
-		_ = c.Status().Update(ctx, physicalMeasurement)
-		return &ctrl.Result{}
-	}
-	_ = c.Status().Update(ctx, physicalMeasurement)
 
 	return &ctrl.Result{}
 }
 
 func DeletePhysicalMeasurementConfig(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
+	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
+	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
+
+	log.Printf("Deleting Prometheus config for PhysicalMeasurement %s\n", physicalMeasurement.Name)
+
+	err := os.Remove(configPath)
+	if err != nil && !os.IsNotExist(err) {
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		log.Printf("Failed to delete config file: %v", err)
+		return &ctrl.Result{}
+	}
+
 	return nil
 }
 
 func ReloadPrometheus(_ *chantico.PhysicalMeasurement) *ctrl.Result {
-	reloadURL := fmt.Sprintf("%s:%s/%s", os.Getenv("CHANTICO_PROMETHEUS_PORT_9090_TCP_ADDR"), "9090", "-/reload")
-	req, _ := http.NewRequest(http.MethodPost, reloadURL, bytes.NewBuffer(nil))
-	// if err != nil {
-	// 	return err
-	// }
-
-	client := &http.Client{}
-	resp, _ := client.Do(req)
-	// if err != nil {
-	// 	return err
-	// }
-	defer resp.Body.Close()
-
-	// if resp.StatusCode != http.StatusOK {
-	// 	return fmt.Errorf("prometheus reload failed: status %d", resp.StatusCode)
-	// }
 
 	return nil
 }

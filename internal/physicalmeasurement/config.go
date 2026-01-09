@@ -30,9 +30,7 @@ type RelabelConfig struct {
 	Replacement  string   `yaml:"replacement,omitempty"`
 }
 
-// Get rid of building -> do merging and create physical measurement map for single one.
-
-func newPhysicalMeasurementConfig(device_id string, measurementIps []string) ScrapeConfig {
+func CreatePrometheusConfig(device_id string, measurementIps []string) PrometheusConfig {
 	cfg := ScrapeConfig{
 		JobName: device_id,
 		StaticConfigs: []StaticConfig{
@@ -51,24 +49,27 @@ func newPhysicalMeasurementConfig(device_id string, measurementIps []string) Scr
 			{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
 		},
 	}
-	return cfg
+	prometheusCfg := PrometheusConfig{
+		ScrapeConfigs: []ScrapeConfig{cfg},
+	}
+	return prometheusCfg
 }
 
-func MergeWithPrometheusConfig(prometheus_yaml string, deviceId string, measurementIps []string) PrometheusConfig {
-	cfg, _ := loadPrometheusConfig(prometheus_yaml)
-	for _, scrape := range cfg.ScrapeConfigs {
-		if scrape.JobName == deviceId {
-			for _, target := range measurementIps {
-				if !contains(scrape.StaticConfigs[0].Targets, target) {
-					scrape.StaticConfigs[0].Targets = append(scrape.StaticConfigs[0].Targets, target)
-				}
-			}
-			return *cfg
-		}
-	}
-	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newPhysicalMeasurementConfig(deviceId, measurementIps))
-	return *cfg
-}
+// func MergeWithPrometheusConfig(prometheus_yaml string, deviceId string, measurementIps []string) PrometheusConfig {
+// 	cfg, _ := loadPrometheusConfig(prometheus_yaml)
+// 	for _, scrape := range cfg.ScrapeConfigs {
+// 		if scrape.JobName == deviceId {
+// 			for _, target := range measurementIps {
+// 				if !contains(scrape.StaticConfigs[0].Targets, target) {
+// 					scrape.StaticConfigs[0].Targets = append(scrape.StaticConfigs[0].Targets, target)
+// 				}
+// 			}
+// 			return *cfg
+// 		}
+// 	}
+// 	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newPhysicalMeasurementConfig(deviceId, measurementIps))
+// 	return *cfg
+// }
 
 func RemoveFromPrometheusConfig(prometheus_yaml string, device_id string) PrometheusConfig {
 	cfg, _ := loadPrometheusConfig(prometheus_yaml)

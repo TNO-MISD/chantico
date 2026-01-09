@@ -18,12 +18,14 @@ package controller
 
 import (
 	"context"
+	"log"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	chantico "chantico/api/v1alpha1"
+	ph "chantico/internal/patch"
 	pm "chantico/internal/physicalmeasurement"
 )
 
@@ -55,15 +57,27 @@ type PhysicalMeasurementReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	physicalMeasurement := &chantico.PhysicalMeasurement{}
-	_ = r.Get(ctx, req.NamespacedName, physicalMeasurement)
+	err := r.Get(ctx, req.NamespacedName, physicalMeasurement)
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
 
 	pm.UpdateState(physicalMeasurement)
-	pm.ExecuteActions(
-		ctx,
-		r.Client,
-		physicalMeasurement,
-	)
+
+	patch := ph.Initialize(ctx, r.Client, physicalMeasurement)
+
+	patchResult := pm.ExecuteActions(ctx, r.Client, physicalMeasurement)
+	if patchResult.Result != nil {
+		return *patchResult.Result, nil
+	}
+
+	log.Printf("PatchType: %#v", patchResult.PatchType)
+	err = patch.Patch(patchResult.PatchType)
+	if err != nil {
+		panic("TODO")
+	}
 	return ctrl.Result{}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
