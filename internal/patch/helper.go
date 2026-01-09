@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"log"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,7 @@ func (p *PatchHelper) Patch(patchType PatchType) error {
 
 func (p *PatchHelper) PatchSpec() error {
 	if err := p.client.Patch(p.ctx, p.obj, client.MergeFrom(p.base)); err != nil {
+		log.Printf("err: %s", err)
 		return err
 	}
 	p.base = p.obj.DeepCopyObject().(client.Object)

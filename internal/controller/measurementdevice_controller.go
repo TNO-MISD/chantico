@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"log"
+	// "log"
 
 	chantico "chantico/api/v1alpha1"
 	md "chantico/internal/measurementdevice"
@@ -28,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ph "chantico/internal/patch"
 )
 
 // MeasurementDeviceReconciler reconciles a MeasurementDevice object
@@ -52,28 +55,18 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
 	md.UpdateState(measurementDevice, job)
-	result := md.ExecuteActions(ctx, r.Client, measurementDevice)
-	if result != nil {
-		return *result, nil
+
+	patch := ph.Initialize(ctx, r.Client, measurementDevice)
+
+	patchResult := md.ExecuteActions(ctx, r.Client, measurementDevice)
+	if patchResult.Result != nil {
+		return *patchResult.Result, nil
 	}
 
-	// TODO This is a bit hacky and need some cleanup
-	updatedDevice := measurementDevice.DeepCopy()
-	if err := r.Patch(ctx, measurementDevice, client.MergeFrom(updatedDevice)); err != nil {
-		log.Fatalf("ERR PATCH FINALIZER: %s\n", err)
-		return ctrl.Result{}, err
-	}
-
-	measurementDevice = &chantico.MeasurementDevice{}
-	err = r.Get(ctx, req.NamespacedName, measurementDevice)
+	log.Printf("PatchType: %#v", patchResult.PatchType)
+	err = patch.Patch(patchResult.PatchType)
 	if err != nil {
-		log.Fatalf("ERR GET: %s\n", err)
-		return ctrl.Result{}, nil
-	}
-
-	if err := r.Status().Patch(ctx, measurementDevice, client.MergeFrom(updatedDevice)); err != nil {
-		log.Fatalf("ERR STATUS UPDATE: %s\n", err)
-		return ctrl.Result{}, err
+		panic("TODO")
 	}
 	return ctrl.Result{}, nil
 }

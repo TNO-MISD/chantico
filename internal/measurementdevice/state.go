@@ -1,12 +1,15 @@
 package measurementdevice
 
 import (
-	"log"
+	"slices"
 	"time"
 
 	chantico "chantico/api/v1alpha1"
+
 	batchv1 "k8s.io/api/batch/v1"
 )
+
+type State string
 
 const (
 	StateInit                      = "Init"
@@ -14,10 +17,10 @@ const (
 	StatePendingSNMPConfigUpdate   = "Pending SNMP Config Update"
 	StateSucceededSNMPConfigUpdate = "Succeeded SNMP Config Update"
 	StatePendingSNMPReload         = "Pending SNMP Config Reload"
+	StateDelete                    = "Delete"
+	StateRemove                    = "Remove"
 	StateFailed                    = "Failed"
-
-	StateEndPoint = "End Point"
-	StateDelete   = "StateDelete"
+	StateEndPoint                  = "End Point"
 )
 
 func UpdateState(
@@ -32,23 +35,34 @@ func UpdateState(
 		measurementDevice.Status.UpdateGeneration = 1
 	}
 
+	// TODO: Could be nice to find a better option for this
+	// Covers finalizer
+	if !slices.Contains(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
+		measurementDevice.Status.State = StateInit
+		return
+	}
+
 	// Covers lifecycle related changes
-	switch {
-	case measurementDevice.Status.UpdateGeneration < measurementDevice.ObjectMeta.Generation:
+	isDeleted := measurementDevice.ObjectMeta.GetDeletionTimestamp() != nil
+	isGenerationUpToDate := measurementDevice.Status.UpdateGeneration < measurementDevice.ObjectMeta.Generation
+
+	if isDeleted {
+		switch measurementDevice.Status.State {
+		case StateDelete, StateRemove:
+			break
+		default:
+			measurementDevice.Status.State = StateDelete
+		}
+	}
+
+	if isGenerationUpToDate && !isDeleted {
 		measurementDevice.Status.State = StateEntryPoint
-		break
-	case measurementDevice.ObjectMeta.GetDeletionTimestamp() != nil:
-		measurementDevice.Status.State = StateDelete
-		break
 	}
 
 	// Realize the update
 	switch measurementDevice.Status.State {
-	case "", StateInit:
-		measurementDevice.Status.State = StateInit
-		measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
-		return
-	case StateEntryPoint:
+	case "", StateInit, StateEntryPoint:
+		measurementDevice.Status.State = StateEntryPoint
 		measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
 		return
 
@@ -57,7 +71,7 @@ func UpdateState(
 			measurementDevice.Status.State = StateSucceededSNMPConfigUpdate
 		} else if snmpJob.Status.Failed > 0 {
 			measurementDevice.Status.State = StateFailed
-			log.Fatalf("JOB: %#v", snmpJob)
+			// log.Fatalf("JOB: %#v", snmpJob)
 		} else {
 			startTime := snmpJob.Status.StartTime
 			if startTime == nil {
@@ -66,13 +80,13 @@ func UpdateState(
 			now := time.Now()
 			if startTime.Time.Add(chantico.SNMPJobTimeout).Before(now) {
 				measurementDevice.Status.State = StateFailed
-				log.Fatalf("JOB: %v, %v", startTime.Time, now)
+				// log.Fatalf("JOB: %v, %v", startTime.Time, now)
 			}
 		}
 		return
 	case StateSucceededSNMPConfigUpdate, StatePendingSNMPReload:
 		return
-	case StateEndPoint, StateFailed, StateDelete:
+	case StateEndPoint, StateFailed, StateRemove, StateDelete:
 		return
 	default:
 		measurementDevice.Status.State = StateFailed

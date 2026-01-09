@@ -49,7 +49,7 @@ type StateActions struct {
 	PatchType       ph.PatchType
 }
 
-var ActionMap = map[string]StateActions{
+var ActionMap = map[State]StateActions{
 	StateInit: {
 		ActionFunctions: []ActionFunction{
 			{Type: ActionFunctionPure, Pure: InitializeFinalizer},
@@ -64,32 +64,28 @@ var ActionMap = map[string]StateActions{
 		},
 		PatchType: ph.PatchObjectStatus,
 	},
-	StatePendingSNMPConfigUpdate: StateActions{
+	StatePendingSNMPConfigUpdate: {
 		ActionFunctions: []ActionFunction{
 			{Type: ActionFunctionPure, Pure: RequeueWithDelay},
 		},
 		PatchType: ph.PatchObjectNone,
 	},
-	StateSucceededSNMPConfigUpdate: StateActions{
+	StateSucceededSNMPConfigUpdate: {
 		ActionFunctions: []ActionFunction{
 			{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 			{Type: ActionFunctionIO, IO: ReloadSNMPService},
 		},
 		PatchType: ph.PatchObjectStatus,
 	},
-	StateDelete: StateActions{
+	StateDelete: {
 		ActionFunctions: []ActionFunction{
 			{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
 			{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
 			{Type: ActionFunctionIO, IO: ReloadSNMPService},
+			{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 		},
-		PatchType: ph.PatchObjectStatus,
+		PatchType: ph.PatchObject,
 	},
-	StateRemove: StateActions{
-		ActionFunctions: []ActionFunction{{Type: ActionFunctionPure, Pure: UpdateFinalizer}},
-		PatchType:       ph.PatchObject,
-	},
-
 	StatePendingSNMPReload: {
 		ActionFunctions: []ActionFunction{},
 		PatchType:       ph.PatchObjectNone,
@@ -110,7 +106,7 @@ func ExecuteActions(
 	measurementDevice *chantico.MeasurementDevice,
 ) ph.ResultToPatch {
 	var patchResult ph.ResultToPatch
-	stateActions := ActionMap[measurementDevice.Status.State]
+	stateActions := ActionMap[State(measurementDevice.Status.State)]
 	patchResult.PatchType = stateActions.PatchType
 	for i, actionFunction := range stateActions.ActionFunctions {
 		log.Printf("Start step %d, status: %s\n", i, measurementDevice.Status.State)
@@ -274,7 +270,9 @@ func ReloadSNMPService(
 		return &ctrl.Result{RequeueAfter: chantico.RequeueDelay}
 	}
 
-	measurementDevice.Status.State = StatePendingSNMPReload
+	if measurementDevice.Status.State != StateDelete {
+		measurementDevice.Status.State = StatePendingSNMPReload
+	}
 	go func() {
 		log.Printf("Enter SNMP reload logic")
 		var err error
@@ -302,8 +300,10 @@ func ReloadSNMPService(
 			select {
 			case <-restartCtx.Done():
 				log.Printf("Failed")
-				measurementDevice.Status.State = StateFailed
-				measurementDevice.Status.ErrorMessage = "chantico-snmp reload timed out"
+				if measurementDevice.Status.State != StateDelete {
+					measurementDevice.Status.State = StateFailed
+					measurementDevice.Status.ErrorMessage = "chantico-snmp reload timed out"
+				}
 				return
 			case <-ticker.C:
 				log.Printf("Polling")
@@ -311,8 +311,9 @@ func ReloadSNMPService(
 					continue
 				}
 				if chanticok8s.CheckDeploymentAvailability(*snmpDeployment) {
-					log.Printf("Done")
-					measurementDevice.Status.State = StateEndPoint
+					if measurementDevice.Status.State != StateDelete {
+						measurementDevice.Status.State = StateEndPoint
+					}
 					time.Sleep(chanticok8s.K8sGracePeriod)
 					err = kubernetesClient.Status().Update(ctx, measurementDevice)
 					if err != nil {

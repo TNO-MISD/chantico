@@ -7,6 +7,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	chantico "chantico/api/v1alpha1"
 )
@@ -34,6 +35,9 @@ func TestGetState(t *testing.T) {
 		},
 		"failed case": {
 			MeasurementDevice: &chantico.MeasurementDevice{
+				ObjectMeta: v1.ObjectMeta{
+					Finalizers: []string{chantico.SNMPUpdateFinalizer},
+				},
 				Status: chantico.MeasurementDeviceStatus{
 					State: StatePendingSNMPConfigUpdate,
 				},
