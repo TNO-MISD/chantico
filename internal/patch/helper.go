@@ -29,12 +29,33 @@ type PatchHelper struct {
 	base   client.Object
 }
 
+const (
+	PatchObject = iota
+	PatchObjectStatus
+	PatchObjectNone
+)
+
+type PatchType int
+
 func Initialize(ctx context.Context, c client.Client, obj client.Object) *PatchHelper {
 	return &PatchHelper{
 		ctx:    ctx,
 		client: c,
 		obj:    obj,
 		base:   obj.DeepCopyObject().(client.Object),
+	}
+}
+
+func (p *PatchHelper) Patch(patchType PatchType) error {
+	switch patchType {
+	case PatchObject:
+		return p.PatchSpec()
+	case PatchObjectStatus:
+		return p.PatchStatus()
+	case PatchObjectNone:
+		return p.PatchNone()
+	default:
+		return nil
 	}
 }
 
@@ -51,5 +72,9 @@ func (p *PatchHelper) PatchStatus() error {
 		return err
 	}
 	p.base = p.obj.DeepCopyObject().(client.Object)
+	return nil
+}
+
+func (p *PatchHelper) PatchNone() error {
 	return nil
 }

@@ -67,20 +67,10 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	patch.PatchStatus()
 
 	log.Printf("Object post-update status: %#v\n", datacenterResource.Status.State)
-	result := dcr.ExecuteActions(ctx, r.Client, datacenterResource)
+	result := dcr.ExecuteActions(ctx, r.Client, datacenterResource, patch)
 	log.Printf("Finished executing actions\n")
-	if result != nil {
-		if result.Requeue || result.RequeueAfter > 0 {
-			return result.Result, nil
-		}
-		if result.UpdateSpec {
-			log.Printf("Patch spec\n")
-			patch.PatchSpec()
-		}
-		if result.UpdateStatus {
-			log.Printf("Patch status\n")
-			patch.PatchStatus()
-		}
+	if result != nil && (result.Requeue || result.RequeueAfter > 0) {
+		return result.Result, nil
 	}
 
 	// Perform validation and clear other visited node validation errors if needed

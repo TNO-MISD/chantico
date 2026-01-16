@@ -18,6 +18,8 @@ package datacenterresource
 
 import (
 	chantico "chantico/api/v1alpha1"
+	ph "chantico/internal/patch"
+
 	"context"
 	"log"
 	"slices"
@@ -35,8 +37,7 @@ const (
 
 type ActionResult struct {
 	ctrl.Result
-	UpdateSpec   bool
-	UpdateStatus bool
+	ph.PatchType
 }
 
 type ActionFuntion struct {
@@ -72,9 +73,9 @@ func ExecuteActions(
 	ctx context.Context,
 	kubernetesClient client.Client,
 	datacenterResource *chantico.DataCenterResource,
+	patch *ph.PatchHelper,
 ) *ActionResult {
-	var result *ActionResult
-	result = nil
+	var result *ActionResult = nil
 	actionFunctions := ActionMap[datacenterResource.Status.State]
 	for i, actionFunction := range actionFunctions {
 		log.Printf("Start step %d, status: %s\n", i, datacenterResource.Status.State)
@@ -85,7 +86,10 @@ func ExecuteActions(
 			result = actionFunction.IO(ctx, kubernetesClient, datacenterResource)
 		}
 
-		if result != nil || datacenterResource.Status.State == StateValidationFailed {
+		if result != nil {
+			patch.Patch(result.PatchType)
+		}
+		if datacenterResource.Status.State == StateValidationFailed {
 			break
 		}
 	}
@@ -100,7 +104,7 @@ func InitializeFinalizer(
 	}
 	datacenterResource.ObjectMeta.Finalizers = append(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
 	log.Printf("Added finalizer: %#v", datacenterResource.ObjectMeta.Finalizers)
-	return &ActionResult{UpdateSpec: true}
+	return &ActionResult{PatchType: ph.PatchObject}
 }
 
 func UpdateFinalizer(
@@ -116,5 +120,5 @@ func UpdateFinalizer(
 		}
 	}
 	datacenterResource.ObjectMeta.Finalizers = accumulator
-	return &ActionResult{UpdateSpec: true}
+	return &ActionResult{PatchType: ph.PatchObject}
 }
