@@ -19,6 +19,7 @@ package datacenterresource
 import (
 	chantico "chantico/api/v1alpha1"
 	"fmt"
+	"slices"
 )
 
 const (
@@ -42,6 +43,11 @@ func UpdateState(
 		datacenterResource.Status.UpdateGeneration = 1
 	}
 
+	state := datacenterResource.Status.State
+	if !slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
+		datacenterResource.Status.State = StateInit
+	}
+
 	// Covers lifecycle related changes
 	switch {
 	case datacenterResource.Status.UpdateGeneration < datacenterResource.ObjectMeta.Generation:
@@ -51,7 +57,7 @@ func UpdateState(
 	}
 
 	// Realize the update
-	switch datacenterResource.Status.State {
+	switch state {
 	case "", StateInit:
 		datacenterResource.Status.State = StateInit
 		datacenterResource.Status.UpdateGeneration = datacenterResource.ObjectMeta.Generation

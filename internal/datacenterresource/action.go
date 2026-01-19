@@ -100,7 +100,7 @@ func InitializeFinalizer(
 	datacenterResource *chantico.DataCenterResource,
 ) *ActionResult {
 	if slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
-		return nil
+		return &ActionResult{PatchType: ph.PatchObjectNone}
 	}
 	datacenterResource.ObjectMeta.Finalizers = append(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
 	log.Printf("Added finalizer: %#v", datacenterResource.ObjectMeta.Finalizers)

@@ -18,6 +18,7 @@ package datacenterresource
 
 import (
 	chantico "chantico/api/v1alpha1"
+	ph "chantico/internal/patch"
 	"testing"
 	"time"
 
@@ -38,30 +39,41 @@ func equalStringSlices(a, b []string) bool {
 
 func TestInitializeFinalizer(t *testing.T) {
 	testCases := map[string]struct {
-		Case     *chantico.DataCenterResource
-		Expected []string
+		Case               *chantico.DataCenterResource
+		ExpectedPatchType  ph.PatchType
+		ExpectedFinalizers []string
 	}{
 		"empty finalizer": {
 			Case: &chantico.DataCenterResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{},
 				}},
-			Expected: []string{chantico.DataCenterResourceGraphFinalizer},
+			ExpectedPatchType:  ph.PatchObject,
+			ExpectedFinalizers: []string{chantico.DataCenterResourceGraphFinalizer},
 		},
 		"already initialized": {
 			Case: &chantico.DataCenterResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{"test"},
 				}},
-			Expected: []string{"test", chantico.DataCenterResourceGraphFinalizer},
+			ExpectedPatchType:  ph.PatchObject,
+			ExpectedFinalizers: []string{"test", chantico.DataCenterResourceGraphFinalizer},
+		},
+		"already contains": {
+			Case: &chantico.DataCenterResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{chantico.DataCenterResourceGraphFinalizer},
+				}},
+			ExpectedPatchType:  ph.PatchObjectNone,
+			ExpectedFinalizers: []string{chantico.DataCenterResourceGraphFinalizer},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			InitializeFinalizer(tc.Case)
-			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
-				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, tc.Case.ObjectMeta.Finalizers, tc.Expected)
+			result := InitializeFinalizer(tc.Case)
+			if result == nil || result.PatchType != tc.ExpectedPatchType || !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
+				t.Errorf("InitializeFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}
 		})
 	}
@@ -69,8 +81,9 @@ func TestInitializeFinalizer(t *testing.T) {
 
 func TestUpdateFinalizer(t *testing.T) {
 	testCases := map[string]struct {
-		Case     *chantico.DataCenterResource
-		Expected []string
+		Case               *chantico.DataCenterResource
+		ExpectedPatchType  ph.PatchType
+		ExpectedFinalizers []string
 	}{
 		"removes DataCenterResourceGraphFinalizer on deletion": {
 			Case: &chantico.DataCenterResource{
@@ -79,15 +92,16 @@ func TestUpdateFinalizer(t *testing.T) {
 					Finalizers:        []string{"test", chantico.DataCenterResourceGraphFinalizer},
 				},
 			},
-			Expected: []string{"test"},
+			ExpectedPatchType:  ph.PatchObject,
+			ExpectedFinalizers: []string{"test"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			UpdateFinalizer(tc.Case)
-			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
-				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc.Case, tc.Case.ObjectMeta.Finalizers, tc.Expected)
+			result := UpdateFinalizer(tc.Case)
+			if result.PatchType != tc.ExpectedPatchType || !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
+				t.Errorf("UpdateFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc.Case, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}
 		})
 	}
