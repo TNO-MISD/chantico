@@ -32,9 +32,9 @@ type PatchHelper struct {
 }
 
 const (
-	PatchObject = iota
-	PatchObjectStatus
-	PatchObjectNone
+	PatchResource = iota
+	PatchResourceStatus
+	PatchResourceNone
 )
 
 type PatchType int
@@ -55,11 +55,11 @@ func Initialize(ctx context.Context, c client.Client, obj client.Object) *PatchH
 
 func (p *PatchHelper) Patch(patchType PatchType) error {
 	switch patchType {
-	case PatchObject:
+	case PatchResource:
 		return p.PatchSpec()
-	case PatchObjectStatus:
+	case PatchResourceStatus:
 		return p.PatchStatus()
-	case PatchObjectNone:
+	case PatchResourceNone:
 		return p.PatchNone()
 	default:
 		return nil

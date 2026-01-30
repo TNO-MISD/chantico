@@ -82,7 +82,7 @@ func init() {
 }
 
 const (
-	SNMPUpdateFinalizer = "snmp.update.finalizer.chantico.ci.tno.nl"
+	SNMPUpdateFinalizer = "measurementdevice.finalizer.chantico.ci.tno.nl/snmp-update"
 )
 
 const (

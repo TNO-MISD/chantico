@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"log"
+
 	// "log"
 
 	chantico "chantico/api/v1alpha1"
@@ -54,20 +55,16 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
-	md.UpdateState(measurementDevice, job)
-
+	log.Printf("Updating state of measurement device %s\n", measurementDevice.Name)
 	patch := ph.Initialize(ctx, r.Client, measurementDevice)
+	md.UpdateState(measurementDevice, job)
+	patch.PatchStatus()
 
-	patchResult := md.ExecuteActions(ctx, r.Client, measurementDevice)
-	if patchResult.Result != nil {
-		return *patchResult.Result, nil
+	result := md.ExecuteActions(ctx, r.Client, measurementDevice, patch)
+	if result != nil && result.Result != nil {
+		return *result.Result, nil
 	}
 
-	log.Printf("PatchType: %#v", patchResult.PatchType)
-	err = patch.Patch(patchResult.PatchType)
-	if err != nil {
-		panic("TODO")
-	}
 	return ctrl.Result{}, nil
 }
 
