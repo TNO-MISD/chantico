@@ -2,6 +2,7 @@ package measurementdevice
 
 import (
 	"fmt"
+	"log"
 	"maps"
 	"path/filepath"
 
@@ -24,7 +25,10 @@ const (
 )
 
 func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
-	volume, _ := vol.GetChanticoVolume()
+	volume, err := vol.GetChanticoVolume()
+	if err != nil {
+		log.Printf("ERR: %s\n", err)
+	}
 
 	containers := []corev1.Container{
 		{
@@ -50,7 +54,7 @@ func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
 		},
 	}
 
-	return &batchv1.Job{
+	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      measurementDevice.Status.JobName,
 			Namespace: measurementDevice.ObjectMeta.Namespace,
@@ -66,19 +70,20 @@ func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
 			},
 		},
 	}
+	return job
 }
 
 func getGeneratorPath(measurementDevice chantico.MeasurementDevice) string {
 	return filepath.Join(
 		snmpConfigDir,
-		fmt.Sprintf("generator_%s.yml", measurementDevice.Name),
+		fmt.Sprintf("generator_%s.yml", measurementDevice.UID),
 	)
 }
 
 func getConfigPath(measurementDevice chantico.MeasurementDevice) string {
 	return filepath.Join(
 		snmpConfigDir,
-		fmt.Sprintf("config_%s.yml", measurementDevice.Name),
+		fmt.Sprintf("config_%s.yml", measurementDevice.UID),
 	)
 }
 
