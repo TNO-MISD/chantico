@@ -15,6 +15,7 @@ const (
 	StateFailed    = "Failed"
 )
 
+// TODO delete reference to job since all actions are not interacting with the cluster.
 func UpdateState(
 	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
 ) {

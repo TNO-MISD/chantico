@@ -22,53 +22,44 @@ const (
 	ActionFunctionPure
 )
 
-type StateActions struct {
-	ActionFunctions []ActionFunction
-	PatchType       ph.PatchType
+type ActionResult struct {
+	ctrl.Result
+	ph.PatchType
 }
 
 type ActionFunction struct {
 	Type ActionFunctionType
 	Pure func(
 		*chantico.PhysicalMeasurement,
-	) *ctrl.Result
+	) *ActionResult
 	IO func(
 		context.Context,
 		client.Client,
 		*chantico.PhysicalMeasurement,
-	) *ctrl.Result
+	) *ActionResult
 }
 
-var ActionMap = map[string]StateActions{
+var ActionMap = map[string][]ActionFunction{
 	StateInit: {
-		ActionFunctions: []ActionFunction{
-			{Type: ActionFunctionPure, Pure: InitializeFinalizer},
-			{Type: ActionFunctionPure, Pure: WritePrometheusConfig},
-			{Type: ActionFunctionPure, Pure: ReloadPrometheus},
-		},
-		PatchType: ph.PatchObject,
+		ActionFunction{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+		ActionFunction{Type: ActionFunctionPure, Pure: WritePrometheusConfig},
+		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
 	},
-	StateRunning: {
-		ActionFunctions: []ActionFunction{},
-		PatchType:       ph.PatchObjectStatus,
-	},
+	StateRunning: {},
 	StateDelete: {
-		ActionFunctions: []ActionFunction{
-			{Type: ActionFunctionPure, Pure: DeletePhysicalMeasurementConfig},
-			{Type: ActionFunctionPure, Pure: ReloadPrometheus},
-		},
-		PatchType: ph.PatchObject,
+		ActionFunction{Type: ActionFunctionPure, Pure: DeletePhysicalMeasurementConfig},
+		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
 	},
 	StateCompleted: {},
 	StateFailed:    {},
 }
 
-func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
+func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	if slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer) {
 		return nil
 	}
-	log.Printf("Adding finalizer to PhysicalMeasurement %s\n", physicalMeasurement.Name)
 	physicalMeasurement.ObjectMeta.Finalizers = append(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer)
+	log.Printf("Added finalizer: %#v\n", physicalMeasurement.ObjectMeta.Finalizers)
 	return nil
 }
 
@@ -79,27 +70,29 @@ func ExecuteActions(
 	c client.Client,
 	physicalMeasurement *chantico.PhysicalMeasurement,
 
-) ph.ResultToPatch {
-	var patchResult ph.ResultToPatch
-	stateActions := ActionMap[string(physicalMeasurement.Status.State)]
-	patchResult.PatchType = stateActions.PatchType
-	for _, actionFunction := range stateActions.ActionFunctions {
+) *ActionResult {
+	var result *ActionResult = nil
+	actionFunctions := ActionMap[string(physicalMeasurement.Status.State)]
+	for i, actionFunction := range actionFunctions {
+		log.Printf("Start step %d, status: %s\n", i, physicalMeasurement.Status.State)
 		switch actionFunction.Type {
 		case ActionFunctionPure:
-			patchResult.Result = actionFunction.Pure(physicalMeasurement)
+			result = actionFunction.Pure(physicalMeasurement)
 		case ActionFunctionIO:
-			patchResult.Result = actionFunction.IO(ctx, c, physicalMeasurement)
+			result = actionFunction.IO(ctx, c, physicalMeasurement)
 		}
-		if patchResult.Result != nil || physicalMeasurement.Status.State == StateFailed {
+		if result != nil {
+		}
+		if physicalMeasurement.Status.State == StateFailed {
 			break
 		}
 	}
-	return patchResult
+	return result
 }
 
 func WritePrometheusConfig(
 	physicalMeasurement *chantico.PhysicalMeasurement,
-) *ctrl.Result {
+) *ActionResult {
 	// physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
 	cfg := CreatePrometheusConfig(physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.ResourceIds)
 
@@ -112,13 +105,13 @@ func WritePrometheusConfig(
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		log.Printf("%v", err)
-		return &ctrl.Result{}
+		return &ActionResult{}
 	}
 
-	return &ctrl.Result{}
+	return &ActionResult{}
 }
 
-func DeletePhysicalMeasurementConfig(physicalMeasurement *chantico.PhysicalMeasurement) *ctrl.Result {
+func DeletePhysicalMeasurementConfig(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
 
@@ -129,13 +122,13 @@ func DeletePhysicalMeasurementConfig(physicalMeasurement *chantico.PhysicalMeasu
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		log.Printf("Failed to delete config file: %v", err)
-		return &ctrl.Result{}
+		return &ActionResult{}
 	}
 
 	return nil
 }
 
-func ReloadPrometheus(_ *chantico.PhysicalMeasurement) *ctrl.Result {
+func ReloadPrometheus(_ *chantico.PhysicalMeasurement) *ActionResult {
 
 	return nil
 }

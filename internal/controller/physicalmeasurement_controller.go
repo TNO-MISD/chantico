@@ -66,19 +66,15 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: physicalMeasurement.Status.JobName, Namespace: "chantico"}, job)
 
-	pm.UpdateState(physicalMeasurement, job)
-
 	patch := ph.Initialize(ctx, r.Client, physicalMeasurement)
 
-	patchResult := pm.ExecuteActions(ctx, r.Client, physicalMeasurement)
-	if patchResult.Result != nil {
-		return *patchResult.Result, nil
-	}
+	log.Printf("Updating state of data center resource %s\n", physicalMeasurement.Name)
+	pm.UpdateState(physicalMeasurement, job)
+	patch.PatchStatus()
 
-	log.Printf("PatchType: %#v", patchResult.PatchType)
-	err = patch.Patch(patchResult.PatchType)
-	if err != nil {
-		panic("TODO")
+	result := pm.ExecuteActions(ctx, r.Client, physicalMeasurement)
+	if result != nil && (result.Requeue || result.RequeueAfter > 0) {
+		return result.Result, nil
 	}
 	return ctrl.Result{}, nil
 
