@@ -2,6 +2,9 @@ package physicalmeasurement
 
 import (
 	chantico "chantico/api/v1alpha1"
+	"slices"
+
+	batchv1 "k8s.io/api/batch/v1"
 )
 
 const (
@@ -13,8 +16,9 @@ const (
 )
 
 func UpdateState(
-	physicalMeasurement *chantico.PhysicalMeasurement,
+	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
 ) {
+	println("Start of state method....")
 	if physicalMeasurement == nil {
 		return
 	}
@@ -22,14 +26,28 @@ func UpdateState(
 		physicalMeasurement.Status.UpdateGeneration = 1
 	}
 
-	// Covers lifecycle related changes
-	switch {
-	case physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation:
+	if !slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
 		physicalMeasurement.Status.State = StateInit
-		break
-	case physicalMeasurement.ObjectMeta.GetDeletionTimestamp() != nil:
-		physicalMeasurement.Status.State = StateDelete
-		break
+		return
+	}
+
+	// Covers lifecycle related changes
+	isDeleted := physicalMeasurement.ObjectMeta.GetDeletionTimestamp() != nil
+	isGenerationUpToDate := physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation
+
+	if isDeleted {
+		println("We go to state delete...")
+		switch physicalMeasurement.Status.State {
+		case StateDelete:
+			break
+		default:
+			physicalMeasurement.Status.State = StateDelete
+		}
+	}
+
+	if isGenerationUpToDate && !isDeleted {
+		println("We go to state running...")
+		physicalMeasurement.Status.State = StateRunning
 	}
 
 	switch physicalMeasurement.Status.State {

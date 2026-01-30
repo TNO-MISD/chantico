@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +63,10 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	pm.UpdateState(physicalMeasurement)
+	job := &batchv1.Job{}
+	_ = r.Get(ctx, client.ObjectKey{Name: physicalMeasurement.Status.JobName, Namespace: "chantico"}, job)
+
+	pm.UpdateState(physicalMeasurement, job)
 
 	patch := ph.Initialize(ctx, r.Client, physicalMeasurement)
 

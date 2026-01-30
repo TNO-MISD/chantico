@@ -60,6 +60,8 @@ spec:
             properties:
               errorMessage:
                 type: string
+              jobName:
+                type: string
               state:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -68,6 +70,8 @@ spec:
               updateGeneration:
                 format: int64
                 type: integer
+              updateTime:
+                type: string
             type: object
         type: object
     served: true
