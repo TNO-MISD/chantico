@@ -214,7 +214,6 @@ release:
     - ./semantic-release --hooks goreleaser
   needs:
     - chantico-fmt
-    - chantico-vet
     - go-test
     - docs
   rules:
