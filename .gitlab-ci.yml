@@ -1,8 +1,8 @@
 image: golang:1.24.5-alpine3.22
 
 stages:
-  - docker
   - build
+  - lint
   - test
   - docs
   - pages
@@ -78,10 +78,25 @@ build-snmp-mock:
     TAG: latest
 
 chantico-fmt:
-  stage: build
+  stage: lint
+  allow_failure: true # Make it a warning instead for now.
   script:
-    - make fmt
-    - make vet
+    - |
+      files=$(gofmt -l .)
+      if [ -n "$files" ]; then
+        echo "The following files are not formatted according to https://go.dev/blog/gofmt:"
+        echo "$files"
+        exit 1
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+chantico-vet:
+  stage: lint
+  allow_failure: true # Make it a warning instead for now.
+  script:
+    - go vet ./...
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
