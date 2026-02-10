@@ -80,7 +80,8 @@ build-snmp-mock:
 chantico-fmt:
   stage: build
   script:
-    - go fmt ./...
+    - make fmt
+    - make vet
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
