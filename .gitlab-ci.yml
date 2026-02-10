@@ -145,14 +145,23 @@ osv-scanner:
     paths:
       - osv-scanner-report.json
       - osv-scanner-report.html
-    expire_in: 7 days
     when: always
+
+osv-scan-review:
+  stage: test
+  needs:
+    - job: osv-scanner
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  script:
+    - echo "Publishing OSV scan artifacts"
   environment:
     name: scan/$CI_COMMIT_REF_SLUG
     url: "$ARTIFACT_URL/osv-scanner-report.html"
     on_stop: stop-scan-review
   variables:
-    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/"
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts"
 
 stop-scan-review:
   stage: pages
@@ -193,11 +202,11 @@ hugo-preview:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
     THEME_URL: "github.com/adityatelange/hugo-PaperMod"
-    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/hugo/public/"
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/hugo/public"
   dependencies:
     - docs
   script:
-    - cd hugo && hugo --baseURL="$ARTIFACT_URL" --config "hugo.toml,hugo.preview.toml"
+    - cd hugo && hugo --baseURL="$ARTIFACT_URL/" --config "hugo.toml,hugo.preview.toml"
     - echo PREVIEW_URL="$ARTIFACT_URL/index.html" >> preview.env
   rules:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
