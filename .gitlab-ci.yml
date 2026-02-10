@@ -139,12 +139,15 @@ osv-scanner:
     entrypoint: [""] # Override entry point
   allow_failure: true # Make it a warning instead for now; to allow deployment/review by team.
   script: # osv-scanner recursively scans the project for dependencies
+    - echo "OSV_JOB_ID=$CI_JOB_ID" >> scanner.env
     - osv-scanner --licenses="Apache-2.0,BSD-3-Clause,BSD-2-Clause,ISC,MIT" --call-analysis -r . --format json --output osv-scanner-report.json ||  true
     - osv-reporter --new osv-scanner-report.json --output html:osv-scanner-report.html
   artifacts:
     paths:
       - osv-scanner-report.json
       - osv-scanner-report.html
+    reports:
+      dotenv: scanner.env
     when: always
 
 osv-scan-review:
@@ -161,7 +164,7 @@ osv-scan-review:
     url: "$ARTIFACT_URL/osv-scanner-report.html"
     on_stop: stop-scan-review
   variables:
-    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts"
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$OSV_JOB_ID/artifacts"
 
 stop-scan-review:
   stage: pages
