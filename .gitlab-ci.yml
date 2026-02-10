@@ -206,3 +206,16 @@ pages:
     - cd hugo && hugo
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+release:
+  stage: release
+  script:
+    - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
+    - ./semantic-release --hooks goreleaser
+  needs:
+    - chantico-fmt
+    - chantico-vet
+    - go-test
+    - docs
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
