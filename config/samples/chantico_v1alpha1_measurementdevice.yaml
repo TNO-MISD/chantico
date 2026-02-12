@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: chantico
     app.kubernetes.io/managed-by: kustomize
-  name: schleifenbauer-in
+  name: tno
   namespace: chantico
 spec:
   auth:
@@ -12,3 +12,35 @@ spec:
     version: 2
   walks:
     - tnoPduEnergyValue
+    - tnoPduPowerValue
+---
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: MeasurementDevice
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: tno1
+  namespace: chantico
+spec:
+  auth:
+    community: public
+    version: 2
+  walks:
+    - tnoPduEnergyValue
+    - tnoPduPowerValue
+---
+apiVersion: chantico.ci.tno.nl/v1alpha1
+kind: MeasurementDevice
+metadata:
+  labels:
+    app.kubernetes.io/name: chantico
+    app.kubernetes.io/managed-by: kustomize
+  name: tno2
+  namespace: chantico
+spec:
+  auth:
+    community: public
+    version: 2
+  walks:
+    - tnoPduPowerValue

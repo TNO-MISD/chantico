@@ -18,16 +18,20 @@ package controller
 
 import (
 	"context"
+	"log"
+
+	// "log"
 
 	chantico "chantico/api/v1alpha1"
 	md "chantico/internal/measurementdevice"
 
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ph "chantico/internal/patch"
 )
 
 // MeasurementDeviceReconciler reconciles a MeasurementDevice object
@@ -38,21 +42,29 @@ type MeasurementDeviceReconciler struct {
 
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=measurementdevices/finalizers,verbs=create;update;patch
 
 func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Get the information needed to determine the state of the MeasurementDevice
 	measurementDevice := &chantico.MeasurementDevice{}
-	_ = r.Get(ctx, req.NamespacedName, measurementDevice)
+	err := r.Get(ctx, req.NamespacedName, measurementDevice)
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
 
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
-	deployment := &appsv1.Deployment{}
-	_ = r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, deployment)
+	log.Printf("Updating state of measurement device %s\n", measurementDevice.Name)
+	patch := ph.Initialize(ctx, r.Client, measurementDevice)
+	md.UpdateState(measurementDevice, job)
+	patch.PatchStatus()
 
-	state := md.GetState(measurementDevice, job, deployment)
-	md.ExecuteActions(state, ctx, r.Client, measurementDevice)
+	result := md.ExecuteActions(ctx, r.Client, measurementDevice, patch)
+	if result != nil && result.Result != nil {
+		return *result.Result, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 

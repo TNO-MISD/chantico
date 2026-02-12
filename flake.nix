@@ -24,8 +24,10 @@
           {
             name = system;
             value.default = pkgs.mkShell {
+              hardeningDisable = [ "fortify" ];
               packages = [
                 pkgs.go
+                pkgs.delve
                 pkgs.kind
                 pkgs.pkgsite
                 pkgs.net-snmp

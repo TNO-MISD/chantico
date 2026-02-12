@@ -13,6 +13,7 @@ import (
 	"go.yaml.in/yaml/v2"
 
 	chantico "chantico/api/v1alpha1"
+	ph "chantico/internal/patch"
 	vol "chantico/internal/volumes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,30 +75,47 @@ func equalStringSlices(a, b []string) bool {
 
 func TestInitializeFinalizer(t *testing.T) {
 	testCases := map[string]struct {
-		Case     *chantico.MeasurementDevice
-		Expected []string
+		Case               *chantico.MeasurementDevice
+		ExpectedPatchType  ph.PatchType
+		ExpectedFinalizers []string
 	}{
 		"empty finalizer": {
 			Case: &chantico.MeasurementDevice{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{},
 				}},
-			Expected: []string{chantico.SNMPUpdateFinalizer},
+			ExpectedPatchType:  ph.PatchResource,
+			ExpectedFinalizers: []string{chantico.SNMPUpdateFinalizer},
 		},
 		"already initialized": {
 			Case: &chantico.MeasurementDevice{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{"test"},
 				}},
-			Expected: []string{"test", chantico.SNMPUpdateFinalizer},
+			ExpectedPatchType:  ph.PatchResource,
+			ExpectedFinalizers: []string{"test", chantico.SNMPUpdateFinalizer},
+		},
+		"already contains": {
+			Case: &chantico.MeasurementDevice{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{chantico.SNMPUpdateFinalizer},
+				}},
+			ExpectedPatchType:  ph.PatchResourceNone,
+			ExpectedFinalizers: []string{chantico.SNMPUpdateFinalizer},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			InitializeFinalizer(tc.Case)
-			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
-				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, tc.Case.ObjectMeta.Finalizers, tc.Expected)
+			result := InitializeFinalizer(tc.Case)
+			if result == nil && tc.ExpectedPatchType != ph.PatchResourceNone {
+				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+			}
+			if result != nil && result.PatchType != tc.ExpectedPatchType {
+				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+			}
+			if !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
+				t.Errorf("InitializeFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}
 		})
 	}
@@ -105,8 +123,9 @@ func TestInitializeFinalizer(t *testing.T) {
 
 func TestUpdateFinalizer(t *testing.T) {
 	testCases := map[string]struct {
-		Case     *chantico.MeasurementDevice
-		Expected []string
+		Case               *chantico.MeasurementDevice
+		ExpectedPatchType  ph.PatchType
+		ExpectedFinalizers []string
 	}{
 		"removes SNMPUpdateFinalizer on deletion": {
 			Case: &chantico.MeasurementDevice{
@@ -115,15 +134,31 @@ func TestUpdateFinalizer(t *testing.T) {
 					Finalizers:        []string{"test", chantico.SNMPUpdateFinalizer},
 				},
 			},
-			Expected: []string{"test"},
+			ExpectedPatchType:  ph.PatchResource,
+			ExpectedFinalizers: []string{"test"},
+		},
+		"retains SNMPUpdateFinalizer when not deletion": {
+			Case: &chantico.MeasurementDevice{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{chantico.SNMPUpdateFinalizer},
+				},
+			},
+			ExpectedPatchType:  ph.PatchResourceNone,
+			ExpectedFinalizers: []string{chantico.SNMPUpdateFinalizer},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			UpdateFinalizer(tc.Case)
-			if !equalStringSlices(tc.Expected, tc.Case.ObjectMeta.Finalizers) {
-				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc.Case, tc.Case.ObjectMeta.Finalizers, tc.Expected)
+			result := UpdateFinalizer(tc.Case)
+			if result == nil && tc.ExpectedPatchType != ph.PatchResourceNone {
+				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+			}
+			if result != nil && result.PatchType != tc.ExpectedPatchType {
+				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+			}
+			if !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
+				t.Errorf("UpdateFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}
 		})
 	}
@@ -176,8 +211,8 @@ func TestRequeueWithDelay(t *testing.T) {
 }
 
 func TestActionMap(t *testing.T) {
-	for state, actions := range ActionMap {
-		for _, action := range actions {
+	for state, stateActions := range ActionMap {
+		for _, action := range stateActions {
 			t.Run(fmt.Sprintf("action %#v in state %#v", action.Type, state), func(t *testing.T) {
 				switch action.Type {
 				case ActionFunctionPure:
@@ -226,7 +261,7 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			_ = CreateSNMPGenerator(tc.Case)
 
 			// Check that the file exist
-			yamlFile := fmt.Sprintf("%s/generator-%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
+			yamlFile := fmt.Sprintf("%s/generator_%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
 			if _, err = os.Stat(yamlFile); err != nil {
 				t.Fatalf("yamlFile: %s does not exist\n", yamlFile)
 			}
