@@ -19,7 +19,6 @@ const (
 func UpdateState(
 	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
 ) {
-	println("Start of state method....")
 	if physicalMeasurement == nil {
 		return
 	}

@@ -67,7 +67,7 @@ type PhysicalMeasurementList struct {
 }
 
 const (
-	PhysicalMeasurementFinalizer = "chantico.ci.tno.nl/physical-measurement"
+	PhysicalMeasurementFinalizer = "physicalmeasurement.chantico.ci.tno.nl/finalizer"
 )
 
 func init() {

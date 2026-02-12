@@ -110,7 +110,7 @@ func InitializeFinalizer(
 		return nil
 	}
 	measurementDevice.ObjectMeta.Finalizers = append(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer)
-	log.Printf("ADDE FINALIZER: %#v", measurementDevice.ObjectMeta.Finalizers)
+	log.Printf("ADDED FINALIZER: %#v", measurementDevice.ObjectMeta.Finalizers)
 	return &ActionResult{PatchType: ph.PatchResource}
 }
 
