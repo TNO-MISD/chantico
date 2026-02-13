@@ -241,6 +241,8 @@ pages:
 build-release-test:
   image: "goreleaser/goreleaser:v2.13.3"
   stage: release
+  variables:
+    GIT_DEPTH: 0
   script:
     - goreleaser build --skip validate
   rules:
@@ -249,6 +251,8 @@ build-release-test:
 release:
   image: "goreleaser/goreleaser:v2.13.3"
   stage: release
+  variables:
+    GIT_DEPTH: 0
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - ./semantic-release --hooks goreleaser --update ./config/initial-deployments/Chart.yaml
