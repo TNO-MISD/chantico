@@ -239,6 +239,7 @@ pages:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 build-release-test:
+  image: "goreleaser/goreleaser:v2.13.3"
   stage: release
   script:
     - goreleaser build --skip validate
@@ -246,6 +247,7 @@ build-release-test:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
 
 release:
+  image: "goreleaser/goreleaser:v2.13.3"
   stage: release
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
