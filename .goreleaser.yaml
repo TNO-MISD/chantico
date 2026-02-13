@@ -40,6 +40,16 @@ archives:
       - goos: windows
         formats: [zip]
 
+dockers_v2:
+  - id: chantico
+    dockerfile: Dockerfile
+    labels:
+      "org.opencontainers.image.description": "Energy-aware controller"
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+
 changelog:
   sort: asc
   filters:

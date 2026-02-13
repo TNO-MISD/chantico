@@ -207,6 +207,13 @@ pages:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
+build-release-test:
+  stage: release
+  script:
+    - goreleaser build --skip validate
+  rules:
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+
 release:
   stage: release
   script:
@@ -215,6 +222,5 @@ release:
   needs:
     - chantico-fmt
     - go-test
-    - docs
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
