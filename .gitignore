@@ -35,3 +35,12 @@ hugo/hugo_stats.json
 *.swp
 *.swo
 *~
+
+# osv-scanner
+osv-scanner-report*.json
+
+# semantic releaser
+.semrel/
+semantic-release
+# Added by goreleaser init:
+dist/
