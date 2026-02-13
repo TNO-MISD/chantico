@@ -49,6 +49,7 @@ var ActionMap = map[string][]ActionFunction{
 	StateDelete: {
 		ActionFunction{Type: ActionFunctionPure, Pure: DeleteConfigFile},
 		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
+		ActionFunction{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 	},
 	StateCompleted: {},
 	StateFailed:    {},
@@ -63,7 +64,22 @@ func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *Act
 	return &ActionResult{PatchType: ph.PatchResource}
 }
 
-// RemoveFinalizer
+func UpdateFinalizer(
+	physicalMeasurement *chantico.PhysicalMeasurement,
+) *ActionResult {
+	if physicalMeasurement.ObjectMeta.DeletionTimestamp.IsZero() {
+		return nil
+	}
+	accumulator := []string{}
+	for _, f := range physicalMeasurement.ObjectMeta.Finalizers {
+		if f != chantico.PhysicalMeasurementFinalizer {
+			accumulator = append(accumulator, f)
+		}
+	}
+	println(accumulator)
+	physicalMeasurement.ObjectMeta.Finalizers = accumulator
+	return &ActionResult{PatchType: ph.PatchResource}
+}
 
 func ExecuteActions(
 	ctx context.Context,

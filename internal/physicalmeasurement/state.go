@@ -19,6 +19,7 @@ const (
 func UpdateState(
 	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
 ) {
+	println("UpdateState called...")
 	if physicalMeasurement == nil {
 		return
 	}
@@ -26,7 +27,7 @@ func UpdateState(
 		physicalMeasurement.Status.UpdateGeneration = 1
 	}
 
-	if !slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
+	if !slices.Contains(physicalMeasurement.ObjectMeta.Finalizers, chantico.PhysicalMeasurementFinalizer) {
 		physicalMeasurement.Status.State = StateInit
 		return
 	}
@@ -36,7 +37,6 @@ func UpdateState(
 	isGenerationUpToDate := physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation
 
 	if isDeleted {
-		println("We go to state delete...")
 		switch physicalMeasurement.Status.State {
 		case StateDelete:
 			break
