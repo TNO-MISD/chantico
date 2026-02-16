@@ -1,13 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: snmp-mock
+  name: chantico-snmp-mock
   namespace: chantico
 spec:
   selector:
-    app: snmp-mock
+    app: chantico-snmp-mock
   ports:
-  - protocol: TCP
-    port: 1000
-    targetPort: 1000
-  type: ClusterIP
+  - protocol: UDP
+    port: 1161
+    targetPort: 1161
+    nodePort: 31161     # NodePort (must be between 30000–32767)
+  type: NodePort

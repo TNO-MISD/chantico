@@ -6,3 +6,7 @@ nodes:
     extraMounts:
       - hostPath: /tmp/chantico-local-path-data
         containerPath: /opt/local-path-provisioner
+    extraPortMappings:
+    - containerPort: 31161
+      hostPort: 31161
+      protocol: UDP

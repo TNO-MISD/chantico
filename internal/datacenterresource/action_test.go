@@ -48,7 +48,7 @@ func TestInitializeFinalizer(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{},
 				}},
-			ExpectedPatchType:  ph.PatchObject,
+			ExpectedPatchType:  ph.PatchResource,
 			ExpectedFinalizers: []string{chantico.DataCenterResourceGraphFinalizer},
 		},
 		"already initialized": {
@@ -56,7 +56,7 @@ func TestInitializeFinalizer(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{"test"},
 				}},
-			ExpectedPatchType:  ph.PatchObject,
+			ExpectedPatchType:  ph.PatchResource,
 			ExpectedFinalizers: []string{"test", chantico.DataCenterResourceGraphFinalizer},
 		},
 		"already contains": {
@@ -64,7 +64,7 @@ func TestInitializeFinalizer(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{chantico.DataCenterResourceGraphFinalizer},
 				}},
-			ExpectedPatchType:  ph.PatchObjectNone,
+			ExpectedPatchType:  ph.PatchResourceNone,
 			ExpectedFinalizers: []string{chantico.DataCenterResourceGraphFinalizer},
 		},
 	}
@@ -92,7 +92,7 @@ func TestUpdateFinalizer(t *testing.T) {
 					Finalizers:        []string{"test", chantico.DataCenterResourceGraphFinalizer},
 				},
 			},
-			ExpectedPatchType:  ph.PatchObject,
+			ExpectedPatchType:  ph.PatchResource,
 			ExpectedFinalizers: []string{"test"},
 		},
 	}

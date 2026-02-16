@@ -18,7 +18,9 @@ package controller
 
 import (
 	"context"
+	"log"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -30,12 +32,17 @@ type PatchHelper struct {
 }
 
 const (
-	PatchObject = iota
-	PatchObjectStatus
-	PatchObjectNone
+	PatchResource = iota
+	PatchResourceStatus
+	PatchResourceNone
 )
 
 type PatchType int
+
+type ResultToPatch struct {
+	Result    *ctrl.Result
+	PatchType PatchType
+}
 
 func Initialize(ctx context.Context, c client.Client, obj client.Object) *PatchHelper {
 	return &PatchHelper{
@@ -48,11 +55,11 @@ func Initialize(ctx context.Context, c client.Client, obj client.Object) *PatchH
 
 func (p *PatchHelper) Patch(patchType PatchType) error {
 	switch patchType {
-	case PatchObject:
+	case PatchResource:
 		return p.PatchSpec()
-	case PatchObjectStatus:
+	case PatchResourceStatus:
 		return p.PatchStatus()
-	case PatchObjectNone:
+	case PatchResourceNone:
 		return p.PatchNone()
 	default:
 		return nil
@@ -61,6 +68,7 @@ func (p *PatchHelper) Patch(patchType PatchType) error {
 
 func (p *PatchHelper) PatchSpec() error {
 	if err := p.client.Patch(p.ctx, p.obj, client.MergeFrom(p.base)); err != nil {
+		log.Printf("err: %s", err)
 		return err
 	}
 	p.base = p.obj.DeepCopyObject().(client.Object)

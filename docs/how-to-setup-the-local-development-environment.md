@@ -8,10 +8,17 @@ menus:
 
 ### Prerequisites
 
+The development currently supports [WSL2](https://github.com/microsoft/WSL) and UNIX based environment.
+
+It requires the following packages:
+
 - go version v1.24.0+
 - kind version v0.30.0+
 - docker version v17.03+
 - psql version v17.5+
+- helm version 3.19+
+- make version 4.3+
+- kubectl version v0.30.0+
 
 ### Installation
 
@@ -42,6 +49,7 @@ menus:
   export CHANTICO_POSTGRES_SERVICE_PORT="15432"
   export CHANTICO_POSTGRES_DBSTRING="postgresql://chanticoUser:toulouse@localhost:15432/chantico"
   export CHANTICOVOLUMELOCATIONENV="$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.name=="chantico-snmp-prometheus-volume-claim")]}{.spec.hostPath.path}{"\n"}{end}' | sed 's|/opt/local-path-provisioner|/tmp/chantico-local-path-data|')"
+  export CHANTICOVOLUMECLAIMENV="chantico-snmp-prometheus-volume-claim"
   ```
 
   It might take a little while for the volume to show up, so redo the final 

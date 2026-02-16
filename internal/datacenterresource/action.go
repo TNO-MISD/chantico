@@ -100,11 +100,11 @@ func InitializeFinalizer(
 	datacenterResource *chantico.DataCenterResource,
 ) *ActionResult {
 	if slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
-		return &ActionResult{PatchType: ph.PatchObjectNone}
+		return &ActionResult{PatchType: ph.PatchResourceNone}
 	}
 	datacenterResource.ObjectMeta.Finalizers = append(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
 	log.Printf("Added finalizer: %#v", datacenterResource.ObjectMeta.Finalizers)
-	return &ActionResult{PatchType: ph.PatchObject}
+	return &ActionResult{PatchType: ph.PatchResource}
 }
 
 func UpdateFinalizer(
@@ -120,5 +120,5 @@ func UpdateFinalizer(
 		}
 	}
 	datacenterResource.ObjectMeta.Finalizers = accumulator
-	return &ActionResult{PatchType: ph.PatchObject}
+	return &ActionResult{PatchType: ph.PatchResource}
 }
