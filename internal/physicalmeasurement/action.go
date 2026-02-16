@@ -1,6 +1,7 @@
 package physicalmeasurement
 
 import (
+	"bytes"
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
 	"context"
@@ -45,16 +46,17 @@ var ActionMap = map[State][]ActionFunction{
 	StateInit: {
 		ActionFunction{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 		ActionFunction{Type: ActionFunctionPure, Pure: WriteConfigFile},
+		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
 		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
 	},
 	StateRunning: {},
 	StateDelete: {
 		ActionFunction{Type: ActionFunctionPure, Pure: DeleteConfigFile},
+		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
 		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
 		ActionFunction{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 	},
-	StateCompleted: {},
-	StateFailed:    {},
+	StateFailed: {},
 }
 
 func InitializeFinalizer(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
@@ -127,6 +129,58 @@ func WriteConfigFile(
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
+func CombineConfigFiles(
+	_ *chantico.PhysicalMeasurement,
+) *ActionResult {
+	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
+	configDir := volumePath + "/prometheus/yml"
+	prometheusYmlPath := configDir + "/prometheus.yml"
+
+	existingConfig, _ := LoadPrometheusConfig(prometheusYmlPath)
+
+	entries, err := os.ReadDir(configDir)
+	if err != nil {
+		log.Printf("Failed to read config directory: %v", err)
+	}
+
+	var configs []PrometheusConfig
+
+	for _, entry := range entries {
+		// Skip directories and prometheus.yml itself
+		if entry.IsDir() || entry.Name() == "prometheus.yml" {
+			continue
+		}
+
+		filePath := configDir + "/" + entry.Name()
+		config, err := LoadPrometheusConfig(filePath)
+		if err != nil {
+			log.Printf("Failed to load config file %s: %v", entry.Name(), err)
+			continue
+		}
+
+		configs = append(configs, *config)
+	}
+
+	combinedConfig := MergeWithPrometheusConfig(configs)
+
+	// Preserve global config from existing prometheus.yml
+	if existingConfig != nil && existingConfig.Global != nil {
+		combinedConfig.Global = existingConfig.Global
+	}
+
+	combinedYaml, err := yaml.Marshal(combinedConfig)
+	if err != nil {
+		log.Printf("Failed to marshal combined config: %v", err)
+	}
+
+	if err := os.WriteFile(prometheusYmlPath, combinedYaml, 0644); err != nil {
+		log.Printf("Failed to write prometheus.yml: %v", err)
+	}
+
+	log.Printf("Combined scrape configs into %s", prometheusYmlPath)
+	return &ActionResult{}
+}
+
 func DeleteConfigFile(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
@@ -146,22 +200,15 @@ func DeleteConfigFile(physicalMeasurement *chantico.PhysicalMeasurement) *Action
 func ReloadPrometheus(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	address := fmt.Sprintf("http://%s:%s/-/reload", os.Getenv("CHANTICO_PROMETHEUS_SERVICE_HOST"), os.Getenv("CHANTICO_PROMETHEUS_SERVICE_PORT"))
 
-	resp, err := http.Post(address, "", nil)
-	if err != nil {
+	resp, err := http.Post(address, "application/json", bytes.NewBuffer([]byte{}))
+	if err != nil || resp.StatusCode != http.StatusOK {
 		log.Printf("Failed to reload Prometheus: %v", err)
 
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %s", resp.Status)
+		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Prometheus reload returned non-OK status: %s", resp.Status)
-
-		physicalMeasurement.Status.State = StateFailed
-		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %s", resp.Status)
-	}
-
 	log.Println("Prometheus reloaded successfully.")
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }

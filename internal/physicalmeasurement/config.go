@@ -6,7 +6,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type GlobalConfig struct {
+	ScrapeInterval     string `yaml:"scrape_interval,omitempty"`
+	EvaluationInterval string `yaml:"evaluation_interval,omitempty"`
+}
+
 type PrometheusConfig struct {
+	Global        *GlobalConfig  `yaml:"global,omitempty"`
 	ScrapeConfigs []ScrapeConfig `yaml:"scrape_configs"`
 }
 
@@ -55,33 +61,42 @@ func CreatePrometheusConfig(device_id string, measurementIps []string) Prometheu
 	return prometheusCfg
 }
 
-// func MergeWithPrometheusConfig(prometheus_yaml string, deviceId string, measurementIps []string) PrometheusConfig {
-// 	cfg, _ := loadPrometheusConfig(prometheus_yaml)
-// 	for _, scrape := range cfg.ScrapeConfigs {
-// 		if scrape.JobName == deviceId {
-// 			for _, target := range measurementIps {
-// 				if !contains(scrape.StaticConfigs[0].Targets, target) {
-// 					scrape.StaticConfigs[0].Targets = append(scrape.StaticConfigs[0].Targets, target)
-// 				}
-// 			}
-// 			return *cfg
-// 		}
-// 	}
-// 	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, newPhysicalMeasurementConfig(deviceId, measurementIps))
-// 	return *cfg
-// }
+func MergeWithPrometheusConfig(configs []PrometheusConfig) PrometheusConfig {
+	// Map to deduplicate jobs by name
+	jobMap := make(map[string]*ScrapeConfig)
 
-func RemoveFromPrometheusConfig(prometheus_yaml string, device_id string) PrometheusConfig {
-	cfg, _ := loadPrometheusConfig(prometheus_yaml)
-	newCfg := PrometheusConfig{}
-	for _, scrape := range cfg.ScrapeConfigs {
-		if scrape.JobName != device_id {
-			newCfg.ScrapeConfigs = append(newCfg.ScrapeConfigs, scrape)
+	for _, config := range configs {
+		for _, scrape := range config.ScrapeConfigs {
+			if existing, ok := jobMap[scrape.JobName]; ok {
+				// Job exists - merge targets
+				for _, staticConfig := range scrape.StaticConfigs {
+					for _, newTarget := range staticConfig.Targets {
+						if !contains(existing.StaticConfigs[0].Targets, newTarget) {
+							existing.StaticConfigs[0].Targets = append(
+								existing.StaticConfigs[0].Targets,
+								newTarget,
+							)
+						}
+					}
+				}
+			} else {
+				newScrape := scrape
+				jobMap[scrape.JobName] = &newScrape
+			}
 		}
 	}
-	return newCfg
+
+	var allScrapeConfigs []ScrapeConfig
+	for _, scrape := range jobMap {
+		allScrapeConfigs = append(allScrapeConfigs, *scrape)
+	}
+
+	return PrometheusConfig{
+		ScrapeConfigs: allScrapeConfigs,
+	}
 }
 
+// Helper function to check if a slice contains a string
 func contains(list []string, item string) bool {
 	for _, v := range list {
 		if v == item {
@@ -91,7 +106,7 @@ func contains(list []string, item string) bool {
 	return false
 }
 
-func loadPrometheusConfig(path string) (*PrometheusConfig, error) {
+func LoadPrometheusConfig(path string) (*PrometheusConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

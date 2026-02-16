@@ -10,11 +10,10 @@ import (
 type State string
 
 const (
-	StateInit      = "init"
-	StateRunning   = "Running"
-	StateDelete    = "Delete"
-	StateCompleted = "Completed"
-	StateFailed    = "Failed"
+	StateInit    = "init"
+	StateRunning = "Running"
+	StateDelete  = "Delete"
+	StateFailed  = "Failed"
 )
 
 // TODO delete reference to job since all actions are not interacting with the cluster.
