@@ -4,7 +4,9 @@ import (
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"slices"
 
@@ -39,7 +41,7 @@ type ActionFunction struct {
 	) *ActionResult
 }
 
-var ActionMap = map[string][]ActionFunction{
+var ActionMap = map[State][]ActionFunction{
 	StateInit: {
 		ActionFunction{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 		ActionFunction{Type: ActionFunctionPure, Pure: WriteConfigFile},
@@ -76,7 +78,6 @@ func UpdateFinalizer(
 			accumulator = append(accumulator, f)
 		}
 	}
-	println(accumulator)
 	physicalMeasurement.ObjectMeta.Finalizers = accumulator
 	return &ActionResult{PatchType: ph.PatchResource}
 }
@@ -88,7 +89,7 @@ func ExecuteActions(
 	patch *ph.PatchHelper,
 ) *ActionResult {
 	var result *ActionResult = nil
-	actionFunctions := ActionMap[string(physicalMeasurement.Status.State)]
+	actionFunctions := ActionMap[State(physicalMeasurement.Status.State)]
 	for i, actionFunction := range actionFunctions {
 		log.Printf("Start step %d, status: %s\n", i, physicalMeasurement.Status.State)
 		switch actionFunction.Type {
@@ -111,44 +112,56 @@ func ExecuteActions(
 func WriteConfigFile(
 	physicalMeasurement *chantico.PhysicalMeasurement,
 ) *ActionResult {
-	println("Write prometheus config...")
-	println("Measurement device: " + physicalMeasurement.Spec.MeasurementDevice)
 	cfg := CreatePrometheusConfig(physicalMeasurement.Spec.MeasurementDevice, []string{physicalMeasurement.Spec.Ip})
 
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
-
 	yamlBytes, _ := yaml.Marshal(cfg)
 	err := os.WriteFile(configPath, yamlBytes, 0644)
 	if err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("%v", err)
-		return &ActionResult{}
+		log.Printf("Failed to write Prometheus config file: %v", err)
 	}
-
 	physicalMeasurement.Status.State = StateRunning
-	return &ActionResult{}
+	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
 func DeleteConfigFile(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
 
-	log.Printf("Deleting Prometheus config for PhysicalMeasurement %s\n", physicalMeasurement.Name)
+	log.Printf("Deleting Prometheus config for %s\n", physicalMeasurement.Name)
 
 	err := os.Remove(configPath)
 	if err != nil && !os.IsNotExist(err) {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		log.Printf("Failed to delete config file: %v", err)
-		return &ActionResult{}
 	}
 
-	return nil
+	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
-func ReloadPrometheus(_ *chantico.PhysicalMeasurement) *ActionResult {
+func ReloadPrometheus(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
+	address := fmt.Sprintf("http://%s:%s/-/reload", os.Getenv("CHANTICO_PROMETHEUS_SERVICE_HOST"), os.Getenv("CHANTICO_PROMETHEUS_SERVICE_PORT"))
 
-	return nil
+	resp, err := http.Post(address, "", nil)
+	if err != nil {
+		log.Printf("Failed to reload Prometheus: %v", err)
+
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %s", resp.Status)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Prometheus reload returned non-OK status: %s", resp.Status)
+
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %s", resp.Status)
+	}
+
+	log.Println("Prometheus reloaded successfully.")
+	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }

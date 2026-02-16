@@ -7,6 +7,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
+type State string
+
 const (
 	StateInit      = "init"
 	StateRunning   = "Running"
@@ -19,7 +21,6 @@ const (
 func UpdateState(
 	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
 ) {
-	println("UpdateState called...")
 	if physicalMeasurement == nil {
 		return
 	}
