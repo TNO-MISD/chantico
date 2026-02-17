@@ -44,7 +44,7 @@ func CreatePrometheusConfig(device_id string, measurementIps []string) Prometheu
 		},
 		Params: map[string][]string{
 			"module": {device_id},
-			"auth":   {"public_v3"},
+			"auth":   {device_id},
 		},
 		MetricsPath:    "/snmp",
 		ScrapeInterval: "10s",
@@ -52,7 +52,7 @@ func CreatePrometheusConfig(device_id string, measurementIps []string) Prometheu
 		RelabelConfigs: []RelabelConfig{
 			{SourceLabels: []string{"__address__"}, TargetLabel: "__param_target"},
 			{SourceLabels: []string{"__param_target"}, TargetLabel: "instance"},
-			{TargetLabel: "__addzress__", Replacement: "chantico-snmp:9116"},
+			{TargetLabel: "__address__", Replacement: "chantico-snmp:9116"},
 		},
 	}
 	prometheusCfg := PrometheusConfig{
