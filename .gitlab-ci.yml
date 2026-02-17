@@ -247,6 +247,7 @@ build-release-test:
     - goreleaser build --skip validate
   rules:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+  when: manual
 
 release:
   image: "goreleaser/goreleaser:v2.13.3"
@@ -255,7 +256,7 @@ release:
     GIT_DEPTH: 0
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-    - ./semantic-release --hooks goreleaser --update ./config/initial-deployments/Chart.yaml
+    - ./semantic-release --hooks goreleaser --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions
   needs:
     - chantico-fmt
     - go-test
