@@ -36,13 +36,6 @@ type PhysicalMeasurementReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// const (
-// 	PhysicalMeasurementStateRunning   = "Running"
-// 	PhysicalMeasurementStateCompleted = "Completed"
-// 	PhysicalMeasurementStateFailed    = "Failed"
-// 	PhysicalMeasurementStateReloaded  = "Reloaded"
-// )
-
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/finalizers,verbs=create;update;patch
