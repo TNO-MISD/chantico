@@ -1,4 +1,4 @@
-package lifecycle
+package webapp
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"example.com/m/internal/html"
-	"example.com/m/internal/http"
-	"example.com/m/internal/kubernetes"
+	"chantico/internal/webapp/internal/html"
+	"chantico/internal/webapp/internal/http"
+	"chantico/internal/webapp/internal/kubernetes"
 )
 
 func New() (App, error) {
@@ -51,17 +51,16 @@ func (a *app) Run() error {
 	}
 	fmt.Println("Completed startup checks")
 
-	httpServer := http.New(t, k, a.cfg.Port)
-
 	ctxInterrupt, stopInterrupt := SignalHandling()
-	ctxHttpServer, stopHttpServer := context.WithCancel(context.Background())
-
-	go httpServer.Run(stopHttpServer)
+	defer stopInterrupt()
+	
+	httpServer := http.New(t, k, a.cfg.Port)
+	httpServerErrChannel := make(chan error, 1)
+	go httpServer.Run(httpServerErrChannel)
 
 	select {
 	case <-ctxInterrupt.Done():
 		fmt.Println("Interrupt signal received. Close services within 30 seconds.")
-		stopInterrupt()
 		ctxTimeout, stopTimeout := context.WithTimeout(context.Background(), 30*time.Second)
 		defer stopTimeout()
 
@@ -72,14 +71,10 @@ func (a *app) Run() error {
 
 		return err
 
-	case <-ctxHttpServer.Done():
+	case err := <-httpServerErrChannel:
 		fmt.Println("HTTP Server had an error. Close everything")
-		stopInterrupt()
-
+		return err
 	}
-
-	return nil
-
 }
 
 type App interface {
@@ -130,6 +125,8 @@ func loadConfig(get envGetter) (config, error) {
 
 	return cfg, nil
 }
+
+
 
 func pathExists(p string) bool {
 	_, err := os.Stat(p)

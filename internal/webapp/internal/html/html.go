@@ -25,8 +25,21 @@ func New() (*TemplateRenderer, error) {
 
 type HomePageData struct {
 	Diagram string
+	Host string
+	CurrentContext string
 }
 
 func (r *TemplateRenderer) RenderHomePage(w io.Writer, d HomePageData) {
 	r.tmpl.ExecuteTemplate(w, "home.html", d)
+}
+
+
+type ErrorPageData struct {
+	Error string
+	Host string
+	CurrentContext string
+}
+
+func (r *TemplateRenderer) RenderErrorPage(w io.Writer, d ErrorPageData) {
+	r.tmpl.ExecuteTemplate(w, "error.html", d)
 }

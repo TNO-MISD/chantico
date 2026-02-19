@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-
-	"example.com/m/internal/lifecycle"
+	"chantico/internal/webapp"
 )
 
 func main() {
-	app, err := lifecycle.New()
+	app, err := webapp.New()
 	if err != nil {
 		panic(err)
 	}

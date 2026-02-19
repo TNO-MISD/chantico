@@ -5,6 +5,17 @@
 </head>
 
 <body>
+    <div>
+      <div>
+        Kubernetes cluster information:
+      </div>
+      <div>
+        Host: {{ .Host }}
+      </div>
+      <div>
+        CurrentContext: {{ .CurrentContext }}
+      </div>
+    </div>
     {{ if .Diagram }}
 
     <pre class="mermaid" style="visibility: hidden;">
