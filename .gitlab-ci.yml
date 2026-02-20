@@ -245,7 +245,7 @@ build-release-test:
     GIT_DEPTH: 0
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-    - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions --dry --no-ci
+    - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions --dry --no-ci || true
     - goreleaser build --config .goreleaser.gitlab.yaml --clean --skip validate
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -256,6 +256,7 @@ build-release-test:
 release:
   image: "goreleaser/goreleaser:v2.13.3"
   stage: release
+  allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
   script:
