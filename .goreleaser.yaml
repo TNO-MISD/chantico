@@ -16,7 +16,7 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/main.go
+  - main: ./cmd/operator/main.go
     binary: bin/manager
     env:
       - CGO_ENABLED=0
