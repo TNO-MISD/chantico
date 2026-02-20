@@ -36,6 +36,9 @@ hugo/hugo_stats.json
 *.swo
 *~
 
+# Macos
+.DS_Store
+
 # osv-scanner
 osv-scanner-report*.json
 

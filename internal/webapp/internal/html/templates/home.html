@@ -1,0 +1,41 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+</head>
+
+<body>
+    <div>
+      <div>
+        Kubernetes cluster information:
+      </div>
+      <div>
+        Host: {{ .Host }}
+      </div>
+      <div>
+        CurrentContext: {{ .CurrentContext }}
+      </div>
+    </div>
+    {{ if .Diagram }}
+
+    <pre class="mermaid" style="visibility: hidden;">
+        {{ .Diagram }}
+    </pre>
+
+    {{ else }}
+
+    <div>There is no input to generate the graph.</div>
+
+    {{ end }}
+
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const diagrams = document.querySelectorAll("pre.mermaid");
+            diagrams.forEach(pre => pre.style.visibility = "visible");
+        })
+    </script>
+</body>
+</html>
