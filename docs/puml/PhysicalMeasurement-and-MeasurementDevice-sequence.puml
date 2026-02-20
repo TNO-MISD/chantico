@@ -1,0 +1,30 @@
+@startuml
+autonumber
+
+actor User
+participant "Kubernetes API" as K8s
+participant "MeasurementDevice Operator" as MDO
+participant "SNMP Generator Job" as SNMPJob
+participant "chantico-snmp Exporter" as SNMP
+participant "PhysicalMeasurement Operator" as PMO
+participant "Prometheus" as Prom
+
+User -> K8s: Apply MeasurementDevice CR
+K8s --> MDO: Reconcile MeasurementDevice
+MDO -> MDO: Write generator_<uid>.yml
+MDO -> SNMPJob: Create Job (mounts snmp/mibs + config paths)
+SNMPJob -> SNMPJob: Resolve OIDs from MIBs\nand generate config_<uid>.yml
+SNMPJob --> MDO: Job Succeeded
+MDO -> MDO: Merge config_*.yml -> snmp.yml
+MDO -> SNMP: Trigger rollout/reload
+SNMP --> MDO: New module/auth config active
+
+User -> K8s: Apply PhysicalMeasurement CR
+K8s --> PMO: Reconcile PhysicalMeasurement
+PMO -> PMO: Write <name>.yml scrape config\n(job=measurementDevice, target=ip)
+PMO -> PMO: Merge prometheus yml fragments -> prometheus.yml
+PMO -> Prom: POST /-/reload
+Prom -> SNMP: Scrape /snmp with module+target
+SNMP --> Prom: Metrics
+
+@enduml

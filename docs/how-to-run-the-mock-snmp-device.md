@@ -9,7 +9,7 @@ menus:
 
 ## The SNMP mock
 
-The snmp mock is an UDP server mocking a device using SNMP with an mock MIB file (`./dev/TNO-PDU-MIB.txt`) and providing the following metrics `tnoPduEnergyValue` and `tnoPduPowerValue`.
+The snmp mock is an UDP server mocking a device using SNMP with an mock MIB file (`./dev/TNO-PDU-MIB.txt`) and providing the following metrics `tnoPduEnergyValue` and `tnoPduPowerValue`. This file details how to set up the mock device, and how to subsequently run a demo with it including both the PhysicalMeasurement and MeasurementDevice custom resources.
 
 ### requirements
 
@@ -52,6 +52,10 @@ snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:31161 tnoPduEnergyVal
 ```
 
 ## Chantico workflow with the snmp-mock as snmp device (full demo)
+
+For an overview of the workflow that is run in the background in this demo please see the below image.
+
+![](puml/PhysicalMeasurement-and-MeasurementDevice-sequence.png)
 
 This section demonstrates a full flow: MIB upload → `MeasurementDevice` → `PhysicalMeasurement` → Prometheus targets.
 
