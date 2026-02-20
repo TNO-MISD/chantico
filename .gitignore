@@ -35,3 +35,6 @@ hugo/hugo_stats.json
 *.swp
 *.swo
 *~
+
+# Macos
+.DS_Store
