@@ -55,6 +55,12 @@ It requires the following packages:
   It might take a little while for the volume to show up, so redo the final 
   export or change the directory back and forth to reapply the direnv.
 
+- Run the chantico controllers locally:
+
+  ```bash
+  make run
+  ```
+
 #### Checks
 
 - Check that postgres is correctly set-up:
@@ -63,32 +69,9 @@ It requires the following packages:
   psql "${CHANTICO_POSTGRES_DBSTRING}" -c '\d'
   ```
 
-### Creating new resources
+### Running a demo
 
-- In order to create new resources, you need to install `kubebuilder` as indicated in the [quick start](https://book.kubebuilder.io/quick-start):
-
-  ```bash
-  curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
-  chmod +x kubebuilder && sudo mv kubebuilder /usr/local/bin/
-  ```
-
-- Then generate the resource scaffolding using:
-
-  ```bash
-  kubebuilder create api --group chantico --version v1alpha1 --kind <RESOURCE_TYPE>
-  ```
-
-- Remove the generated integration end-to-end tests with kubernetes client:
-
-  ```bash
-  rm internal/controller/suite_test.go internal/controller/<resource_type>_controller_test.go
-  ```
-
-- Make changes to the resource fields, then update the manifests and other generated files:
-
-  ```bash
-  make build
-  ```
+After setting up the local development environment, you are ready to run the demo in [How to run the mock snmp device](how-to-run-the-mock-snmp-device.md).
 
 ### Teardown
 

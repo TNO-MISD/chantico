@@ -11,89 +11,70 @@ menus:
 
 The snmp mock is an UDP server mocking a device using SNMP with an mock MIB file (`./dev/TNO-PDU-MIB.txt`) and providing the following metrics `tnoPduEnergyValue` and `tnoPduPowerValue`.
 
-## Running locally
+### requirements
 
-### Requirements
+Ensure you have followed the instructions in [How to set up the local development environment](how-to-setup-the-local-development-environment.md) to set up a local development environment. After this:
 
-- [net-snmp](https://www.net-snmp.org/)
+- The development cluster is running.
+- The controller is running (locally via `make run` or in-cluster).
+- Port-forwarding is active (`./dev/port-forward.sh`).
 
-### Running the server
 
-Running the following command will start the mock snmp server locally.
-
-```go
-go run ./dev/mock_snmp.go
-```
-
-This will start a upd server on port `1161`.
-
-### Running the latest version with docker
-
-Running the following command will start the mock snmp server within docker and expose the port
+## Build and load the snmp-mock image into the kind environment
 
 ```bash
-docker run -p 1161:1161/udp ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico-snmp-mock:latest
+export CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
+export SNMP_MOCK_TAG="${SNMP_MOCK_TAG:-latest}"
+export SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"
+docker pull "$SNMP_MOCK_IMAGE"
+docker tag "$SNMP_MOCK_IMAGE" chantico-snmp-mock:latest
+kind load docker-image chantico-snmp-mock:latest --name kind
 ```
 
-### Querying the server
-
-Get the values of the server
+## Apply the mock to Kubernetes
 
 ```bash
-# To get tnoPduEnergyValue
-snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:1161 tnoPduEnergyValue
-# Output: TNO-PDU-MIB::tnoPduPowerValue = INTEGER: 825
+kubectl apply -f dev/k8s/snmp-mock-deployment.yaml
+kubectl apply -f dev/k8s/snmp-mock-service.yaml
 
-# To get tnoPduPowerValue
-snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:1161 tnoPduPowerValue
-# Output: TNO-PDU-MIB::tnoPduPowerValue = INTEGER: 68
 ```
+
+kubectl apply -f config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
 
 ## Querying the chantico-snmp-mock running in the development setup
 
-If the development kind cluster is running the `chantico-snmp-mock` service is a Node Port that visible on port `31161`.
+If the development kind cluster is running the `chantico-snmp-mock` service, there is a Node Port that is visible on port `31161`.
+
 It can be queried as follow:
 
 ```bash
 snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:31161 tnoPduEnergyValue
 ```
 
-## Adding the snmp-mock in chantico (in custruction)
+## Chantico workflow with the snmp-mock as snmp device (full demo)
 
-- Port forward `chantico-filebrowser`
-```bash
-    kubectl port-forward -n chantico svc/chantico-filebrowser 18888:80
-```
-- Login in the web UI, `localhost:18888` and Upload `./dev/TNO-PDU-MIB.txt` to `./snmp/mibs/TNO-PDU-MIB.txt`
+This section demonstrates a full flow: MIB upload → `MeasurementDevice` → `PhysicalMeasurement` → Prometheus targets.
 
+1. Login in the web UI of `chantico-filebrowser`, `localhost:18888` and Upload `./dev/TNO-PDU-MIB.txt` to `./snmp/mibs/TNO-PDU-MIB.txt`
 
-(The following steps are temporary until the MeasurementDevice operator is rolled out)
+1. Create a `MeasurementDevice` for the mock MIB:
 
-- In the web UI, Upload the following yaml file at the following location `./snmp/yml/snmp.yml`
-```yaml
-auths:
-  default:
-    community: public
-    version: 2
-modules:
-  init:
-    get:
-    - 1.3.6.1.4.1.99999.1.0
-    metrics:
-    - name: tnoPduEnergyValue
-      oid: 1.3.6.1.4.1.99999.1
-      type: gauge
-      help: A random energy value (in J) - 1.3.6.1.4.1.99999.1
-```
-- Restart `chantico-snmp` service:
 ```bash
-kubectl rollout restart -n chantico deployment/chantico-snmp
+kubectl apply -f ./config/samples/chantico_v1alpha1_measurementdevice_mock.yaml
 ```
-- Port forward the snmp_exporter
+
+1. Wait for the SNMP generator job:
 ```bash
-    kubectl port-forward -n chantico svc/chantico-snmp 9116:9116
+kubectl get jobs -n chantico | grep update-snmp
 ```
-- Curl the module (optionally this can be done via the web UI)
+
+1. Create a `PhysicalMeasurement` pointing at the mock target:
 ```bash
-curl -X GET 'http://localhost:9116/snmp?target='$(kubectl get -n chantico svc/chantico-snmp-mock -o jsonpath='{.spec.clusterIP}')':1161&auth=default&module=init'
+kubectl apply -f ./config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
 ```
+
+1. Port-forward Prometheus and verify targets:
+```bash
+kubectl port-forward -n chantico deployment/chantico-prometheus 9090:9090
+```
+Open http://localhost:9090/targets and verify the target is `UP`.
