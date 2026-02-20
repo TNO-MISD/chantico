@@ -110,6 +110,29 @@ func TestValidate(t *testing.T) {
 			ExpectedError:            ErrorCycleDetected{InvolvedResource: "bar"},
 			ExpectedInvolvedResource: "bar",
 		},
+		"gives error if a self-reference is found": {
+			Resource: &chantico.DataCenterResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{"foo"},
+				},
+			},
+			Resources: []chantico.DataCenterResource{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{"foo"},
+				},
+			}},
+			ExpectedVisited:          []chantico.DataCenterResource{},
+			ExpectedError:            ErrorCycleDetected{InvolvedResource: "foo"},
+			ExpectedInvolvedResource: "foo",
+		},
 		"gives error if unknown type is found": {
 			Resource: &chantico.DataCenterResource{
 				ObjectMeta: metav1.ObjectMeta{
