@@ -4,7 +4,14 @@
 
 ## Description
 
-In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the deity who reigns over the fires of hearths and fire stoves. If you would subsitute hearths with datacenter bare metals, Chantico would have similar ruling power in our context. Chantico is a [K8s SDK operator](https://sdk.operatorframework.io) project handling the monitoring of power usage of SNMP devices.
+In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the 
+deity who reigns over the fires of hearths and fire stoves. If you would 
+substitute hearths with datacenter bare metals, Chantico would have similar 
+ruling power over the energy flowing through the data center resources in our 
+context. Chantico is a [K8s SDK operator](https://sdk.operatorframework.io) 
+project handling the monitoring of power usage of devices, such as PDUs and 
+bare metal servers monitored with SNMP but we also envision monitoring VMs 
+running on hypervisors and pods in clusters.
 
 ## Getting Started
 
