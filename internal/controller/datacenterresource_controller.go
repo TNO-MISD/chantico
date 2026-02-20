@@ -49,25 +49,25 @@ type DataCenterResourceReconciler struct {
 func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = logf.FromContext(ctx)
 
-	datacenterResource := &chantico.DataCenterResource{}
-	_ = r.Get(ctx, req.NamespacedName, datacenterResource)
+	dataCenterResource := &chantico.DataCenterResource{}
+	_ = r.Get(ctx, req.NamespacedName, dataCenterResource)
 
 	listOptions := []client.ListOption{client.InNamespace(req.NamespacedName.Namespace)}
-	datacenterResources := &chantico.DataCenterResourceList{}
-	_ = r.List(ctx, datacenterResources, listOptions...)
+	dataCenterResources := &chantico.DataCenterResourceList{}
+	_ = r.List(ctx, dataCenterResources, listOptions...)
 
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
 	_ = r.List(ctx, physicalMeasurements, listOptions...)
 
-	patch := ph.Initialize(ctx, r.Client, datacenterResource)
+	patch := ph.Initialize(ctx, r.Client, dataCenterResource)
 
 	// Update state of the resource
-	log.Printf("Updating state of data center resource %s\n", datacenterResource.Name)
-	dcr.UpdateState(datacenterResource)
+	log.Printf("Updating state of data center resource %s\n", dataCenterResource.Name)
+	dcr.UpdateState(dataCenterResource)
 	patch.PatchStatus()
 
-	log.Printf("Object post-update status: %#v\n", datacenterResource.Status.State)
-	result := dcr.ExecuteActions(ctx, r.Client, datacenterResource, patch)
+	log.Printf("Object post-update status: %#v\n", dataCenterResource.Status.State)
+	result := dcr.ExecuteActions(ctx, r.Client, dataCenterResource, patch)
 	log.Printf("Finished executing actions\n")
 	if result != nil && (result.Requeue || result.RequeueAfter > 0) {
 		return result.Result, nil
@@ -75,21 +75,21 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// Perform validation and clear other visited node validation errors if needed
 	// This brings those into a reconciliation loop as well
-	visited, err, involvedResource := dcr.Validate(datacenterResource, datacenterResources.Items, physicalMeasurements.Items)
+	visited, err, involvedResource := dcr.Validate(dataCenterResource, dataCenterResources.Items, physicalMeasurements.Items)
 	if err != nil {
-		log.Printf("Setting validation error of data center resource %s: %s\n", datacenterResource.Name, err)
-		dcr.SetValidationError(datacenterResource, err, involvedResource)
+		log.Printf("Setting validation error of data center resource %s: %s\n", dataCenterResource.Name, err)
+		dcr.SetValidationError(dataCenterResource, err, involvedResource)
 	} else {
-		log.Printf("Clearing validation errors of data center resource %s", datacenterResource.Name)
-		log.Printf("Previous status: %#v", datacenterResource.Status)
+		log.Printf("Clearing validation errors of data center resource %s", dataCenterResource.Name)
+		log.Printf("Previous status: %#v", dataCenterResource.Status)
 
 		references := &chantico.DataCenterResourceList{}
-		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": datacenterResource.Name})...)
+		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": dataCenterResource.Name})...)
 		children := &chantico.DataCenterResourceList{}
-		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parent": datacenterResource.Name})...)
-		if datacenterResource.Status.InvolvedResource != "" {
+		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parent": dataCenterResource.Name})...)
+		if dataCenterResource.Status.InvolvedResource != "" {
 			involved := &chantico.DataCenterResource{}
-			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: datacenterResource.Status.InvolvedResource}, involved)
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: dataCenterResource.Status.InvolvedResource}, involved)
 			visited = append(visited, *involved)
 		}
 		log.Printf("Visited nodes: %#v", visited)
@@ -98,10 +98,10 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 		items := MergeUnique(visited, references.Items, children.Items)
 
 		for _, item := range items {
-			r.ClearReferencedValidation(ctx, req, datacenterResource, &item)
+			r.ClearReferencedValidation(ctx, req, dataCenterResource, &item)
 		}
-		dcr.ClearValidationError(datacenterResource)
-		datacenterResource.Status.State = dcr.StateEntry
+		dcr.ClearValidationError(dataCenterResource)
+		dataCenterResource.Status.State = dcr.StateEntry
 	}
 	patch.PatchStatus()
 
@@ -135,11 +135,11 @@ func MergeUnique(
 func (r *DataCenterResourceReconciler) ClearReferencedValidation(
 	ctx context.Context,
 	req ctrl.Request,
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 	referenced *chantico.DataCenterResource,
 ) {
 	// Revalidate if previously failed or current item is being removed
-	if referenced.Status.State == dcr.StateValidationFailed || datacenterResource.Status.State == dcr.StateDelete {
+	if referenced.Status.State == dcr.StateValidationFailed || dataCenterResource.Status.State == dcr.StateDelete {
 		patch := ph.Initialize(ctx, r.Client, referenced)
 		dcr.ClearValidationError(referenced)
 		patch.PatchStatus()

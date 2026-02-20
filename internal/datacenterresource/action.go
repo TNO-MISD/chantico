@@ -72,24 +72,24 @@ var ActionMap = map[string][]ActionFuntion{
 func ExecuteActions(
 	ctx context.Context,
 	kubernetesClient client.Client,
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 	patch *ph.PatchHelper,
 ) *ActionResult {
 	var result *ActionResult = nil
-	actionFunctions := ActionMap[datacenterResource.Status.State]
+	actionFunctions := ActionMap[dataCenterResource.Status.State]
 	for i, actionFunction := range actionFunctions {
-		log.Printf("Start step %d, status: %s\n", i, datacenterResource.Status.State)
+		log.Printf("Start step %d, status: %s\n", i, dataCenterResource.Status.State)
 		switch actionFunction.Type {
 		case ActionFunctionPure:
-			result = actionFunction.Pure(datacenterResource)
+			result = actionFunction.Pure(dataCenterResource)
 		case ActionFunctionIO:
-			result = actionFunction.IO(ctx, kubernetesClient, datacenterResource)
+			result = actionFunction.IO(ctx, kubernetesClient, dataCenterResource)
 		}
 
 		if result != nil {
 			patch.Patch(result.PatchType)
 		}
-		if datacenterResource.Status.State == StateValidationFailed {
+		if dataCenterResource.Status.State == StateValidationFailed {
 			break
 		}
 	}
@@ -97,28 +97,28 @@ func ExecuteActions(
 }
 
 func InitializeFinalizer(
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 ) *ActionResult {
-	if slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
+	if slices.Contains(dataCenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
 		return &ActionResult{PatchType: ph.PatchResourceNone}
 	}
-	datacenterResource.ObjectMeta.Finalizers = append(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
-	log.Printf("Added finalizer: %#v", datacenterResource.ObjectMeta.Finalizers)
+	dataCenterResource.ObjectMeta.Finalizers = append(dataCenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer)
+	log.Printf("Added finalizer: %#v", dataCenterResource.ObjectMeta.Finalizers)
 	return &ActionResult{PatchType: ph.PatchResource}
 }
 
 func UpdateFinalizer(
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 ) *ActionResult {
-	if datacenterResource.ObjectMeta.DeletionTimestamp.IsZero() {
+	if dataCenterResource.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil
 	}
 	accumulator := []string{}
-	for _, f := range datacenterResource.ObjectMeta.Finalizers {
+	for _, f := range dataCenterResource.ObjectMeta.Finalizers {
 		if f != chantico.DataCenterResourceGraphFinalizer {
 			accumulator = append(accumulator, f)
 		}
 	}
-	datacenterResource.ObjectMeta.Finalizers = accumulator
+	dataCenterResource.ObjectMeta.Finalizers = accumulator
 	return &ActionResult{PatchType: ph.PatchResource}
 }

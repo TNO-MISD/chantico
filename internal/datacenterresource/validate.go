@@ -51,26 +51,26 @@ func GetFromMap(
 }
 
 func Validate(
-	datacenterResource *chantico.DataCenterResource,
-	datacenterResources []chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
+	dataCenterResources []chantico.DataCenterResource,
 	physicalMeasurements []chantico.PhysicalMeasurement,
 ) ([]chantico.DataCenterResource, error, string) {
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]chantico.DataCenterResource)
-	for _, resource := range datacenterResources {
+	for _, resource := range dataCenterResources {
 		if resource.Status.State != StateDelete {
 			resourcesMap[resource.ObjectMeta.Name] = resource
 		}
 	}
 	queue := make([]string, 0)
-	queue = append(queue, datacenterResource.Spec.Parent...)
+	queue = append(queue, dataCenterResource.Spec.Parent...)
 	visited := 0
 	for len(queue) > visited {
 		current, ok := resourcesMap[queue[visited]]
 		if !ok {
 			return GetFromMap(resourcesMap, queue[0:visited]), ErrorResourceNotFound{InvolvedResource: queue[visited]}, queue[visited]
 		}
-		if slices.Contains(current.Spec.Parent, datacenterResource.ObjectMeta.Name) {
+		if slices.Contains(current.Spec.Parent, dataCenterResource.ObjectMeta.Name) {
 			return GetFromMap(resourcesMap, queue[0:visited]), ErrorCycleDetected{InvolvedResource: queue[visited]}, queue[visited]
 		}
 		visited = visited + 1
@@ -82,10 +82,10 @@ func Validate(
 	// order the resources are created
 
 	// Check type of resource
-	switch datacenterResource.Spec.Type {
+	switch dataCenterResource.Spec.Type {
 	case "", DataCenterResourceTypePDU, DataCenterResourceTypeBaremetal, DataCenterResourceTypeVM, DataCenterResourceTypeKubernetes, DataCenterResourceTypeHeat:
 		return GetFromMap(resourcesMap, queue[0:visited]), nil, ""
 	default:
-		return GetFromMap(resourcesMap, queue[0:visited]), ErrorUnknownType{Type: datacenterResource.Spec.Type}, ""
+		return GetFromMap(resourcesMap, queue[0:visited]), ErrorUnknownType{Type: dataCenterResource.Spec.Type}, ""
 	}
 }

@@ -33,37 +33,37 @@ const (
 )
 
 func UpdateState(
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 ) {
 	// Covers the initialization pathological cases
-	if datacenterResource == nil {
+	if dataCenterResource == nil {
 		return
 	}
-	if datacenterResource.Status.UpdateGeneration == 0 {
-		datacenterResource.Status.UpdateGeneration = 1
+	if dataCenterResource.Status.UpdateGeneration == 0 {
+		dataCenterResource.Status.UpdateGeneration = 1
 	}
 
-	state := datacenterResource.Status.State
-	if !slices.Contains(datacenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
-		datacenterResource.Status.State = StateInit
+	state := dataCenterResource.Status.State
+	if !slices.Contains(dataCenterResource.ObjectMeta.Finalizers, chantico.DataCenterResourceGraphFinalizer) {
+		dataCenterResource.Status.State = StateInit
 	}
 
 	// Covers lifecycle related changes
 	switch {
-	case datacenterResource.Status.UpdateGeneration < datacenterResource.ObjectMeta.Generation:
-		datacenterResource.Status.State = StateEntry
-	case datacenterResource.ObjectMeta.GetDeletionTimestamp() != nil:
-		datacenterResource.Status.State = StateDelete
+	case dataCenterResource.Status.UpdateGeneration < dataCenterResource.ObjectMeta.Generation:
+		dataCenterResource.Status.State = StateEntry
+	case dataCenterResource.ObjectMeta.GetDeletionTimestamp() != nil:
+		dataCenterResource.Status.State = StateDelete
 	}
 
 	// Realize the update
 	switch state {
 	case "", StateInit:
-		datacenterResource.Status.State = StateInit
-		datacenterResource.Status.UpdateGeneration = datacenterResource.ObjectMeta.Generation
+		dataCenterResource.Status.State = StateInit
+		dataCenterResource.Status.UpdateGeneration = dataCenterResource.ObjectMeta.Generation
 		return
 	case StateEntry:
-		datacenterResource.Status.UpdateGeneration = datacenterResource.ObjectMeta.Generation
+		dataCenterResource.Status.UpdateGeneration = dataCenterResource.ObjectMeta.Generation
 		return
 
 	case StatePendingPostgresUpdate:
@@ -73,27 +73,27 @@ func UpdateState(
 	case StateEnd, StateValidationFailed, StateDelete:
 		return
 	default:
-		SetValidationError(datacenterResource, fmt.Errorf("unknown state"), "")
+		SetValidationError(dataCenterResource, fmt.Errorf("unknown state"), "")
 		return
 	}
 }
 
 func SetValidationError(
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 	err error,
 	involvedResource string,
 ) {
-	datacenterResource.Status.State = StateValidationFailed
-	datacenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
-	datacenterResource.Status.ErrorType = fmt.Sprintf("%T", err)
-	datacenterResource.Status.InvolvedResource = involvedResource
+	dataCenterResource.Status.State = StateValidationFailed
+	dataCenterResource.Status.ErrorMessage = fmt.Sprintf("validation error: %s", err)
+	dataCenterResource.Status.ErrorType = fmt.Sprintf("%T", err)
+	dataCenterResource.Status.InvolvedResource = involvedResource
 }
 
 func ClearValidationError(
-	datacenterResource *chantico.DataCenterResource,
+	dataCenterResource *chantico.DataCenterResource,
 ) {
-	datacenterResource.Status.State = StateInit
-	datacenterResource.Status.ErrorMessage = ""
-	datacenterResource.Status.ErrorType = ""
-	datacenterResource.Status.InvolvedResource = ""
+	dataCenterResource.Status.State = StateInit
+	dataCenterResource.Status.ErrorMessage = ""
+	dataCenterResource.Status.ErrorType = ""
+	dataCenterResource.Status.InvolvedResource = ""
 }
