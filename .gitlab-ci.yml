@@ -247,10 +247,8 @@ build-release-test:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions --dry
     - goreleaser build --config .goreleaser.gitlab.yaml --clean --skip validate
-  needs:
-    - go-test
   rules:
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   when: manual
 
 release:
