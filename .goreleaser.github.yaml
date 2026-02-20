@@ -41,13 +41,11 @@ archives:
         formats: [zip]
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  disable: true # semantic-release generates the changelog.
 
 release:
   github:
     owner: TNO-MISD
     name: chantico
+
+force_token: github

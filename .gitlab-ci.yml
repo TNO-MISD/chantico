@@ -256,7 +256,8 @@ release:
     GIT_DEPTH: 0
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-    - ./semantic-release --hooks goreleaser --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions
+    - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions
+    - goreleaser release --config .goreleaser.gitlab.yaml --clean
     - goreleaser release --config .goreleaser.github.yaml --clean
   needs:
     - chantico-fmt
