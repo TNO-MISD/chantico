@@ -82,10 +82,12 @@ func init() {
 }
 
 const (
-	SNMPUpdateFinalizer = "snmp.update.finalizer.chantico.ci.tno.nl"
+	SNMPUpdateFinalizer = "measurementdevice.finalizer.chantico.ci.tno.nl/snmp-update"
 )
 
 const (
-	RequeueDelay  = 5 * time.Second
-	ReloadTimeout = 3 * time.Minute
+	RequeueDelay   = 5 * time.Second
+	ReloadInterval = 5 * time.Second
+	ReloadTimeout  = 3 * time.Minute
+	SNMPJobTimeout = 3 * time.Minute
 )

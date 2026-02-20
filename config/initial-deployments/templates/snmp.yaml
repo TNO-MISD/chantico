@@ -50,8 +50,8 @@ spec:
               echo "  init:" >> /tmp/chantico-volume-mount/snmp/yml/snmp.yml;
               echo "    walk: []" >> /tmp/chantico-volume-mount/snmp/yml/snmp.yml;
               echo "    metrics: []" >> /tmp/chantico-volume-mount/snmp/yml/snmp.yml;
-
             fi
+            chmod -R 1777 /tmp/chantico-volume-mount/snmp
         volumeMounts:
         - mountPath: "/tmp/chantico-volume-mount"
           name: chantico-volume-mount
