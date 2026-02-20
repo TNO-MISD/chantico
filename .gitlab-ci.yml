@@ -244,7 +244,11 @@ build-release-test:
   variables:
     GIT_DEPTH: 0
   script:
-    - goreleaser build --skip validate
+    - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
+    - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions --dry
+    - goreleaser build --config .goreleaser.gitlab.yaml --clean --skip validate
+  needs:
+    - go-test
   rules:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
   when: manual
@@ -260,7 +264,6 @@ release:
     - goreleaser release --config .goreleaser.gitlab.yaml --clean
     - goreleaser release --config .goreleaser.github.yaml --clean
   needs:
-    - chantico-fmt
     - go-test
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
