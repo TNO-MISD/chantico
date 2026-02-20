@@ -29,7 +29,7 @@ We currently allow environment variables to configure the webapp:
 kubectl apply --file config/crd/bases/chantico.ci.tno.nl_datacenterresources.yaml
 
 # 2. Add CR DataCenterResource to your cluster. You may use this example file.
-kubectl apply --file docs/examples/example-webapp-demo.yaml 
+kubectl apply --file config/samples/example-webapp-demo.yaml 
 
 # 3. Run the webapp. Open in webbrowser.
 go run cmd/webapp/main.go
