@@ -249,6 +249,8 @@ build-release-test:
     - goreleaser build --config .goreleaser.gitlab.yaml --clean --skip validate
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        CI_COMMIT_BRANCH: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
   when: manual
 
 release:
