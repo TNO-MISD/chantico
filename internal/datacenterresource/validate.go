@@ -57,6 +57,7 @@ func Validate(
 ) ([]chantico.DataCenterResource, error, string) {
 	// Perform validation of parent for directed acyclic graph
 	resourcesMap := make(map[string]chantico.DataCenterResource)
+	visitedSet := make(map[string]bool)
 	for _, resource := range dataCenterResources {
 		if resource.Status.State != StateDelete {
 			resourcesMap[resource.ObjectMeta.Name] = resource
@@ -66,6 +67,10 @@ func Validate(
 	queue = append(queue, dataCenterResource.Spec.Parent...)
 	visited := 0
 	for len(queue) > visited {
+		if visitedSet[queue[visited]] {
+			queue = append(queue[0:visited], queue[visited+1:]...)
+			continue
+		}
 		current, ok := resourcesMap[queue[visited]]
 		if !ok {
 			return GetFromMap(resourcesMap, queue[0:visited]), ErrorResourceNotFound{InvolvedResource: queue[visited]}, queue[visited]
@@ -73,6 +78,7 @@ func Validate(
 		if slices.Contains(current.Spec.Parent, dataCenterResource.ObjectMeta.Name) {
 			return GetFromMap(resourcesMap, queue[0:visited]), ErrorCycleDetected{InvolvedResource: queue[visited]}, queue[visited]
 		}
+		visitedSet[queue[visited]] = true
 		visited = visited + 1
 		queue = append(queue, current.Spec.Parent...)
 	}

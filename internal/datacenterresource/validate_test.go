@@ -2,6 +2,7 @@ package datacenterresource
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -9,6 +10,18 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func FormatResources(resources []chantico.DataCenterResource) string {
+	text := ""
+	for index, resource := range resources {
+		if index == 0 {
+			text = resource.ObjectMeta.Name
+		} else {
+			text = fmt.Sprintf("%s, %s", text, resource.ObjectMeta.Name)
+		}
+	}
+	return text
+}
 
 func TestValidate(t *testing.T) {
 	testCases := map[string]struct {
@@ -39,8 +52,8 @@ func TestValidate(t *testing.T) {
 					Name: "foo",
 				},
 				Spec: chantico.DataCenterResourceSpec{
-					Type:   "pdu",
-					Parent: []string{},
+					Type:   "baremetal",
+					Parent: []string{"bar"},
 				},
 			},
 			Resources: []chantico.DataCenterResource{{
@@ -48,7 +61,7 @@ func TestValidate(t *testing.T) {
 					Name: "foo",
 				},
 				Spec: chantico.DataCenterResourceSpec{
-					Type:   "pdu",
+					Type:   "baremetal",
 					Parent: []string{"bar"},
 				},
 			}, {
@@ -60,7 +73,102 @@ func TestValidate(t *testing.T) {
 					Parent: []string{},
 				},
 			}},
-			ExpectedVisited:          []chantico.DataCenterResource{},
+			ExpectedVisited: []chantico.DataCenterResource{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{},
+				},
+			}},
+			ExpectedError:            nil,
+			ExpectedInvolvedResource: "",
+		},
+		"creates resource with convergent dependency": {
+			Resource: &chantico.DataCenterResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vm1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "vm",
+					Parent: []string{"bm1", "bm2"},
+				},
+			},
+			Resources: []chantico.DataCenterResource{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pdu1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pdu2",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bm1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "baremetal",
+					Parent: []string{"pdu1", "pdu2"},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bm2",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "baremetal",
+					Parent: []string{"pdu1", "pdu2"},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vm1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "vm",
+					Parent: []string{"bm1", "bm2"},
+				},
+			}},
+			ExpectedVisited: []chantico.DataCenterResource{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bm1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "baremetal",
+					Parent: []string{"pdu1", "pdu2"},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bm2",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "baremetal",
+					Parent: []string{"pdu1", "pdu2"},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pdu1",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{},
+				},
+			}, {
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "pdu2",
+				},
+				Spec: chantico.DataCenterResourceSpec{
+					Type:   "pdu",
+					Parent: []string{},
+				},
+			}},
 			ExpectedError:            nil,
 			ExpectedInvolvedResource: "",
 		},
@@ -154,7 +262,7 @@ func TestValidate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			visited, err, involvedResource := Validate(tc.Resource, tc.Resources, []chantico.PhysicalMeasurement{})
 			if !reflect.DeepEqual(visited, tc.ExpectedVisited) || !errors.Is(err, tc.ExpectedError) || involvedResource != tc.ExpectedInvolvedResource {
-				t.Errorf("Validate(%#v) = %#v, %#v, want %#v, %#v\n)", tc, visited, err, tc.ExpectedVisited, tc.ExpectedError)
+				t.Errorf("Validate(%#v, %#v) = %#v, %#v, want %#v, %#v\n)", tc.Resource, FormatResources(tc.Resources), FormatResources(visited), err, FormatResources(tc.ExpectedVisited), tc.ExpectedError)
 			}
 		})
 	}
