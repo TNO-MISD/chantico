@@ -124,6 +124,7 @@ func WriteConfigFile(
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		log.Printf("Failed to write Prometheus config file: %v", err)
+		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 	physicalMeasurement.Status.State = StateRunning
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
@@ -192,6 +193,7 @@ func DeleteConfigFile(physicalMeasurement *chantico.PhysicalMeasurement) *Action
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
 		log.Printf("Failed to delete config file: %v", err)
+		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
@@ -201,7 +203,7 @@ func ReloadPrometheus(physicalMeasurement *chantico.PhysicalMeasurement) *Action
 	address := fmt.Sprintf("http://%s:%s/-/reload", os.Getenv("CHANTICO_PROMETHEUS_SERVICE_HOST"), os.Getenv("CHANTICO_PROMETHEUS_SERVICE_PORT"))
 
 	resp, err := http.Post(address, "application/json", bytes.NewBuffer([]byte{}))
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil || resp == nil || resp.StatusCode != http.StatusOK {
 		log.Printf("Failed to reload Prometheus: %v", err)
 
 		physicalMeasurement.Status.State = StateFailed

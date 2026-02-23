@@ -34,7 +34,7 @@ func UpdateState(
 
 	// Covers lifecycle related changes
 	isDeleted := physicalMeasurement.ObjectMeta.GetDeletionTimestamp() != nil
-	isGenerationUpToDate := physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation
+	needsReconcile := physicalMeasurement.Status.UpdateGeneration < physicalMeasurement.ObjectMeta.Generation
 
 	if isDeleted {
 		switch physicalMeasurement.Status.State {
@@ -45,15 +45,15 @@ func UpdateState(
 		}
 	}
 
-	if isGenerationUpToDate && !isDeleted {
-		println("We go to state running...")
+	if needsReconcile && !isDeleted {
+		physicalMeasurement.Status.State = StateInit
+	} else if !needsReconcile && !isDeleted {
 		physicalMeasurement.Status.State = StateRunning
 	}
 
 	switch physicalMeasurement.Status.State {
 	case "", StateInit:
 		physicalMeasurement.Status.State = StateInit
-		physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
 		return
 	case StateRunning, StateDelete, StateFailed:
 		return
