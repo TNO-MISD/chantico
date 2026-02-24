@@ -1,6 +1,6 @@
 # Chantico - energy controller
 
-![chantico](./assets/logo/chantico.png)
+![](assets/logo/chantico.png)
 
 ## Description
 In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the deity who reigns over the fires of hearths and fire stoves. If you would subsitute hearths with datacenter bare metals, Chantico would have similar ruling power in our context. Chantico is a [K8s SDK operator](https://sdk.operatorframework.io) project handling the monitoring of power usage of SNMP devices.
