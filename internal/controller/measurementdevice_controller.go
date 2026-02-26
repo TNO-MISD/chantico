@@ -64,7 +64,6 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if result != nil && result.Result != nil {
 		return *result.Result, nil
 	}
-
 	return ctrl.Result{}, nil
 }
 

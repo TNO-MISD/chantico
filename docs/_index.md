@@ -11,7 +11,7 @@ menus:
 
 Streamlining Energy Management for Cloud Operators.
 
-![](assets/logo/chantico.png)
+{{< figure src="assets/logo/chantico.png" alt="" width="150" height="150" >}}
 
 ## Naming
 

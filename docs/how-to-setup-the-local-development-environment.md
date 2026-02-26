@@ -47,6 +47,8 @@ It requires the following packages:
   ```bash
   export CHANTICO_POSTGRES_SERVICE_HOST="localhost"
   export CHANTICO_POSTGRES_SERVICE_PORT="15432"
+  export CHANTICO_PROMETHEUS_SERVICE_HOST="localhost"
+  export CHANTICO_PROMETHEUS_SERVICE_PORT="19090"
   export CHANTICO_POSTGRES_DBSTRING="postgresql://chanticoUser:toulouse@localhost:15432/chantico"
   export CHANTICOVOLUMELOCATIONENV="$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.name=="chantico-snmp-prometheus-volume-claim")]}{.spec.hostPath.path}{"\n"}{end}' | sed 's|/opt/local-path-provisioner|/tmp/chantico-local-path-data|')"
   export CHANTICOVOLUMECLAIMENV="chantico-snmp-prometheus-volume-claim"

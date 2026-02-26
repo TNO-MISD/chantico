@@ -33,4 +33,16 @@ helm install chantico ../config/initial-deployments/ --set chanticoGooseImage="$
 
 # Install CRDs using kustomize
 make -C "$SCRIPT_DIR/.." install
+
+# Make snmp-mock docker image
+SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"
+docker pull "$SNMP_MOCK_IMAGE"
+docker tag "$SNMP_MOCK_IMAGE" chantico-snmp-mock:latest
+kind load docker-image chantico-snmp-mock:latest --name kind
+
+# Apply to k8s
+kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
+kubectl apply -f k8s/snmp-mock-deployment.yaml
+kubectl apply -f k8s/snmp-mock-service.yaml
+
 popd

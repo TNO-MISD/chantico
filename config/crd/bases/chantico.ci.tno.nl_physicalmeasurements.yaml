@@ -41,8 +41,6 @@ spec:
             description: PhysicalMeasurementSpec defines the desired state of PhysicalMeasurement
             properties:
               ip:
-                description: Foo is an example field of PhysicalMeasurement. Edit
-                  physicalmeasurement_types.go to remove/update
                 type: string
               measurementDevice:
                 type: string
@@ -62,13 +60,17 @@ spec:
             properties:
               errorMessage:
                 type: string
-              generation:
-                format: int64
-                type: integer
+              jobName:
+                type: string
               state:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
                   Important: Run "make" to regenerate code after modifying this file
+                type: string
+              updateGeneration:
+                format: int64
+                type: integer
+              updateTime:
                 type: string
             type: object
         type: object

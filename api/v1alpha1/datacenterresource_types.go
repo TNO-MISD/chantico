@@ -44,6 +44,8 @@ type DataCenterResourceStatus struct {
 	UpdateTime       string `json:"updateTime,omitempty"`
 	UpdateGeneration int64  `json:"updateGeneration,omitempty"`
 	ErrorMessage     string `json:"errorMessage,omitempty"`
+	ErrorType        string `json:"errorType,omitempty"`
+	InvolvedResource string `json:"involvedResource,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -78,3 +80,7 @@ type DataCenterResourceList struct {
 func init() {
 	SchemeBuilder.Register(&DataCenterResource{}, &DataCenterResourceList{})
 }
+
+const (
+	DataCenterResourceGraphFinalizer = "datacenterresource.graph.finalizer.chantico.ci.tno.nl"
+)
