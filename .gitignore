@@ -40,3 +40,6 @@ hugo/hugo_stats.json
 *.env*
 
 *.gocache*
+
+# Macos
+.DS_Store

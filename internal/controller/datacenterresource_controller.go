@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	DataCenterResourceTypePDU = "pdu"
-	DataCenterResourceTypeBaremetal = "baremetal"
-	DataCenterResourceTypeVM = "vm"
+	DataCenterResourceTypePDU        = "pdu"
+	DataCenterResourceTypeBaremetal  = "baremetal"
+	DataCenterResourceTypeVM         = "vm"
 	DataCenterResourceTypeKubernetes = "kubernetes"
-	DataCenterResourceTypeHeat = "heat"
+	DataCenterResourceTypeHeat       = "heat"
 )
 
 // DataCenterResourceReconciler reconciles a DataCenterResource object
