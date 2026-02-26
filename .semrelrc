@@ -1,0 +1,22 @@
+{
+    "plugins": {
+        "commit-analyzer": {
+            "name": "default",
+            "options": {
+                "major_release_rules": ""
+            }
+        },
+        "ci-condition": {
+            "name": "gitlab",
+            "options": {
+                "defaultBranch": "main"
+            }
+        },
+        "provider": {
+            "name": "gitlab"
+        },
+        "files-updater": {
+            "names": ["helm"]
+        }
+    }
+}
