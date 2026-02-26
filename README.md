@@ -1,15 +1,27 @@
 # Chantico - energy controller
 
-![](assets/logo/chantico.png)
+
+<img src="assets/logo/chantico.png" width="150" height="150">
+
 
 ## Description
-In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the deity who reigns over the fires of hearths and fire stoves. If you would subsitute hearths with datacenter bare metals, Chantico would have similar ruling power in our context. Chantico is a [K8s SDK operator](https://sdk.operatorframework.io) project handling the monitoring of power usage of SNMP devices.
+
+In Aztec religion, [Chantico](https://en.wikipedia.org/wiki/Chantico) is the 
+deity who reigns over the fires of hearths and fire stoves. If you would 
+substitute hearths with datacenter bare metals, Chantico would have similar 
+ruling power over the energy flowing through the data center resources in our 
+context. Chantico is a [K8s SDK operator](https://sdk.operatorframework.io) 
+project handling the monitoring of power usage of devices, such as PDUs and 
+bare metal servers monitored with SNMP but we also envision monitoring VMs 
+running on hypervisors and pods in clusters.
 
 ## Getting Started
 
-How-to guides can be found in the `/docs` folder.
+How-to guides can be found in the `/docs` folder and on our [documentation 
+website](https://chantico-300062.ci.tno.nl/).
 
 ### Prerequisites
+
 - go version v1.24.0+
 - docker version 17.03+.
 
@@ -19,7 +31,19 @@ If not using local development using kind:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
+We welcome issues and discussions for our project. Initially, we will not seek 
+external contributions via Pull Requests. At this stage in the project it is 
+considered too early to accept external work, given pending design changes and 
+major technology choices. Once we are more mature, we welcome contributions 
+that align with our scope and vision of the Chantico project. Have a look at 
+our [contribution 
+guidance](https://github.com/TNO-MISD/.github/blob/main/CONTRIBUTING.md).
+
+## Code of Conduct
+
+Please consider the guidelines in the [Code of 
+Conduct](https://github.com/TNO-MISD/.github/blob/main/CODE_OF_CONDUCT.md) when 
+participating in our shared environment.
 
 ## License
 
