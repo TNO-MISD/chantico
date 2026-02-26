@@ -24,8 +24,8 @@ func New() (*TemplateRenderer, error) {
 }
 
 type HomePageData struct {
-	Diagram string
-	Host string
+	Diagram        string
+	Host           string
 	CurrentContext string
 }
 
@@ -33,10 +33,9 @@ func (r *TemplateRenderer) RenderHomePage(w io.Writer, d HomePageData) {
 	r.tmpl.ExecuteTemplate(w, "home.html", d)
 }
 
-
 type ErrorPageData struct {
-	Error string
-	Host string
+	Error          string
+	Host           string
 	CurrentContext string
 }
 
