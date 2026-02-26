@@ -2,7 +2,6 @@ package datacenterresource
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -10,18 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func FormatResources(resources []chantico.DataCenterResource) string {
-	text := ""
-	for index, resource := range resources {
-		if index == 0 {
-			text = resource.ObjectMeta.Name
-		} else {
-			text = fmt.Sprintf("%s, %s", text, resource.ObjectMeta.Name)
-		}
-	}
-	return text
-}
 
 func TestValidate(t *testing.T) {
 	testCases := map[string]struct {

@@ -92,9 +92,9 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: dataCenterResource.Status.InvolvedResource}, involved)
 			visited = append(visited, *involved)
 		}
-		log.Printf("Visited nodes: %#v", visited)
-		log.Printf("Referencing resources: %#v", references.Items)
-		log.Printf("Children: %#v", children.Items)
+		log.Printf("Visited nodes: %s", dcr.FormatResources(visited))
+		log.Printf("Referencing resources: %s", dcr.FormatResources(references.Items))
+		log.Printf("Children: %s", dcr.FormatResources(children.Items))
 		items := MergeUnique(visited, references.Items, children.Items)
 
 		for _, item := range items {

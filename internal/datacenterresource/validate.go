@@ -50,6 +50,18 @@ func GetFromMap(
 	return result
 }
 
+func FormatResources(resources []chantico.DataCenterResource) string {
+	text := ""
+	for index, resource := range resources {
+		if index == 0 {
+			text = resource.ObjectMeta.Name
+		} else {
+			text = fmt.Sprintf("%s, %s", text, resource.ObjectMeta.Name)
+		}
+	}
+	return text
+}
+
 func Validate(
 	dataCenterResource *chantico.DataCenterResource,
 	dataCenterResources []chantico.DataCenterResource,
