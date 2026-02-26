@@ -36,6 +36,8 @@ hugo/hugo_stats.json
 *.swo
 *~
 
+# Environment files
+*.env*
 # Macos
 .DS_Store
 

@@ -22,7 +22,6 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - datacenterresources/finalizers
-  - physicalmeasurements/finalizers
   verbs:
   - update
 - apiGroups:
@@ -39,6 +38,7 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - measurementdevices/finalizers
+  - physicalmeasurements/finalizers
   verbs:
   - create
   - patch
