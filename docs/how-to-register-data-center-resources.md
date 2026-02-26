@@ -52,7 +52,7 @@ kubectl apply -f config/samples/chantico_v1alpha1_datacenterresource.yaml
 ```
 1. Check the resource:
   ```sh
-kubectl describe datacenterresource datacenterresource-pdu2
+kubectl describe -n chantico datacenterresource datacenterresource-pdu2
 ```
   Notice that the status of the resource is updated to have a validation 
   message.
