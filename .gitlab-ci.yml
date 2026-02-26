@@ -259,7 +259,6 @@ release:
   allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
-    GITLAB_TOKEN: $GITLAB_TOKEN
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions
@@ -283,7 +282,6 @@ release-dist:
   allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
-    GITLAB_TOKEN: $GITLAB_TOKEN
   script:
     - goreleaser release --config .goreleaser.gitlab.yaml --clean
     - goreleaser release --config .goreleaser.github.yaml --clean
