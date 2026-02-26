@@ -207,7 +207,7 @@ func ReloadPrometheus(physicalMeasurement *chantico.PhysicalMeasurement) *Action
 		log.Printf("Failed to reload Prometheus: %v", err)
 
 		physicalMeasurement.Status.State = StateFailed
-		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %s", resp.Status)
+		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %v", err)
 		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 	defer resp.Body.Close()
