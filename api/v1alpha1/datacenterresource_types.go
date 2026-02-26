@@ -82,6 +82,5 @@ func init() {
 }
 
 const (
-	DataCenterResourceGraphFinalizer    = "datacenterresource.graph.finalizer.chantico.ci.tno.nl"
-	DataCenterResourcePostgresFinalizer = "datacenterresource.postgres.finalizer.chantico.ci.tno.nl"
+	DataCenterResourceGraphFinalizer = "datacenterresource.graph.finalizer.chantico.ci.tno.nl"
 )
