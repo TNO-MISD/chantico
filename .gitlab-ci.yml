@@ -259,12 +259,35 @@ release:
   allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
+    GITLAB_TOKEN: $GITLAB_TOKEN
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions
+    - git config --global user.email "semantic-release@gitlab"
+    - git config --global user.name "go-semantic-release"
+    # Commit updated Chart.yaml if changed
+    - |
+      if ! git diff --quiet; then
+        git add config/initial-deployments/Chart.yaml
+        git commit -m "chore(release): bump helm chart version"
+        git push https://oauth2:${GITLAB_TOKEN}@ci.tno.nl/${CI_PROJECT_PATH}.git HEAD:${CI_COMMIT_BRANCH}
+      fi
+  needs:
+    - go-test
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+release-dist:
+  image: "goreleaser/goreleaser:v2.13.3"
+  stage: release
+  allow_failure: true # semantic release exits with code 1 if there are no changes
+  variables:
+    GIT_DEPTH: 0
+    GITLAB_TOKEN: $GITLAB_TOKEN
+  script:
     - goreleaser release --config .goreleaser.gitlab.yaml --clean
     - goreleaser release --config .goreleaser.github.yaml --clean
   needs:
     - go-test
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: $CI_COMMIT_TAG
