@@ -38,3 +38,12 @@ hugo/hugo_stats.json
 
 # Macos
 .DS_Store
+
+# osv-scanner
+osv-scanner-report*.json
+
+# semantic releaser
+.semrel/
+semantic-release
+# Added by goreleaser init:
+dist/
