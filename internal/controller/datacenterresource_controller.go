@@ -18,22 +18,17 @@ package controller
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	types "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	chantico "chantico/api/v1alpha1"
-)
-
-const (
-	DataCenterResourceTypePDU        = "pdu"
-	DataCenterResourceTypeBaremetal  = "baremetal"
-	DataCenterResourceTypeVM         = "vm"
-	DataCenterResourceTypeKubernetes = "kubernetes"
-	DataCenterResourceTypeHeat       = "heat"
+	dcr "chantico/internal/datacenterresource"
+	ph "chantico/internal/patch"
 )
 
 // DataCenterResourceReconciler reconciles a DataCenterResource object
@@ -54,44 +49,125 @@ type DataCenterResourceReconciler struct {
 func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = logf.FromContext(ctx)
 
-	datacenterResource := &chantico.DataCenterResource{}
-	_ = r.Get(ctx, req.NamespacedName, datacenterResource)
+	dataCenterResource := &chantico.DataCenterResource{}
+	_ = r.Get(ctx, req.NamespacedName, dataCenterResource)
+
+	listOptions := []client.ListOption{client.InNamespace(req.NamespacedName.Namespace)}
+	dataCenterResources := &chantico.DataCenterResourceList{}
+	_ = r.List(ctx, dataCenterResources, listOptions...)
 
 	physicalMeasurements := &chantico.PhysicalMeasurementList{}
-	_ = r.List(ctx, physicalMeasurements)
+	_ = r.List(ctx, physicalMeasurements, listOptions...)
 
-	//parent := &chantico.DataCenterResourceList{}
-	//_ = r.List(ctx, parent client.ObjectKey{Name: datacenterResource.Spec.Parent, Namespace: "chantico"}, parent)
+	patch := ph.Initialize(ctx, r.Client, dataCenterResource)
 
-	// TODO(user): do something with the types/links here:
+	// Update state of the resource
+	log.Printf("Updating state of data center resource %s\n", dataCenterResource.Name)
+	dcr.UpdateState(dataCenterResource)
+	patch.PatchStatus()
+
+	log.Printf("Object post-update status: %#v\n", dataCenterResource.Status.State)
+	result := dcr.ExecuteActions(ctx, r.Client, dataCenterResource, patch)
+	log.Printf("Finished executing actions\n")
+	if result != nil && (result.Requeue || result.RequeueAfter > 0) {
+		return result.Result, nil
+	}
+
+	// Perform validation and clear other visited node validation errors if needed
+	// This brings those into a reconciliation loop as well
+	visited, err, involvedResource := dcr.Validate(dataCenterResource, dataCenterResources.Items, physicalMeasurements.Items)
+	if err != nil {
+		log.Printf("Setting validation error of data center resource %s: %s\n", dataCenterResource.Name, err)
+		dcr.SetValidationError(dataCenterResource, err, involvedResource)
+	} else {
+		log.Printf("Clearing validation errors of data center resource %s", dataCenterResource.Name)
+		log.Printf("Previous status: %#v", dataCenterResource.Status)
+
+		references := &chantico.DataCenterResourceList{}
+		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": dataCenterResource.Name})...)
+		children := &chantico.DataCenterResourceList{}
+		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parent": dataCenterResource.Name})...)
+		if dataCenterResource.Status.InvolvedResource != "" {
+			involved := &chantico.DataCenterResource{}
+			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: dataCenterResource.Status.InvolvedResource}, involved)
+			visited = append(visited, *involved)
+		}
+		log.Printf("Visited nodes: %s", dcr.FormatResources(visited))
+		log.Printf("Referencing resources: %s", dcr.FormatResources(references.Items))
+		log.Printf("Children: %s", dcr.FormatResources(children.Items))
+		items := MergeUnique(visited, references.Items, children.Items)
+
+		for _, item := range items {
+			r.ClearReferencedValidation(ctx, req, dataCenterResource, &item)
+		}
+		dcr.ClearValidationError(dataCenterResource)
+		dataCenterResource.Status.State = dcr.StateEntry
+	}
+	patch.PatchStatus()
+
+	// TODO(user): do something with the links here:
 	// perform operations to make the cluster state reflect the state specified by
 	// the user.
 	// Specifically: register in postgres (or prometheus?) which datacenter resource
 	// is involved for which physical measurement
-	// Also perform validation of parent for directed acyclic graph
 
-	switch datacenterResource.Spec.Type {
-	case "":
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypePDU:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeBaremetal:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeVM:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeKubernetes:
-		return ctrl.Result{}, nil
-	case DataCenterResourceTypeHeat:
-		return ctrl.Result{}, nil
-	default:
-		err := fmt.Errorf("unknown type: %s", datacenterResource.Spec.Type)
-		datacenterResource.Status.ErrorMessage = err.Error()
-		return ctrl.Result{}, err
+	return ctrl.Result{}, nil
+}
+
+func MergeUnique(
+	lists ...[]chantico.DataCenterResource,
+) []chantico.DataCenterResource {
+	seen := make(map[string]chantico.DataCenterResource)
+
+	for _, list := range lists {
+		for _, item := range list {
+			seen[item.Name] = item
+		}
+	}
+
+	result := make([]chantico.DataCenterResource, 0, len(seen))
+	for _, v := range seen {
+		result = append(result, v)
+	}
+	return result
+}
+
+func (r *DataCenterResourceReconciler) ClearReferencedValidation(
+	ctx context.Context,
+	req ctrl.Request,
+	dataCenterResource *chantico.DataCenterResource,
+	referenced *chantico.DataCenterResource,
+) {
+	// Revalidate if previously failed or current item is being removed
+	if referenced.Status.State == dcr.StateValidationFailed || dataCenterResource.Status.State == dcr.StateDelete {
+		patch := ph.Initialize(ctx, r.Client, referenced)
+		dcr.ClearValidationError(referenced)
+		patch.PatchStatus()
 	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DataCenterResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	ctx := context.Background()
+
+	// Create a one-to-many index for parent field
+	err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&chantico.DataCenterResource{},
+		"spec.parent",
+		func(rawObj client.Object) []string {
+			dcr := rawObj.(*chantico.DataCenterResource)
+
+			if dcr.Spec.Parent == nil {
+				return nil
+			}
+			return dcr.Spec.Parent
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.DataCenterResource{}).
 		Named("datacenterresource").

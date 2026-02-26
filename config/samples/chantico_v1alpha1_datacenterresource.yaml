@@ -11,7 +11,6 @@ spec:
   type: pdu
   physicalMeasurements:
     - physicalMeasurement-pdu1-out
-apiVersion: chantico.ci.tno.nl/v1alpha1
 ---
 apiVersion: chantico.ci.tno.nl/v1alpha1
 kind: DataCenterResource
