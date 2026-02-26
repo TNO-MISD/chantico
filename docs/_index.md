@@ -26,6 +26,15 @@ It therefore felt natural to call the energy domain controller developped within
 
 [Please refer to the following document](how-to-install-chantico.md)
 
+## Local developer
+
+This is the fastest way to iterate: run the controller locally and use port-forwards for cluster services.
+
+1. Set up the local development environment:
+[How to set up the local development environment](how-to-setup-the-local-development-environment.md)
+1. Run the SNMP mock demo end-to-end (including Prometheus):
+[How to run the mock snmp device](how-to-run-the-mock-snmp-device.md)
+
 ## Technical proposal
 
 The idea behind chantico is to use the kubernetes control plane as a basis to have a fully declarative approach to the energy domain control.

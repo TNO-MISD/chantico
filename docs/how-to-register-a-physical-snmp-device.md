@@ -6,9 +6,10 @@ menus:
     weight: 30
 ---
 
-In the current setting, a type of device using SNMP can be configured uploading the MIBS and defining a `PhysicalMeasurement` custom resource.
+`PhysicalMeasurement` does not parse MIBs. It links a concrete device IP to an existing `MeasurementDevice` (SNMP module/auth definition) and writes Prometheus scrape config, then reloads Prometheus.
 In our First use-case (see `goal.md`) this corresponds to the `createPDU1` and `createPDU2` phases.
 
+1. Ensure a matching `MeasurementDevice` exists (see `how-to-register-an-snmp-device-type.md`).
 1. Create the PhysicalMeasurement matching the required type of PhysicalMeasurement
   1. Create a `physical_measurement.yaml` file
 
@@ -31,10 +32,14 @@ In our First use-case (see `goal.md`) this corresponds to the `createPDU1` and `
   kubectl apply -f physical_measurement.yaml
   ```
 1. Verify the new device setting
-  1. Wait that `chantico-prometheus` is correctly redeployed
-  1. Port-forward the SNMP exporter
+  1. Port-forward Prometheus
   ```sh
-  kubectl port-forward -n chantico deployment/chantico-prometheus 9090
+  kubectl port-forward -n chantico deployment/chantico-prometheus 9090:9090
   ```
   1. Check that the config (http://localhost:9090/targets)
-
+  1. If you are using `./dev/port-forward.sh`, Prometheus is forwarded to `localhost:19090` instead.
+  1. If running the controller locally, ensure the port-forward and env vars are set so the operator can call the reload endpoint:
+  ```sh
+  export CHANTICO_PROMETHEUS_SERVICE_HOST="localhost"
+  export CHANTICO_PROMETHEUS_SERVICE_PORT="19090"
+  ```

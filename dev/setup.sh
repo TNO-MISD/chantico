@@ -44,4 +44,5 @@ kind load docker-image chantico-snmp-mock:latest --name kind
 kubectl apply -f ../config/samples/chantico_v1alpha1_physicalmeasurement_mock.yaml
 kubectl apply -f k8s/snmp-mock-deployment.yaml
 kubectl apply -f k8s/snmp-mock-service.yaml
+
 popd
