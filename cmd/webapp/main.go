@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"chantico/internal/webapp"
+	"fmt"
 )
 
 func main() {

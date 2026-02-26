@@ -53,7 +53,7 @@ func (a *app) Run() error {
 
 	ctxInterrupt, stopInterrupt := SignalHandling()
 	defer stopInterrupt()
-	
+
 	httpServer := http.New(t, k, a.cfg.Port)
 	httpServerErrChannel := make(chan error, 1)
 	go httpServer.Run(httpServerErrChannel)
@@ -125,8 +125,6 @@ func loadConfig(get envGetter) (config, error) {
 
 	return cfg, nil
 }
-
-
 
 func pathExists(p string) bool {
 	_, err := os.Stat(p)
