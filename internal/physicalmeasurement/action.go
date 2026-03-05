@@ -5,6 +5,7 @@ import (
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +18,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type PrometheusTarget struct {
+	Labels    map[string]string `json:"labels"`
+	Health    string            `json:"health"`
+	LastError string            `json:"lastError"`
+}
 
 type ActionFunctionType int
 
@@ -49,7 +56,12 @@ var ActionMap = map[State][]ActionFunction{
 		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
 		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
 	},
-	StateRunning: {},
+	StateRunning: {
+		ActionFunction{Type: ActionFunctionPure, Pure: CheckEndpointHealth},
+	},
+	StateRunningWithWarning: {
+		ActionFunction{Type: ActionFunctionPure, Pure: CheckEndpointHealth},
+	},
 	StateDelete: {
 		ActionFunction{Type: ActionFunctionPure, Pure: DeleteConfigFile},
 		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
@@ -109,6 +121,49 @@ func ExecuteActions(
 		}
 	}
 	return result
+}
+
+func CheckEndpointHealth(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
+	url := fmt.Sprintf("http://%s:%s/api/v1/targets", os.Getenv("CHANTICO_PROMETHEUS_SERVICE_HOST"), os.Getenv("CHANTICO_PROMETHEUS_SERVICE_PORT"))
+
+	state, errMsg := queryTargetHealth(url, physicalMeasurement.Spec.Ip, physicalMeasurement.Spec.MeasurementDevice)
+	physicalMeasurement.Status.State = state
+	physicalMeasurement.Status.ErrorMessage = errMsg
+	return &ActionResult{
+		Result:    &ctrl.Result{RequeueAfter: chantico.EndpointRequeueDelay},
+		PatchType: ph.PatchResourceStatus,
+	}
+}
+
+func queryTargetHealth(url, targetIP string, auth string) (string, string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return StateRunningWithWarning, fmt.Sprintf("Cannot reach Prometheus: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Data struct {
+			ActiveTargets []PrometheusTarget `json:"activeTargets"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return StateRunningWithWarning, fmt.Sprintf("Failed to parse targets: %v", err)
+	}
+
+	return matchTargetHealth(result.Data.ActiveTargets, targetIP, auth)
+}
+
+func matchTargetHealth(targets []PrometheusTarget, targetIP, auth string) (string, string) {
+	for _, t := range targets {
+		if t.Labels["instance"] == targetIP && t.Labels["job"] == auth {
+			if t.Health == "up" {
+				return StateRunning, ""
+			}
+			return StateRunningWithWarning, fmt.Sprintf("Cannot reach target: %s", t.LastError)
+		}
+	}
+	return StateRunningWithWarning, "Target not yet registered in Prometheus"
 }
 
 func WriteConfigFile(

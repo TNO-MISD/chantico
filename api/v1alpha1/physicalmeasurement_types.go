@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -73,3 +75,7 @@ const (
 func init() {
 	SchemeBuilder.Register(&PhysicalMeasurement{}, &PhysicalMeasurementList{})
 }
+
+const (
+	EndpointRequeueDelay = 30 * time.Second
+)
