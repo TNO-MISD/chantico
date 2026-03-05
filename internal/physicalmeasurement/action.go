@@ -19,6 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type PrometheusTarget struct {
+	Labels    map[string]string `json:"labels"`
+	Health    string            `json:"health"`
+	LastError string            `json:"lastError"`
+}
+
 type ActionFunctionType int
 
 const (
@@ -138,18 +144,18 @@ func queryTargetHealth(url, targetIP string, auth string) (string, string) {
 
 	var result struct {
 		Data struct {
-			ActiveTargets []struct {
-				Labels    map[string]string `json:"labels"`
-				Health    string            `json:"health"`
-				LastError string            `json:"lastError"`
-			} `json:"activeTargets"`
+			ActiveTargets []PrometheusTarget `json:"activeTargets"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return StateRunningWithWarning, fmt.Sprintf("Failed to parse targets: %v", err)
 	}
 
-	for _, t := range result.Data.ActiveTargets {
+	return matchTargetHealth(result.Data.ActiveTargets, targetIP, auth)
+}
+
+func matchTargetHealth(targets []PrometheusTarget, targetIP, auth string) (string, string) {
+	for _, t := range targets {
 		if t.Labels["instance"] == targetIP && t.Labels["job"] == auth {
 			if t.Health == "up" {
 				return StateRunning, ""

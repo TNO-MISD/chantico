@@ -283,3 +283,78 @@ func testCreateTmpDirectories(t *testing.T) string {
 
 	return tmpDir
 }
+
+func TestMatchTargetHealth(t *testing.T) {
+	testCases := map[string]struct {
+		targets       []PrometheusTarget
+		targetIP      string
+		auth          string
+		expectedState string
+		expectedError string
+	}{
+		"target healthy": {
+			targets: []PrometheusTarget{
+				{
+					Labels:    map[string]string{"instance": "192.168.1.10", "job": "device-a"},
+					Health:    "up",
+					LastError: "",
+				},
+			},
+			targetIP:      "192.168.1.10",
+			auth:          "device-a",
+			expectedState: StateRunning,
+			expectedError: "",
+		},
+		"target unhealthy": {
+			targets: []PrometheusTarget{
+				{
+					Labels:    map[string]string{"instance": "192.168.1.10", "job": "device-a"},
+					Health:    "down",
+					LastError: "connection refused",
+				},
+			},
+			targetIP:      "192.168.1.10",
+			auth:          "device-a",
+			expectedState: StateRunningWithWarning,
+			expectedError: "Cannot reach target: connection refused",
+		},
+		"different target present": {
+			targets: []PrometheusTarget{
+				{
+					Labels:    map[string]string{"instance": "192.168.1.99", "job": "other-device"},
+					Health:    "up",
+					LastError: "",
+				},
+			},
+			targetIP:      "192.168.1.10",
+			auth:          "device-a",
+			expectedState: StateRunningWithWarning,
+			expectedError: "Target not yet registered in Prometheus",
+		},
+		"matching instance but different job": {
+			targets: []PrometheusTarget{
+				{
+					Labels:    map[string]string{"instance": "192.168.1.10", "job": "other-device"},
+					Health:    "up",
+					LastError: "",
+				},
+			},
+			targetIP:      "192.168.1.10",
+			auth:          "device-a",
+			expectedState: StateRunningWithWarning,
+			expectedError: "Target not yet registered in Prometheus",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			state, errMsg := matchTargetHealth(tc.targets, tc.targetIP, tc.auth)
+			if state != tc.expectedState {
+				t.Errorf("matchTargetHealth() state = %q, want %q", state, tc.expectedState)
+			}
+			if errMsg != tc.expectedError {
+				t.Errorf("matchTargetHealth() error = %q, want %q", errMsg, tc.expectedError)
+			}
+		})
+	}
+}
