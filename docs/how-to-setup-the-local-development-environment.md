@@ -12,7 +12,7 @@ The development currently supports [WSL2](https://github.com/microsoft/WSL) and 
 
 It requires the following packages:
 
-- go version v1.24.0+
+- go version v1.24.13+
 - kind version v0.30.0+
 - docker version v17.03+
 - psql version v17.5+
