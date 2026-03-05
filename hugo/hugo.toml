@@ -1,8 +1,24 @@
 baseURL = 'https://chantico-300062.ci.tno.nl/'
 languageCode = 'en-us'
 title = 'Chantico'
-theme = 'hugo-PaperMod'
+theme = 'hugo-theme-relearn'
 contentDir = '../docs'
+copyright = 'Copyright 2025-2026 TNO. Chantico is licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>. Published documentation is available under <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.en">CC-BY-SA 4.0</a>.'
+
+[markup]
+  [markup.highlight]
+    noClasses = false   # generates <span class="keyword"> for styling
+    style = "monokai"   # or any preferred theme
+
+[params]
+disableInlineCopyToClipBoard = true
+themeVariant = ['relearn-dark', 'relearn-light']
+
+[params.sidebar]
+  autoCollapsed = false
+
+[params.author]
+   name = 'TNO'
 
 [params.assets]
   disableFingerprinting = false
@@ -11,10 +27,10 @@ contentDir = '../docs'
   name = "How to(s)"
   identifier = "howto"
   url = "/#how-tos"
-  weight = 30
+  weight = 10
 
 [[menus.main]]
   name = "API Reference"
   identifier = "api"
   pageRef = "/api/"
-  weight = 40
+  weight = 20
