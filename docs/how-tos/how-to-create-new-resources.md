@@ -1,6 +1,6 @@
 ---
 title: "How to create new resources"
-menus:
+menu:
   main:
     parent: howto
     weight: 40

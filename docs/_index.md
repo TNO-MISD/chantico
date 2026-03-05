@@ -7,8 +7,6 @@ menus:
     name: "Chantico"
 ---
 
-# Chantico
-
 Streamlining Energy Management for Cloud Operators.
 
 {{< figure src="assets/logo/chantico.png" alt="" width="150" height="150" >}}
@@ -173,15 +171,6 @@ Additionally, formatting, tests and coverage are run. Pages are also deployed fr
 
 [Use cases](use-cases.md) are defined by the development team in collaboration with the workflow orchestrator team.
 Relevant features are then developed to support the use case.
-
-## How to(s)
-
-The file contained in this directory starting with `how-to-...` are there to 
-help the developers / users using chantico.
-
-Here is an overview:
-
-{{% howtos %}}
 
 ## API documentation
 

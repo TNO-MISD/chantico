@@ -180,7 +180,8 @@ docs:
   stage: docs
   script:
     - go install go.abhg.dev/doc2go@v0.11.0
-    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -internal ./...
+    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
+    - find docs/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
     - cp -r assets docs/assets/
     - mkdir -p docs/assets/css/extended
     - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
@@ -189,7 +190,12 @@ docs:
     paths:
       - docs
   rules:
-    - when: always
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      variables:
+        REL_LINK_STYLE: "directory"
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      variables:
+        REL_LINK_STYLE: "index"
 
 hugo-preview:
   image: "hugomods/hugo:exts"
