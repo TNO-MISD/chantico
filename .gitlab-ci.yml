@@ -190,7 +190,6 @@ docs:
     paths:
       - docs
   rules:
-    - when: always
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
         REL_LINK_STYLE: "directory"
