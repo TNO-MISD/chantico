@@ -22,7 +22,7 @@ website](https://chantico-300062.ci.tno.nl/).
 
 ### Prerequisites
 
-- go version v1.24.0+
+- go version v1.24.13+
 - docker version 17.03+.
 
 If not using local development using kind:

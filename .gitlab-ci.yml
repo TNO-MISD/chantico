@@ -1,4 +1,4 @@
-image: golang:1.24.5-alpine3.22
+image: golang:1.25.7-alpine3.23
 
 stages:
   - build
@@ -136,12 +136,12 @@ osv-scanner:
   rules: 
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'  
   image:
-    name: ghcr.io/google/osv-scanner-action:v2.3.1
+    name: ghcr.io/google/osv-scanner-action:v2.3.3
     entrypoint: [""] # Override entry point
   allow_failure: true # Make it a warning instead for now; to allow deployment/review by team.
   script: # osv-scanner recursively scans the project for dependencies
     - echo "OSV_JOB_ID=$CI_JOB_ID" >> scanner.env
-    - osv-scanner --licenses="Apache-2.0,BSD-3-Clause,BSD-2-Clause,ISC,MIT" --call-analysis -r . --format json --output osv-scanner-report.json ||  true
+    - osv-scanner --licenses="Apache-2.0,BSD-3-Clause,BSD-2-Clause,ISC,MIT" --call-analysis -r . --format json --output osv-scanner-report.json || true
     - osv-reporter --new osv-scanner-report.json --output html:osv-scanner-report.html
   artifacts:
     paths:
