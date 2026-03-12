@@ -49,16 +49,17 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	measurementDevice := &chantico.MeasurementDevice{}
 	err := r.Get(ctx, req.NamespacedName, measurementDevice)
 	if err != nil {
+		// IVO: I believe this return is a bit strange.
 		return ctrl.Result{}, nil
 	}
 
 	job := &batchv1.Job{}
-	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
+	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job) // IVO: why not check if JobName exists?
 
 	log.Printf("Updating state of measurement device %s\n", measurementDevice.Name)
-	patch := ph.Initialize(ctx, r.Client, measurementDevice)
-	md.UpdateState(measurementDevice, job)
-	patch.PatchStatus()
+	patch := ph.Initialize(ctx, r.Client, measurementDevice) // IVO: I don't get it. You give the measurement device to the patch, which has it as a copy and the object.
+	md.UpdateState(measurementDevice, job) // here we update the state of the measurement device and job 
+	patch.PatchStatus() // since the measurment device is a pointer, we patch the status
 
 	result := md.ExecuteActions(ctx, r.Client, measurementDevice, patch)
 	if result != nil && result.Result != nil {
@@ -70,5 +71,6 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *MeasurementDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.MeasurementDevice{}).
+		Owns(&batchv1.Job{}).
 		Complete(r)
 }

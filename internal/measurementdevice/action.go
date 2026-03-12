@@ -83,7 +83,7 @@ func ExecuteActions(
 	patch *ph.PatchHelper,
 ) *ActionResult {
 	var result *ActionResult = nil
-	stateActions := ActionMap[State(measurementDevice.Status.State)]
+	stateActions := ActionMap[State(measurementDevice.Status.State)] // IVO: maybe this "state conversion" can already be done when Unmarshalling the JSON. We can then enforce it.
 	for i, actionFunction := range stateActions {
 		log.Printf("Start step %d, status: %s\n", i, measurementDevice.Status.State)
 		switch actionFunction.Type {

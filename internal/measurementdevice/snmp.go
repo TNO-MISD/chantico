@@ -30,30 +30,6 @@ func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
 		log.Printf("ERR: %s\n", err)
 	}
 
-	containers := []corev1.Container{
-		{
-			Name:  "create-snmp-config",
-			Image: img.SnmpGenerator,
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      vol.ChanticoVolumeMount,
-					MountPath: "/opt/snmp.yml",
-					SubPath:   getConfigPath(measurementDevice),
-				},
-				{
-					Name:      vol.ChanticoVolumeMount,
-					MountPath: "/opt/generator.yml",
-					SubPath:   getGeneratorPath(measurementDevice),
-				},
-				{
-					Name:      vol.ChanticoVolumeMount,
-					MountPath: "/opt/mibs",
-					SubPath:   snmpMibsDir,
-				},
-			},
-		},
-	}
-
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      measurementDevice.Status.JobName,
@@ -63,7 +39,29 @@ func MakeJob(measurementDevice chantico.MeasurementDevice) *batchv1.Job {
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					Containers:    containers,
+					Containers: []corev1.Container{
+						{
+							Name:  "create-snmp-config",
+							Image: img.SnmpGenerator,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      vol.ChanticoVolumeMount,
+									MountPath: "/opt/snmp.yml",
+									SubPath:   getConfigPath(measurementDevice),
+								},
+								{
+									Name:      vol.ChanticoVolumeMount,
+									MountPath: "/opt/generator.yml",
+									SubPath:   getGeneratorPath(measurementDevice),
+								},
+								{
+									Name:      vol.ChanticoVolumeMount,
+									MountPath: "/opt/mibs",
+									SubPath:   snmpMibsDir,
+								},
+							},
+						},
+					},
 					RestartPolicy: corev1.RestartPolicyNever,
 					Volumes:       []corev1.Volume{volume},
 				},

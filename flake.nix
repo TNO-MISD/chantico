@@ -38,6 +38,7 @@
                 pkgs.operator-sdk
                 pkgs.kubernetes-helm
                 pkgs.sshfs
+                pkgs.git
               ];
             };
           }

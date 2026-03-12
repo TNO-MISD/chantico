@@ -44,7 +44,7 @@ func UpdateState(
 
 	// Covers lifecycle related changes
 	isDeleted := measurementDevice.ObjectMeta.GetDeletionTimestamp() != nil
-	isGenerationUpToDate := measurementDevice.Status.UpdateGeneration < measurementDevice.ObjectMeta.Generation
+	isGenerationUpToDate := measurementDevice.Status.UpdateGeneration < measurementDevice.ObjectMeta.Generation // IVO: how does this generation relate to the state?
 
 	if isDeleted {
 		switch measurementDevice.Status.State {
