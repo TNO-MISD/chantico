@@ -3,8 +3,6 @@ package physicalmeasurement
 import (
 	chantico "chantico/api/v1alpha1"
 	"slices"
-
-	batchv1 "k8s.io/api/batch/v1"
 )
 
 type State string
@@ -17,9 +15,8 @@ const (
 	StateFailed             = "Failed"
 )
 
-// TODO delete reference to job since all actions are not interacting with the cluster.
 func UpdateState(
-	physicalMeasurement *chantico.PhysicalMeasurement, job *batchv1.Job,
+	physicalMeasurement *chantico.PhysicalMeasurement,
 ) {
 	if physicalMeasurement == nil {
 		return
