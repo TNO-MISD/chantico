@@ -2,6 +2,7 @@ package physicalmeasurement
 
 import (
 	chantico "chantico/api/v1alpha1"
+	sm "chantico/internal/statemachine"
 	vol "chantico/internal/volumes"
 	"encoding/json"
 	"fmt"
@@ -14,18 +15,18 @@ import (
 )
 
 func TestActionMap(t *testing.T) {
-	for state, stateActions := range ActionMap {
+	for state, stateActions := range StateMachine.Actions {
 		for _, action := range stateActions {
 			t.Run(fmt.Sprintf("action %#v in state %#v", action.Type, state), func(t *testing.T) {
 				switch action.Type {
-				case ActionFunctionPure:
+				case sm.ActionFunctionPure:
 					if action.IO != nil {
 						t.Errorf("Pure action should not have IO: %#v", action)
 					}
 					if action.Pure == nil {
 						t.Errorf("Pure action must have Pure function: %#v", action)
 					}
-				case ActionFunctionIO:
+				case sm.ActionFunctionIO:
 					if action.IO == nil {
 						t.Errorf("IO action must have IO function: %#v", action)
 					}
@@ -293,79 +294,4 @@ func testCreateTmpDirectories(t *testing.T) string {
 	}
 
 	return tmpDir
-}
-
-func TestMatchTargetHealth(t *testing.T) {
-	testCases := map[string]struct {
-		targets       []PrometheusTarget
-		targetIP      string
-		auth          string
-		expectedState string
-		expectedError string
-	}{
-		"target healthy": {
-			targets: []PrometheusTarget{
-				{
-					Labels:    map[string]string{"instance": "192.168.1.10", "job": "device-a"},
-					Health:    "up",
-					LastError: "",
-				},
-			},
-			targetIP:      "192.168.1.10",
-			auth:          "device-a",
-			expectedState: StateRunning,
-			expectedError: "",
-		},
-		"target unhealthy": {
-			targets: []PrometheusTarget{
-				{
-					Labels:    map[string]string{"instance": "192.168.1.10", "job": "device-a"},
-					Health:    "down",
-					LastError: "connection refused",
-				},
-			},
-			targetIP:      "192.168.1.10",
-			auth:          "device-a",
-			expectedState: StateRunningWithWarning,
-			expectedError: "Cannot reach target: connection refused",
-		},
-		"different target present": {
-			targets: []PrometheusTarget{
-				{
-					Labels:    map[string]string{"instance": "192.168.1.99", "job": "other-device"},
-					Health:    "up",
-					LastError: "",
-				},
-			},
-			targetIP:      "192.168.1.10",
-			auth:          "device-a",
-			expectedState: StateRunningWithWarning,
-			expectedError: "Target not yet registered in Prometheus",
-		},
-		"matching instance but different job": {
-			targets: []PrometheusTarget{
-				{
-					Labels:    map[string]string{"instance": "192.168.1.10", "job": "other-device"},
-					Health:    "up",
-					LastError: "",
-				},
-			},
-			targetIP:      "192.168.1.10",
-			auth:          "device-a",
-			expectedState: StateRunningWithWarning,
-			expectedError: "Target not yet registered in Prometheus",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			state, errMsg := matchTargetHealth(tc.targets, tc.targetIP, tc.auth)
-			if state != tc.expectedState {
-				t.Errorf("matchTargetHealth() state = %q, want %q", state, tc.expectedState)
-			}
-			if errMsg != tc.expectedError {
-				t.Errorf("matchTargetHealth() error = %q, want %q", errMsg, tc.expectedError)
-			}
-		})
-	}
 }

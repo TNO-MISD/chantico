@@ -1,4 +1,4 @@
-image: golang:1.25.7-alpine3.23
+image: golang:1.25.8-alpine3.23
 
 stages:
   - build
