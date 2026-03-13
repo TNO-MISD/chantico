@@ -15,7 +15,6 @@ It requires the following packages:
 - go version v1.24.13+
 - kind version v0.30.0+
 - docker version v17.03+
-- psql version v17.5+
 - helm version 3.19+
 - make version 4.3+
 - kubectl version v0.30.0+
@@ -45,11 +44,8 @@ It requires the following packages:
 - Set up the following environment variables (this can be automated using [direnv](https://direnv.net/))
 
   ```bash
-  export CHANTICO_POSTGRES_SERVICE_HOST="localhost"
-  export CHANTICO_POSTGRES_SERVICE_PORT="15432"
   export CHANTICO_PROMETHEUS_SERVICE_HOST="localhost"
   export CHANTICO_PROMETHEUS_SERVICE_PORT="19090"
-  export CHANTICO_POSTGRES_DBSTRING="postgresql://chanticoUser:toulouse@localhost:15432/chantico"
   export CHANTICOVOLUMELOCATIONENV="$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.name=="chantico-snmp-prometheus-volume-claim")]}{.spec.hostPath.path}{"\n"}{end}' | sed 's|/opt/local-path-provisioner|/tmp/chantico-local-path-data|')"
   export CHANTICOVOLUMECLAIMENV="chantico-snmp-prometheus-volume-claim"
   ```
@@ -61,14 +57,6 @@ It requires the following packages:
 
   ```bash
   make run
-  ```
-
-#### Checks
-
-- Check that postgres is correctly set-up:
-
-  ```bash
-  psql "${CHANTICO_POSTGRES_DBSTRING}" -c '\d'
   ```
 
 ### Running a demo

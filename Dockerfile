@@ -14,7 +14,6 @@ RUN go mod download
 # Copy the go source
 COPY cmd/operator/main.go cmd/operator/main.go
 COPY api/ api/
-COPY chantico/ chantico/
 COPY internal/ internal/
 
 # Build

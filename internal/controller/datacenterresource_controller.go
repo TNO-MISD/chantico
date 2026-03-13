@@ -108,7 +108,7 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// TODO(user): do something with the links here:
 	// perform operations to make the cluster state reflect the state specified by
 	// the user.
-	// Specifically: register in postgres (or prometheus?) which datacenter resource
+	// Specifically: register in relational/graph db (or prometheus?) which datacenter resource
 	// is involved for which physical measurement
 
 	return ctrl.Result{}, nil

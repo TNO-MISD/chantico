@@ -45,11 +45,6 @@ To make this happen Chantico is built as a [kubernetes controller](https://kuber
 The `chantico-filebrowser` is a kubernetes deployment living in the `chantico` namespace.
 It allows to add configuration files via drag and drop (e.g. uploading MIB files for the registration of a PDU).
 
-#### chantico-postgres
-
-The `chantico-postgres` is a kubernetes service living in the `chantico` namespace.
-It acts as long term storage database for chantico.
-
 #### chantico-snmp
 
 The `chantico-snmp` is a kubernetes deployment living in the `chantico` namespace.
@@ -74,23 +69,6 @@ This is why we use [plantuml](https://plantuml.com/) to write diagrams, as its t
 
 To seamlessly interoperate with kubernetes the [go](https://go.dev/) programming language was chosen.
 
-### Interface with postgres
-
-
-#### Migrations
-
-The SQL migrations are handled by [goose](https://pressly.github.io/goose/).
-
-#### Go code
-
-To avoid the [short-comings](https://en.wikipedia.org/wiki/Object%E2%80%93relational_impedance_mismatch) of ORMs an approach based on generating idiomatic go code directly from annotated SQL queries have been prefered.
-To do this we use the [sqlc](https://sqlc.dev/) library.
-
-### That does not work on my machine
-
-To avoid the "it does not work" on my machine we provide a [nix-flake](https://wiki.nixos.org/wiki/Flakes) to set-up your development environment.
-Although this is not strictly required this is encouraged to work on the project.
-
 ### Testing
 
 #### Philosophy
@@ -109,7 +87,7 @@ To keep testing lightweight and efficient, we follow these rules regarding what 
 
 **Disallowed in tests:**
 - Spinning up a Kubernetes instance
-- Spinning up service instances (e.g., PostgreSQL, etc.)
+- Spinning up service instances (e.g., Prometheus, etc.)
 
 #### Table-Driven Testing
 
@@ -163,7 +141,7 @@ Coming soon.
 
 ### CI/CD
 
-We use GitLab CI to build Docker images for Chantico components, including the manager, Goose for Postgres migrations and SNMP mock.
+We use GitLab CI to build Docker images for Chantico components, including the manager and SNMP mock.
 Additionally, formatting, tests and coverage are run. Pages are also deployed from GitLab CI.
 
 
