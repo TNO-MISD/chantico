@@ -1,7 +1,6 @@
 package physicalmeasurement
 
 import (
-	"bytes"
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
 	"context"
@@ -10,11 +9,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 
 	vol "chantico/internal/volumes"
 
-	"go.yaml.in/yaml/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,12 +48,15 @@ type ActionFunction struct {
 	) *ActionResult
 }
 
+const prometheusTargetsDir = "prometheus/targets"
+
+// ActionMap defines the actions to execute for each state.
+// With file_sd_configs, Prometheus automatically watches the target files
+// for changes — no explicit reload or config merging is needed.
 var ActionMap = map[State][]ActionFunction{
 	StateInit: {
 		ActionFunction{Type: ActionFunctionPure, Pure: InitializeFinalizer},
-		ActionFunction{Type: ActionFunctionPure, Pure: WriteConfigFile},
-		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
-		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
+		ActionFunction{Type: ActionFunctionPure, Pure: WriteTargetFile},
 	},
 	StateRunning: {
 		ActionFunction{Type: ActionFunctionPure, Pure: CheckEndpointHealth},
@@ -63,9 +65,7 @@ var ActionMap = map[State][]ActionFunction{
 		ActionFunction{Type: ActionFunctionPure, Pure: CheckEndpointHealth},
 	},
 	StateDelete: {
-		ActionFunction{Type: ActionFunctionPure, Pure: DeleteConfigFile},
-		ActionFunction{Type: ActionFunctionPure, Pure: CombineConfigFiles},
-		ActionFunction{Type: ActionFunctionPure, Pure: ReloadPrometheus},
+		ActionFunction{Type: ActionFunctionPure, Pure: DeleteTargetFile},
 		ActionFunction{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 	},
 	StateFailed: {},
@@ -166,106 +166,51 @@ func matchTargetHealth(targets []PrometheusTarget, targetIP, auth string) (strin
 	return StateRunningWithWarning, "Target not yet registered in Prometheus"
 }
 
-func WriteConfigFile(
+// WriteTargetFile writes a file_sd_configs JSON target file for this PhysicalMeasurement.
+// The file is written to prometheus/targets/<name>.json.
+// Prometheus automatically detects changes to these files and updates its scrape targets.
+func WriteTargetFile(
 	physicalMeasurement *chantico.PhysicalMeasurement,
 ) *ActionResult {
-	cfg := CreatePrometheusConfig(physicalMeasurement.Spec.MeasurementDevice, []string{physicalMeasurement.Spec.Ip})
+	target := CreateFileSDTarget(physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.Ip)
 
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
-	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
-	yamlBytes, _ := yaml.Marshal(cfg)
-	err := os.WriteFile(configPath, yamlBytes, 0644)
-	if err != nil {
+	targetsDir := filepath.Join(volumePath, prometheusTargetsDir)
+	if err := os.MkdirAll(targetsDir, 0777); err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("Failed to write Prometheus config file: %v", err)
+		log.Printf("Failed to create targets directory: %v", err)
 		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
+
+	targetPath := filepath.Join(targetsDir, physicalMeasurement.Name+".json")
+	if err := WriteFileSDTargets(targetPath, []FileSDTarget{target}); err != nil {
+		physicalMeasurement.Status.State = StateFailed
+		physicalMeasurement.Status.ErrorMessage = err.Error()
+		log.Printf("Failed to write target file: %v", err)
+		return &ActionResult{PatchType: ph.PatchResourceStatus}
+	}
+
+	log.Printf("Wrote file_sd target file %s for device %s\n", targetPath, physicalMeasurement.Spec.MeasurementDevice)
 	physicalMeasurement.Status.State = StateRunning
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
-func CombineConfigFiles(
-	_ *chantico.PhysicalMeasurement,
-) *ActionResult {
+// DeleteTargetFile removes the file_sd_configs target file for this PhysicalMeasurement.
+// Prometheus will automatically stop scraping the removed targets.
+func DeleteTargetFile(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
-	configDir := volumePath + "/prometheus/yml"
-	prometheusYmlPath := configDir + "/prometheus.yml"
+	targetPath := filepath.Join(volumePath, prometheusTargetsDir, physicalMeasurement.Name+".json")
 
-	existingConfig, _ := LoadPrometheusConfig(prometheusYmlPath)
+	log.Printf("Deleting target file for %s\n", physicalMeasurement.Name)
 
-	entries, err := os.ReadDir(configDir)
-	if err != nil {
-		log.Printf("Failed to read config directory: %v", err)
-	}
-
-	var configs []PrometheusConfig
-
-	for _, entry := range entries {
-		// Skip directories and prometheus.yml itself
-		if entry.IsDir() || entry.Name() == "prometheus.yml" {
-			continue
-		}
-
-		filePath := configDir + "/" + entry.Name()
-		config, err := LoadPrometheusConfig(filePath)
-		if err != nil {
-			log.Printf("Failed to load config file %s: %v", entry.Name(), err)
-			continue
-		}
-
-		configs = append(configs, *config)
-	}
-
-	combinedConfig := MergeWithPrometheusConfig(configs)
-
-	// Preserve global config from existing prometheus.yml
-	if existingConfig != nil && existingConfig.Global != nil {
-		combinedConfig.Global = existingConfig.Global
-	}
-
-	combinedYaml, err := yaml.Marshal(combinedConfig)
-	if err != nil {
-		log.Printf("Failed to marshal combined config: %v", err)
-	}
-
-	if err := os.WriteFile(prometheusYmlPath, combinedYaml, 0644); err != nil {
-		log.Printf("Failed to write prometheus.yml: %v", err)
-	}
-
-	log.Printf("Combined scrape configs into %s", prometheusYmlPath)
-	return &ActionResult{}
-}
-
-func DeleteConfigFile(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
-	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
-	configPath := volumePath + "/prometheus/yml/" + physicalMeasurement.Name + ".yml"
-
-	log.Printf("Deleting Prometheus config for %s\n", physicalMeasurement.Name)
-
-	err := os.Remove(configPath)
+	err := os.Remove(targetPath)
 	if err != nil && !os.IsNotExist(err) {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("Failed to delete config file: %v", err)
+		log.Printf("Failed to delete target file: %v", err)
 		return &ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
-	return &ActionResult{PatchType: ph.PatchResourceStatus}
-}
-
-func ReloadPrometheus(physicalMeasurement *chantico.PhysicalMeasurement) *ActionResult {
-	address := fmt.Sprintf("http://%s:%s/-/reload", os.Getenv("CHANTICO_PROMETHEUS_SERVICE_HOST"), os.Getenv("CHANTICO_PROMETHEUS_SERVICE_PORT"))
-
-	resp, err := http.Post(address, "application/json", bytes.NewBuffer([]byte{}))
-	if err != nil || resp == nil || resp.StatusCode != http.StatusOK {
-		log.Printf("Failed to reload Prometheus: %v", err)
-
-		physicalMeasurement.Status.State = StateFailed
-		physicalMeasurement.Status.ErrorMessage = fmt.Sprintf("Prometheus reload failed with status: %v", err)
-		return &ActionResult{PatchType: ph.PatchResourceStatus}
-	}
-	defer resp.Body.Close()
-	log.Println("Prometheus reloaded successfully.")
 	return &ActionResult{PatchType: ph.PatchResourceStatus}
 }
