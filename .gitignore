@@ -52,3 +52,6 @@ osv-scanner-report*.json
 semantic-release
 # Added by goreleaser init:
 dist/
+
+# direnv
+.direnv

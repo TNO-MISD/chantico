@@ -33,11 +33,10 @@
                 pkgs.net-snmp
                 pkgs.gnumake
                 pkgs.plantuml
-                pkgs.goose
-                pkgs.sqlc
                 pkgs.operator-sdk
                 pkgs.kubernetes-helm
                 pkgs.sshfs
+                pkgs.git
               ];
             };
           }

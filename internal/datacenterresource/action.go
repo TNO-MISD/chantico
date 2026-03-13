@@ -57,10 +57,6 @@ var ActionMap = map[string][]ActionFuntion{
 		ActionFuntion{Type: ActionFunctionPure, Pure: InitializeFinalizer},
 	},
 	StateEntry: {},
-
-	StatePendingPostgresUpdate:   {},
-	StateSucceededPostgresUpdate: {},
-
 	StateDelete: {
 		ActionFuntion{Type: ActionFunctionPure, Pure: UpdateFinalizer},
 	},

@@ -3,7 +3,6 @@
 set -ex
 
 SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
-GOOSE_TAG="${GOOSE_TAG:-latest}"
 SNMP_MOCK_TAG="${SNMP_MOCK_TAG:-latest}"
 
 # get kind
@@ -24,12 +23,9 @@ pushd "$SCRIPT_DIR"
 # Create PVC
 kubectl apply -f k8s/chantico-pvc.yaml
 
-# Install chantico dependencies (filebrowser, postgres, prometheus, snmp exporter)
+# Install chantico dependencies (filebrowser, prometheus, snmp exporter)
 CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
-GOOSE_IMAGE="$CI_REGISTRY/chantico-goose:$GOOSE_TAG"
-docker pull "$GOOSE_IMAGE"
-kind load docker-image "$GOOSE_IMAGE" --name kind
-helm install chantico ../config/initial-deployments/ --set chanticoGooseImage="$GOOSE_IMAGE" -n chantico
+helm install chantico ../config/initial-deployments/ -n chantico
 
 # Install CRDs using kustomize
 make -C "$SCRIPT_DIR/.." install

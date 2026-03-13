@@ -47,21 +47,6 @@ build-chantico:
     IMAGE: "$CI_REGISTRY_IMAGE/chantico"
     TAG: latest
 
-build-chantico-goose:
-  extends: .buildah-sha
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: latest
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      variables:
-        TAG: $CI_COMMIT_REF_SLUG
-  variables:
-    BUILD_DOCKERFILE: Dockerfile.migrations
-    BUILD_CONTEXT: .
-    IMAGE: "$CI_REGISTRY_IMAGE/chantico-goose"
-    TAG: latest
-
 build-snmp-mock:
   extends: .buildah-sha
   rules:
