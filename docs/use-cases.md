@@ -1,8 +1,6 @@
 ---
 title: "Use-cases"
-menus:
-  main:
-    weight: 10
+weight: 20
 ---
 
 ## First use-case

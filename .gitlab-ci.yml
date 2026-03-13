@@ -196,13 +196,52 @@ hugo-preview:
     on_stop: stop-review
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    THEME_URL: "github.com/adityatelange/hugo-PaperMod"
     ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/hugo/public"
   dependencies:
     - docs
   script:
     - cd hugo && hugo --baseURL="$ARTIFACT_URL/" --config "hugo.toml,hugo.preview.toml"
     - echo PREVIEW_URL="$ARTIFACT_URL/index.html" >> preview.env
+    - echo "PREVIEW_JOB_ID=$CI_JOB_ID" >> preview.env
+  rules:
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+
+docs-check-links:
+  stage: pages
+  needs:
+    - job: hugo-preview
+      artifacts: true
+  allow_failure: true # Make it a warning instead for now.
+  variables:
+    ARTIFACT_HOST: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl"
+    ARTIFACT_PATH: "-/wp2/energy-domain-controller/chantico/-/jobs/$PREVIEW_JOB_ID/artifacts/hugo/public"
+  script:
+    - |
+      cat <<'EOF' > server.go
+      package main
+      import (
+        "log"
+        "net/http"
+      )
+      func main() {
+        log.Println("Serving on :8000")
+        log.Fatal(http.ListenAndServe(":8000", http.FileServer(http.Dir("."))))
+      }
+      EOF
+
+    # mirror GitLab artifact path
+    - mkdir -p -- "$(dirname -- "$ARTIFACT_PATH")"
+    - mv hugo/public -- "$ARTIFACT_PATH"
+
+    # start server
+    - go run server.go &
+    - SERVER_PID=$!
+
+    - go install github.com/raviqqe/muffet/v2@v2.11.2
+    - muffet --verbose --include="http://localhost:8000/$ARTIFACT_PATH" "http://localhost:8000/$ARTIFACT_PATH/index.html" | sed "s|http://localhost:8000|${ARTIFACT_HOST}|g"
+
+    # cleanup
+    - kill $SERVER_PID
   rules:
     - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
 
@@ -222,7 +261,6 @@ pages:
     publish: hugo/public
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    THEME_URL: "github.com/adityatelange/hugo-PaperMod"
   dependencies:
     - docs
   script:
