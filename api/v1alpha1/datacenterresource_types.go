@@ -84,3 +84,11 @@ func init() {
 const (
 	DataCenterResourceGraphFinalizer = "datacenterresource.graph.finalizer.chantico.ci.tno.nl"
 )
+
+func (r *DataCenterResource) GetState() string            { return r.Status.State }
+func (r *DataCenterResource) SetState(s string)           { r.Status.State = s }
+func (r *DataCenterResource) GetUpdateGeneration() int64  { return r.Status.UpdateGeneration }
+func (r *DataCenterResource) SetUpdateGeneration(g int64) { r.Status.UpdateGeneration = g }
+func (r *DataCenterResource) GetFinalizerName() string    { return DataCenterResourceGraphFinalizer }
+func (r *DataCenterResource) GetErrorMessage() string     { return r.Status.ErrorMessage }
+func (r *DataCenterResource) SetErrorMessage(msg string)  { r.Status.ErrorMessage = msg }

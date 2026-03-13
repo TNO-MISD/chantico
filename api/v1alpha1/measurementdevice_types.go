@@ -85,6 +85,14 @@ const (
 	SNMPUpdateFinalizer = "measurementdevice.finalizer.chantico.ci.tno.nl/snmp-update"
 )
 
+func (r *MeasurementDevice) GetState() string            { return r.Status.State }
+func (r *MeasurementDevice) SetState(s string)           { r.Status.State = s }
+func (r *MeasurementDevice) GetUpdateGeneration() int64  { return r.Status.UpdateGeneration }
+func (r *MeasurementDevice) SetUpdateGeneration(g int64) { r.Status.UpdateGeneration = g }
+func (r *MeasurementDevice) GetFinalizerName() string    { return SNMPUpdateFinalizer }
+func (r *MeasurementDevice) GetErrorMessage() string     { return r.Status.ErrorMessage }
+func (r *MeasurementDevice) SetErrorMessage(msg string)  { r.Status.ErrorMessage = msg }
+
 const (
 	RequeueDelay   = 5 * time.Second
 	ReloadInterval = 5 * time.Second

@@ -51,7 +51,7 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 	pm.UpdateState(physicalMeasurement)
 	patch.PatchStatus()
 
-	result := pm.ExecuteActions(ctx, r.Client, physicalMeasurement, patch)
+	result := pm.StateMachine.ExecuteActions(ctx, r.Client, physicalMeasurement, patch)
 	if result != nil && result.Result != nil && (result.Requeue || result.RequeueAfter > 0) {
 		return *result.Result, nil
 	}

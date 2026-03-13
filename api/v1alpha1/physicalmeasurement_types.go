@@ -72,6 +72,14 @@ const (
 	PhysicalMeasurementFinalizer = "physicalmeasurement.chantico.ci.tno.nl/finalizer"
 )
 
+func (r *PhysicalMeasurement) GetState() string            { return r.Status.State }
+func (r *PhysicalMeasurement) SetState(s string)           { r.Status.State = s }
+func (r *PhysicalMeasurement) GetUpdateGeneration() int64  { return r.Status.UpdateGeneration }
+func (r *PhysicalMeasurement) SetUpdateGeneration(g int64) { r.Status.UpdateGeneration = g }
+func (r *PhysicalMeasurement) GetFinalizerName() string    { return PhysicalMeasurementFinalizer }
+func (r *PhysicalMeasurement) GetErrorMessage() string     { return r.Status.ErrorMessage }
+func (r *PhysicalMeasurement) SetErrorMessage(msg string)  { r.Status.ErrorMessage = msg }
+
 func init() {
 	SchemeBuilder.Register(&PhysicalMeasurement{}, &PhysicalMeasurementList{})
 }

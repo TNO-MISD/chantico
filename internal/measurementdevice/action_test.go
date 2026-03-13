@@ -14,6 +14,7 @@ import (
 
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
+	sm "chantico/internal/statemachine"
 	vol "chantico/internal/volumes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,6 +78,7 @@ func TestInitializeFinalizer(t *testing.T) {
 	testCases := map[string]struct {
 		Case               *chantico.MeasurementDevice
 		ExpectedPatchType  ph.PatchType
+		ExpectedNil        bool
 		ExpectedFinalizers []string
 	}{
 		"empty finalizer": {
@@ -100,18 +102,19 @@ func TestInitializeFinalizer(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{chantico.SNMPUpdateFinalizer},
 				}},
-			ExpectedPatchType:  ph.PatchResourceNone,
+			ExpectedNil:        true,
 			ExpectedFinalizers: []string{chantico.SNMPUpdateFinalizer},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := InitializeFinalizer(tc.Case)
-			if result == nil && tc.ExpectedPatchType != ph.PatchResourceNone {
-				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
-			}
-			if result != nil && result.PatchType != tc.ExpectedPatchType {
+			result := sm.InitializeFinalizer(tc.Case)
+			if tc.ExpectedNil {
+				if result != nil {
+					t.Errorf("InitializeFinalizer(%#v) = %#v, want nil\n", tc, result)
+				}
+			} else if result == nil || result.PatchType != tc.ExpectedPatchType {
 				t.Errorf("InitializeFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
 			}
 			if !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
@@ -125,6 +128,7 @@ func TestUpdateFinalizer(t *testing.T) {
 	testCases := map[string]struct {
 		Case               *chantico.MeasurementDevice
 		ExpectedPatchType  ph.PatchType
+		ExpectedNil        bool
 		ExpectedFinalizers []string
 	}{
 		"removes SNMPUpdateFinalizer on deletion": {
@@ -143,22 +147,25 @@ func TestUpdateFinalizer(t *testing.T) {
 					Finalizers: []string{chantico.SNMPUpdateFinalizer},
 				},
 			},
-			ExpectedPatchType:  ph.PatchResourceNone,
+			ExpectedNil:        true,
 			ExpectedFinalizers: []string{chantico.SNMPUpdateFinalizer},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := UpdateFinalizer(tc.Case)
-			if result == nil && tc.ExpectedPatchType != ph.PatchResourceNone {
-				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
-			}
-			if result != nil && result.PatchType != tc.ExpectedPatchType {
-				t.Errorf("UpdateFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+			result := sm.RemoveFinalizer(tc.Case)
+			if tc.ExpectedNil {
+				if result != nil {
+					t.Errorf("RemoveFinalizer(%#v) = %#v, want nil\n", tc, result)
+				}
+			} else {
+				if result == nil || result.PatchType != tc.ExpectedPatchType {
+					t.Errorf("RemoveFinalizer(%#v) = %#v, want %#v\n", tc, result, tc.ExpectedPatchType)
+				}
 			}
 			if !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
-				t.Errorf("UpdateFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
+				t.Errorf("RemoveFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}
 		})
 	}
@@ -211,18 +218,18 @@ func TestRequeueWithDelay(t *testing.T) {
 }
 
 func TestActionMap(t *testing.T) {
-	for state, stateActions := range ActionMap {
+	for state, stateActions := range StateMachine.Actions {
 		for _, action := range stateActions {
 			t.Run(fmt.Sprintf("action %#v in state %#v", action.Type, state), func(t *testing.T) {
 				switch action.Type {
-				case ActionFunctionPure:
+				case sm.ActionFunctionPure:
 					if action.IO != nil {
 						t.Errorf("Pure action should not have IO: %#v", action)
 					}
 					if action.Pure == nil {
 						t.Errorf("Pure action must have Pure function: %#v", action)
 					}
-				case ActionFunctionIO:
+				case sm.ActionFunctionIO:
 					if action.IO == nil {
 						t.Errorf("IO action must have IO function: %#v", action)
 					}

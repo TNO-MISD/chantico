@@ -1,11 +1,10 @@
 module chantico
 
-go 1.25.7
+go 1.25.8
 
 require (
 	github.com/gosnmp/gosnmp v1.43.2
 	go.yaml.in/yaml/v2 v2.4.3
-	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2

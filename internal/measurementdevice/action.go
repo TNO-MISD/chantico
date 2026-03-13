@@ -6,13 +6,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 	"sync"
 	"time"
 
 	chantico "chantico/api/v1alpha1"
 	chanticok8s "chantico/internal/k8s"
 	pm "chantico/internal/postmortem"
+	sm "chantico/internal/statemachine"
 	vol "chantico/internal/volumes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,130 +24,54 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// In that context Pure means does not modify the kubernetes cluster resources
-type ActionFunctionType int
-
-const (
-	ActionFunctionIO = iota
-	ActionFunctionPure
-)
-
-type ActionResult struct {
-	*ctrl.Result
-	ph.PatchType
-}
-
-type ActionFunction struct {
-	Type ActionFunctionType
-	Pure func(
-		*chantico.MeasurementDevice,
-	) *ActionResult
-	IO func(
-		context.Context,
-		client.Client,
-		*chantico.MeasurementDevice,
-	) *ActionResult
-}
-
-var ActionMap = map[State][]ActionFunction{
-	StateInit: {
-		{Type: ActionFunctionPure, Pure: InitializeFinalizer},
+var StateMachine = sm.Machine[*chantico.MeasurementDevice]{
+	Actions: map[string][]sm.ActionFunction[*chantico.MeasurementDevice]{
+		StateInit: {
+			{Type: sm.ActionFunctionPure, Pure: sm.InitializeFinalizer[*chantico.MeasurementDevice]},
+		},
+		StateEntryPoint: {
+			{Type: sm.ActionFunctionPure, Pure: CreateSNMPGenerator},
+			{Type: sm.ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: sm.ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
+		},
+		StatePendingSNMPConfigUpdate: {
+			{Type: sm.ActionFunctionPure, Pure: RequeueWithDelay},
+		},
+		StateSucceededSNMPConfigUpdate: {
+			{Type: sm.ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: sm.ActionFunctionIO, IO: ReloadSNMPService},
+		},
+		StateDelete: {
+			{Type: sm.ActionFunctionPure, Pure: DeleteSNMPConfig},
+			{Type: sm.ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
+			{Type: sm.ActionFunctionIO, IO: ReloadSNMPService},
+			{Type: sm.ActionFunctionPure, Pure: sm.RemoveFinalizer[*chantico.MeasurementDevice]},
+		},
+		StatePendingSNMPReload: {},
+		StateFailed:            {},
+		StateEndPoint:          {},
 	},
-	StateEntryPoint: {
-		{Type: ActionFunctionPure, Pure: CreateSNMPGenerator},
-		{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		{Type: ActionFunctionIO, IO: ScheduleSNMPGeneratorJob},
-	},
-	StatePendingSNMPConfigUpdate: {
-		{Type: ActionFunctionPure, Pure: RequeueWithDelay},
-	},
-	StateSucceededSNMPConfigUpdate: {
-		{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		{Type: ActionFunctionIO, IO: ReloadSNMPService},
-	},
-	StateDelete: {
-		{Type: ActionFunctionPure, Pure: DeleteSNMPConfig},
-		{Type: ActionFunctionPure, Pure: CreateSNMPDeploymentConfig},
-		{Type: ActionFunctionIO, IO: ReloadSNMPService},
-		{Type: ActionFunctionPure, Pure: UpdateFinalizer},
-	},
-	StatePendingSNMPReload: {},
-	StateFailed:            {},
-	StateEndPoint:          {},
-}
-
-func ExecuteActions(
-	ctx context.Context,
-	kubernetesClient client.Client,
-	measurementDevice *chantico.MeasurementDevice,
-	patch *ph.PatchHelper,
-) *ActionResult {
-	var result *ActionResult = nil
-	stateActions := ActionMap[State(measurementDevice.Status.State)]
-	for i, actionFunction := range stateActions {
-		log.Printf("Start step %d, status: %s\n", i, measurementDevice.Status.State)
-		switch actionFunction.Type {
-		case ActionFunctionPure:
-			result = actionFunction.Pure(measurementDevice)
-		case ActionFunctionIO:
-			result = actionFunction.IO(ctx, kubernetesClient, measurementDevice)
-		}
-
-		if result != nil {
-			patch.Patch(result.PatchType)
-			if result.Result != nil || measurementDevice.Status.State == StateFailed {
-				break
-			}
-		}
-	}
-	return result
-}
-
-func InitializeFinalizer(
-	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
-	if slices.Contains(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer) {
-		return nil
-	}
-	measurementDevice.ObjectMeta.Finalizers = append(measurementDevice.ObjectMeta.Finalizers, chantico.SNMPUpdateFinalizer)
-	log.Printf("ADDED FINALIZER: %#v", measurementDevice.ObjectMeta.Finalizers)
-	return &ActionResult{PatchType: ph.PatchResource}
-}
-
-func UpdateFinalizer(
-	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
-	if measurementDevice.ObjectMeta.DeletionTimestamp.IsZero() {
-		return nil
-	}
-	accumulator := []string{}
-	for _, f := range measurementDevice.ObjectMeta.Finalizers {
-		if f != chantico.SNMPUpdateFinalizer {
-			accumulator = append(accumulator, f)
-		}
-	}
-	measurementDevice.ObjectMeta.Finalizers = accumulator
-	return &ActionResult{PatchType: ph.PatchResource}
+	FailState: StateFailed,
 }
 
 func UpdateModification(
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	measurementDevice.Status.UpdateTime = metav1.Time{Time: time.Now()}.Format(time.RFC3339)
 	measurementDevice.Status.UpdateGeneration = measurementDevice.ObjectMeta.Generation
-	return &ActionResult{PatchType: ph.PatchResourceStatus}
+	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
 func RequeueWithDelay(
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	// TODO: Figure out requeuing strategy, might need a redesign
-	return &ActionResult{Result: &ctrl.Result{RequeueAfter: chantico.RequeueDelay}}
+	return &sm.ActionResult{Result: &ctrl.Result{RequeueAfter: chantico.RequeueDelay}}
 }
 
 func CreateSNMPGenerator(
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	log.Printf("CHECK FINALIZER: %#v", measurementDevice.ObjectMeta.Finalizers)
 	generatorYaml, err := GenerateSNMPGeneratorConfig(*measurementDevice)
 	if err != nil {
@@ -176,12 +100,12 @@ func CreateSNMPGenerator(
 		measurementDevice.Status.ErrorMessage = fmt.Sprintf("Could not write to %s", configPath)
 		log.Printf("%s\n", measurementDevice.Status.ErrorMessage)
 	}
-	return &ActionResult{PatchType: ph.PatchResourceStatus}
+	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
 func DeleteSNMPConfig(
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("config_%s.yml", measurementDevice.ObjectMeta.GetUID())))
 	_ = os.Remove(filepath.Join(volumePath, snmpConfigDir, fmt.Sprintf("generator_%s.yml", measurementDevice.ObjectMeta.GetUID())))
@@ -190,7 +114,7 @@ func DeleteSNMPConfig(
 
 func CreateSNMPDeploymentConfig(
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	// Find files match the config_*.yml format
 	configFilesGlobPattern := filepath.Join(
 		os.Getenv(vol.ChanticoVolumeLocationEnv),
@@ -241,12 +165,12 @@ func ReloadSNMPService(
 	ctx context.Context,
 	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	snmpDeployment := &appsv1.Deployment{}
 	_ = kubernetesClient.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, snmpDeployment)
 
 	if !snmpReloadMutex.TryLock() {
-		return &ActionResult{Result: &ctrl.Result{RequeueAfter: chantico.RequeueDelay}}
+		return &sm.ActionResult{Result: &ctrl.Result{RequeueAfter: chantico.RequeueDelay}}
 	}
 
 	if measurementDevice.Status.State != StateDelete {
@@ -303,14 +227,14 @@ func ReloadSNMPService(
 			}
 		}
 	}()
-	return &ActionResult{PatchType: ph.PatchResourceStatus}
+	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
 func ScheduleSNMPGeneratorJob(
 	ctx context.Context,
 	kubernetesClient client.Client,
 	measurementDevice *chantico.MeasurementDevice,
-) *ActionResult {
+) *sm.ActionResult {
 	measurementDevice.Status.JobName = fmt.Sprintf("update-snmp-%s-%d", measurementDevice.Name, int(time.Now().Unix()))
 	measurementDevice.Status.State = StatePendingSNMPConfigUpdate
 	log.Printf("New Status: %s\n", measurementDevice.Status.State)
@@ -320,7 +244,7 @@ func ScheduleSNMPGeneratorJob(
 	if err != nil {
 		measurementDevice.Status.State = StateFailed
 		measurementDevice.Status.ErrorMessage = err.Error()
-		return &ActionResult{PatchType: ph.PatchResourceStatus}
+		return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 	}
-	return &ActionResult{PatchType: ph.PatchResourceStatus}
+	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }

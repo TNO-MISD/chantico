@@ -60,7 +60,7 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	md.UpdateState(measurementDevice, job)
 	patch.PatchStatus()
 
-	result := md.ExecuteActions(ctx, r.Client, measurementDevice, patch)
+	result := md.StateMachine.ExecuteActions(ctx, r.Client, measurementDevice, patch)
 	if result != nil && result.Result != nil {
 		return *result.Result, nil
 	}
