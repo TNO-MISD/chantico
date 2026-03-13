@@ -18,19 +18,17 @@ themeVariant = ['relearn-dark', 'relearn-light']
   autoCollapsed = false
 
 [params.author]
-   name = 'TNO'
+  name = 'TNO'
 
 [params.assets]
   disableFingerprinting = false
 
-[[menus.main]]
-  name = "How to(s)"
-  identifier = "howto"
-  url = "/#how-tos"
-  weight = 10
+[params.logo]
+  direction = 'column'
+  src = '/assets/logo/chantico.png'
 
 [[menus.main]]
   name = "API Reference"
   identifier = "api"
   pageRef = "/api/"
-  weight = 20
+  weight = 50

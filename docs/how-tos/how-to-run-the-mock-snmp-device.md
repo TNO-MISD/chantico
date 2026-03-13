@@ -53,7 +53,7 @@ snmpget -v2c -c public -M +./dev -m +TNO-PDU-MIB localhost:31161 tnoPduEnergyVal
 
 For an overview of the workflow that is run in the background in this demo please see the below image.
 
-![](puml/PhysicalMeasurement-and-MeasurementDevice-sequence.png)
+![](../puml/PhysicalMeasurement-and-MeasurementDevice-sequence.png)
 
 This section demonstrates a full flow: MIB upload → `MeasurementDevice` → `PhysicalMeasurement` → Prometheus targets.
 
