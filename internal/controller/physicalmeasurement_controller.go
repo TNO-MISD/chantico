@@ -38,6 +38,7 @@ type PhysicalMeasurementReconciler struct {
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=chantico.ci.tno.nl,resources=physicalmeasurements/finalizers,verbs=create;update;patch
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
 
 func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	physicalMeasurement := &chantico.PhysicalMeasurement{}

@@ -8,8 +8,6 @@ menus:
 
 ## Installation
 
-> Note this installation does not explain how to deploy the controller and custom resources yet
-
 To install chantico on a Kubernetes cluster:
 
 1. Create a volume with at least 3Gi of storage. Example for our current cluster set-up:
@@ -42,3 +40,17 @@ To install chantico on a Kubernetes cluster:
   ```bash
   helm install chantico config/initial-deployments/ --set persistentVolumeClaimName=<PVC-NAME> -n chantico --create-namespace
   ```
+
+## Chantico controller
+
+First, verify the current context which is used by `kubectl config current-context` and if needed change current context with ` kubectl config set-context <HESI-MISD-CONTEXT> --current`.
+
+```bash
+make install
+```
+
+```bash
+kubectl create namespace chantico-system
+kubectl create -n chantico-system secret docker-registry regcred --docker-server=ci.tno.nl --docker-username=<TOKEN-NAME> --docker-password=<ACCESS-TOKEN> --docker-email=<YOUR-EMAIL>
+make deploy
+```
