@@ -69,6 +69,9 @@ func RequeueWithDelay(
 	return &sm.ActionResult{Result: &ctrl.Result{RequeueAfter: chantico.RequeueDelay}}
 }
 
+/*
+Creates generator_[id].yml file, and empty config_[id].yml file.
+*/
 func CreateSNMPGenerator(
 	measurementDevice *chantico.MeasurementDevice,
 ) *sm.ActionResult {
@@ -112,6 +115,9 @@ func DeleteSNMPConfig(
 	return nil
 }
 
+/*
+Combines config_*.yml into snmp.yml
+*/
 func CreateSNMPDeploymentConfig(
 	measurementDevice *chantico.MeasurementDevice,
 ) *sm.ActionResult {
@@ -230,6 +236,9 @@ func ReloadSNMPService(
 	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
+/*
+Creates Job. The Job uses the MIBs and generator_[id].yml file to give actual content to the empty config_[id].yml.
+*/
 func ScheduleSNMPGeneratorJob(
 	ctx context.Context,
 	kubernetesClient client.Client,
