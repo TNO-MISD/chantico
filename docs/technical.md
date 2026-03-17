@@ -15,11 +15,6 @@ To make this happen Chantico is built as a [kubernetes controller](https://kuber
 The `chantico-filebrowser` is a kubernetes deployment living in the `chantico` namespace.
 It allows to add configuration files via drag and drop (e.g. uploading MIB files for the registration of a PDU).
 
-#### chantico-postgres
-
-The `chantico-postgres` is a kubernetes service living in the `chantico` namespace.
-It acts as long term storage database for chantico.
-
 #### chantico-snmp
 
 The `chantico-snmp` is a kubernetes deployment living in the `chantico` namespace.
