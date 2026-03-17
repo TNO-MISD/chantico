@@ -4,7 +4,7 @@ metadata:
   name: chantico-snmp-prometheus-volume-claim
   namespace: chantico
 spec:
-  storageClassName: local-path
+  storageClassName: csi-rbd
   accessModes:
     - ReadWriteOnce
   resources:

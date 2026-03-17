@@ -8,6 +8,8 @@ menus:
 
 ## Installation
 
+### Deployment of Chantico on k8s cluster
+
 To install chantico on a Kubernetes cluster:
 
 1. Create a volume with at least 3Gi of storage. Example for our current cluster set-up:
@@ -41,16 +43,28 @@ To install chantico on a Kubernetes cluster:
   helm install chantico config/initial-deployments/ --set persistentVolumeClaimName=<PVC-NAME> -n chantico --create-namespace
   ```
 
-## Chantico controller
+### Deployment of Chantico controller on k8s cluster
 
-First, verify the current context which is used by `kubectl config current-context` and if needed change current context with ` kubectl config set-context <HESI-MISD-CONTEXT> --current`.
+> If you want to run the Chantico controller locally (for testing purposes), please refer to [this guide](how-to-setup-the-local-development-environment.md).
+
+1. First, verify the current context which is used by `kubectl config current-context` and if needed change current context with ` kubectl config set-context <HESI-MISD-CONTEXT> --current`.
+
+    After confirming the current context links to the desired cluster, install the CRDs which are used by Chantico with the following command. This installs the CRDs of physical measurements, measurement devices and datacenter resources.
+
+    ```bash
+    make install
+    ```
+
+1. Now the Chantico controller can be deployed to the `chantico` namespace. This pulls the latest Chantico image from the Gitlab image container registry. If you would like to change to another version of Chantico please alter the `$IMG` variable in the `Makefile` accordingly.
+
+    ```bash
+    make deploy
+    ```
+
+1. Verify deployment
+
 
 ```bash
-make install
-```
-
-```bash
-kubectl create namespace chantico-system
-kubectl create -n chantico-system secret docker-registry regcred --docker-server=ci.tno.nl --docker-username=<TOKEN-NAME> --docker-password=<ACCESS-TOKEN> --docker-email=<YOUR-EMAIL>
-make deploy
+kubectl logs deployment/controller-manager -n chantico > /tmp/chantico.log
+grep -n -A5 -B5 "forbidden\|Failed to watch" /tmp/chantico.log
 ```

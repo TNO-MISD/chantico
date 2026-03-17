@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: chantico-prometheus
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: manager
+        env:
+        - name: CHANTICOVOLUMELOCATIONENV
+          value: /data
+        volumeMounts:
+        - name: chantico-volume-mount
+          mountPath: /data
+      volumes:
+      - name: chantico-volume-mount
+        persistentVolumeClaim:
+          claimName: chantico-snmp-prometheus-volume-claim
