@@ -308,7 +308,7 @@ release:
     - git config --global user.email "semantic-release@gitlab"
     - git config --global user.name "go-semantic-release"
     - ./semantic-release --dry -f $SEMREL_OPTIONS
-    - if ! -f .version-unreleased; then exit 0; fi
+    - if [ ! -f .version-unreleased ]; then exit 0; fi
     - VERSION=$(cat .version-unreleased)
     # Commit updated versions in files if changed
     - sed -E -i "s/^VERSION([ ?]*)=.*/VERSION\1= $VERSION/" Makefile
