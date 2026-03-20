@@ -1,3 +1,14 @@
+## 0.4.3 (2026-03-20)
+
+#### Bug Fixes
+
+* **ci:** Avoid redundant changelog entry and publish changelog to GitHub (0e6c069c)
+
+#### Chores
+
+* **release:** bump version to v0.4.2 [skip ci] (d4c50a47)
+
+
 ## 0.4.2 (2026-03-20)
 
 #### Bug Fixes
