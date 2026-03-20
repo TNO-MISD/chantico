@@ -1,3 +1,14 @@
+## 0.4.2 (2026-03-20)
+
+#### Bug Fixes
+
+* **release:** Correct GitLab URLs (aa17dcb7)
+
+#### Chores
+
+* **release:** bump version to v0.4.1 [skip ci] (8a32ed48)
+
+
 ## 0.4.1 (2026-03-20)
 
 #### Bug Fixes
