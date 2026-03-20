@@ -316,7 +316,7 @@ release:
     - |
       if ! git diff --quiet; then
         git add CHANGELOG.md Makefile config/initial-deployments/Chart.yaml
-        git commit -m "chore(release): bump version to v$VERSION [skip ci]"
+        git commit -m "bump version to v$VERSION [skip ci]"
         git push https://oauth2:${GITLAB_TOKEN}@ci.tno.nl/gitlab/${CI_PROJECT_PATH}.git HEAD:${CI_COMMIT_BRANCH}
       fi
     - ./semantic-release $SEMREL_OPTIONS
