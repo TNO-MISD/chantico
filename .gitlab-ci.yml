@@ -176,9 +176,8 @@ docs:
   stage: docs
   script:
     - go install go.abhg.dev/doc2go@v0.11.0
-    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
+    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter docs/hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
     - find docs/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
-    - cp -r assets docs/assets/
     - 'printf -- "---\ntitle: "Changelog"\nweight: 60\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/TNO-MISD/chantico/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/TNO-MISD/chantico/releases/tag/v\1)|" CHANGELOG.md)" > docs/changelog.md'
     - mkdir -p docs/assets/css/extended
     - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
@@ -199,20 +198,20 @@ hugo-preview:
   stage: pages
   artifacts:
     paths:
-      - hugo/public
+      - docs/hugo/public
     reports:
-      dotenv: hugo/preview.env
+      dotenv: docs/hugo/preview.env
   environment:
     name: review/$CI_COMMIT_REF_SLUG
     url: "$ARTIFACT_URL/index.html"
     on_stop: stop-review
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/hugo/public"
+    ARTIFACT_URL: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl/-/wp2/energy-domain-controller/chantico/-/jobs/$CI_JOB_ID/artifacts/docs/hugo/public"
   dependencies:
     - docs
   script:
-    - cd hugo && hugo --baseURL="$ARTIFACT_URL/" --config "hugo.toml,hugo.preview.toml"
+    - cd docs/hugo && hugo --baseURL="$ARTIFACT_URL/" --config "hugo.toml,hugo.preview.toml"
     - echo PREVIEW_URL="$ARTIFACT_URL/index.html" >> preview.env
     - echo "PREVIEW_JOB_ID=$CI_JOB_ID" >> preview.env
   rules:
@@ -226,7 +225,7 @@ docs-check-links:
   allow_failure: true # Make it a warning instead for now.
   variables:
     ARTIFACT_HOST: "https://ipcei-cis-misd-sustainable-datacenters.ci.tno.nl"
-    ARTIFACT_PATH: "-/wp2/energy-domain-controller/chantico/-/jobs/$PREVIEW_JOB_ID/artifacts/hugo/public"
+    ARTIFACT_PATH: "-/wp2/energy-domain-controller/chantico/-/jobs/$PREVIEW_JOB_ID/artifacts/docs/hugo/public"
   script:
     - |
       cat <<'EOF' > server.go
@@ -243,7 +242,7 @@ docs-check-links:
 
     # mirror GitLab artifact path
     - mkdir -p -- "$(dirname -- "$ARTIFACT_PATH")"
-    - mv hugo/public -- "$ARTIFACT_PATH"
+    - mv docs/hugo/public -- "$ARTIFACT_PATH"
 
     # start server
     - go run server.go &
@@ -270,13 +269,13 @@ pages:
   image: "hugomods/hugo:exts"
   stage: pages
   pages:
-    publish: hugo/public
+    publish: docs/hugo/public
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   dependencies:
     - docs
   script:
-    - cd hugo && hugo
+    - cd docs/hugo && hugo
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
