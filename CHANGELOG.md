@@ -1,3 +1,21 @@
+## 0.4.1 (2026-03-20)
+
+#### Bug Fixes
+
+* **ci:** Correct syntax for file existence check in release job (4f2d2345)
+* **ci:** Use goreleaser image for release job (f53e34ed)
+* **ci:** Improvements for release, with changelog and version bumps (ad49cf6b)
+
+#### Documentation
+
+* Update links, menus, and add more sections and add link checker to CI (ca0829e0)
+* Link architecture figure from use cases (9a0b86b1)
+
+#### Chores
+
+* update docs (3b12f9b8)
+
+
 ## 0.4.0 (2026-03-13)
 
 #### Feature
