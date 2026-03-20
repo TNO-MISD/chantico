@@ -17,10 +17,11 @@ Dockerfile.cross
 # Go workspace file
 go.work
 
-# Documentation
-# Hugo generated output
+# Documentation additions
 docs/api/
 docs/assets/
+docs/changelog.md
+# Hugo generated output
 hugo/public/
 hugo/resources/_gen/
 hugo/.hugo_build.lock
@@ -50,6 +51,7 @@ osv-scanner-report*.json
 # semantic releaser
 .semrel/
 semantic-release
+.version*
 # Added by goreleaser init:
 dist/
 
