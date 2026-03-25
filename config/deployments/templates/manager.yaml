@@ -1,0 +1,84 @@
+{{- if .Values.includeController }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chantico-controller-manager
+  namespace: chantico
+  labels:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chantico-controller-manager
+  namespace: chantico
+  labels:
+    control-plane: controller-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      containers:
+        - name: manager
+          image: ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /manager
+          args:
+            - --leader-elect
+            - --health-probe-bind-address=:8081
+          env:
+            - name: CHANTICOVOLUMELOCATIONENV
+              value: "/data"
+            - name: CHANTICOVOLUMECLAIMENV
+              value: "chantico-pvc"
+          ports:
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: chantico-volume
+              mountPath: /data
+      volumes:
+        - name: chantico-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistentVolumeClaimName }}
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: chantico-controller-manager
+      securityContext:
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 10
+{{- end }}

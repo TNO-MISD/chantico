@@ -21,11 +21,11 @@ kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisione
 pushd "$SCRIPT_DIR"
 
 # Create PVC
-kubectl apply -f k8s/chantico-pvc.yaml
+kubectl apply -f k8s/local-chantico-pvc.yaml
 
 # Install chantico dependencies (filebrowser, prometheus, snmp exporter)
 CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
-helm install chantico ../config/initial-deployments/ -n chantico
+helm install chantico ../config/deployments/ --set includeController=false -n chantico
 
 # Install CRDs using kustomize
 make -C "$SCRIPT_DIR/.." install

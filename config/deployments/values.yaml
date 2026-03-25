@@ -1,0 +1,5 @@
+persistentVolumeClaimName: chantico-snmp-prometheus-volume-claim
+prometheusRetention: 5h
+snmpExporterAddress: chantico-snmp:9116
+imagePullSecretName: regcred
+includeController: true
