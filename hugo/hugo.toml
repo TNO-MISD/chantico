@@ -26,9 +26,3 @@ themeVariant = ['relearn-dark', 'relearn-light']
 [params.logo]
   direction = 'column'
   src = '/assets/logo/chantico.png'
-
-[[menus.main]]
-  name = "API Reference"
-  identifier = "api"
-  pageRef = "/api/"
-  weight = 50
