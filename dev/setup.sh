@@ -23,12 +23,12 @@ pushd "$SCRIPT_DIR"
 # Create PVC
 kubectl apply -f k8s/local-chantico-pvc.yaml
 
-# Install chantico dependencies (filebrowser, prometheus, snmp exporter)
-CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
-helm install chantico ../config/deployments/ --set includeController=false -n chantico
-
 # Install CRDs using kustomize
 make -C "$SCRIPT_DIR/.." install
+
+# Install chantico dependencies (filebrowser, prometheus, snmp exporter)
+CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
+helm install chantico ../config/deployment/ --set controller.include=false -n chantico
 
 # Make snmp-mock docker image
 SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"

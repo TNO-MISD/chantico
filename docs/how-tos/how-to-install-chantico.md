@@ -8,63 +8,52 @@ menus:
 
 ## Installation
 
-### Deployment of Chantico on k8s cluster
+### Getting the Chantico image
 
-To install chantico on a Kubernetes cluster:
-
-1. Create a volume with at least 3Gi of storage. Example for our current cluster set-up:
-    ```yaml
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: <PVC-NAME>
-      namespace: chantico
-    spec:
-      storageClassName: csi-rbd
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 3Gi
-      volumeMode: Filesystem
-    ```
-    Change the `storageClassName` if you have a different preference on your cluster. You may also need `accessModes` `ReadWriteMany` if you have a multi-node Ceph setup, for example. Then `kubectl apply -f pvc.yaml` or wherever you save this file.
-
-1. Create registry credentials for pulling images from a private Docker registry:
-
-    1. Go to GitLab -> Chantico project -> Settings -> Access tokens -> Add new token, with a descriptive/easy-to-copy "Token name" and "Scopes" have at least `read_registry` checked.
-    1. Copy the access token, then:
-      ```bash
-      kubectl create -n chantico secret docker-registry regcred --docker-server=ci.tno.nl --docker-username=<TOKEN-NAME> --docker-password=<ACCESS-TOKEN> --docker-email=<YOUR-EMAIL>
-      ```
-
-1. Install snmp and prometheus via `helm` (change `chantico` if you want a different release name and/or namespace):
-  ```bash
-  helm install chantico config/initial-deployments/ --set persistentVolumeClaimName=<PVC-NAME> -n chantico --create-namespace
-  ```
-
-### Deployment of Chantico controller on k8s cluster
-
-> If you want to run the Chantico controller locally (for testing purposes), please refer to [this guide](how-to-setup-the-local-development-environment.md).
-
-1. First, verify the current context which is used by `kubectl config current-context` and if needed change current context with ` kubectl config set-context <HESI-MISD-CONTEXT> --current`.
-
-    After confirming the current context links to the desired cluster, install the CRDs which are used by Chantico with the following command. This installs the CRDs of physical measurements, measurement devices and datacenter resources.
-
-    ```bash
-    make install
-    ```
-
-1. Now the Chantico controller can be deployed to the `chantico` namespace. This pulls the latest Chantico image from the Gitlab image container registry. If you would like to change to another version of Chantico please alter the `$IMG` variable in the `Makefile` accordingly.
-
-    ```bash
-    make deploy
-    ```
-
-1. Verify deployment
-
+#### Option A: Build it yourself
 
 ```bash
-kubectl logs deployment/controller-manager -n chantico > /tmp/chantico.log
-grep -n -A5 -B5 "forbidden\|Failed to watch" /tmp/chantico.log
+make docker-build IMG=<your-registry>/chantico:<tag>
+```
+
+#### Option B: Pull from GitLab
+
+> The Chantico repository on GitHub does not host images yet in the container registry there. This is still work in progress. The following steps only work if you have access to the GitLab repository of Chantico. 
+
+The GitLab repository of Chantico hosts several relevant images, including the one of the Chantico controller itself. First, create registry credentials for pulling images from a private Docker registry:
+
+1. Go to GitLab -> Chantico project -> Settings -> Access tokens -> Add new token, with a descriptive/easy-to-copy "Token name" and "Scopes" have at least `read_registry` checked.
+1. Copy the access token, then:
+  
+  ```bash
+  kubectl create namespace chantico
+  kubectl create -n chantico secret docker-registry regcred \
+    --docker-server=ci.tno.nl \
+    --docker-username=<TOKEN-NAME> \
+    --docker-password=<ACCESS-TOKEN> \
+    --docker-email=<YOUR-EMAIL>
+  ```
+
+### Deployment of Chantico on k8s cluster
+
+1. Install CRDs
+
+The CRDs used by Chantico are typically already in place under `config/deployment/crd`. If you want to (re)install them there, do so with the following make command:
+```
+make install
+```
+
+2. Deploy Chantico and dependencies with Helm
+
+```bash
+# With selfmade Chantico image:
+helm install chantico config/deployment/ \
+  --set controller.image=<your-registry>/chantico:<tag> \
+  -n chantico --create-namespace
+
+# Or with Chantico image from GitLab:
+# Latest image of Chantico
+helm install chantico config/deployment/ \
+  --set controller.image=ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico:latest \
+  -n chantico --create-namespace
 ```
