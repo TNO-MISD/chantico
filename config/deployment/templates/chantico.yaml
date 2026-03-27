@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: chantico-controller-manager
-  namespace: chantico
+  namespace: {{ .Release.Namespace }}
   labels:
     control-plane: controller-manager
 ---

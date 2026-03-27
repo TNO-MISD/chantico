@@ -10,13 +10,15 @@ menus:
 
 ### Getting the Chantico image
 
-#### Option A: Build it yourself
+#### Option A: Build and host image yourself
 
 ```bash
 make docker-build IMG=<your-registry>/chantico:<tag>
 ```
 
-#### Option B: Pull from GitLab
+Then host this image on a container registry of choice and make sure to synchronize credentials as listed in option (B).
+
+#### Option B: Pull from Chantico GitLab repository
 
 > The Chantico repository on GitHub does not host images yet in the container registry there. This is still work in progress. The following steps only work if you have access to the GitLab repository of Chantico. 
 
@@ -46,14 +48,31 @@ make install
 2. Deploy Chantico and dependencies with Helm
 
 ```bash
-# With selfmade Chantico image:
-helm install chantico config/deployment/ \
-  --set controller.image=<your-registry>/chantico:<tag> \
-  -n chantico --create-namespace
-
-# Or with Chantico image from GitLab:
-# Latest image of Chantico
+# Or with Chantico image hosted somewhere else:
 helm install chantico config/deployment/ \
   --set controller.image=ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico:latest \
   -n chantico --create-namespace
+```
+
+### Remove deployed Chantico on K8s cluster
+
+1. Uninstall the Helm release:
+
+```bash
+helm uninstall chantico -n chantico
+```
+
+This removes all namespaced resources (Deployments, Services, ServiceAccount, Roles, RoleBindings, PVC) as well as the cluster-scoped resources (ClusterRole, ClusterRoleBinding) managed by the release.
+
+2. Uninstall the CRDs:
+
+Removing CRDs will delete all custom resources (PhysicalMeasurements, MeasurementDevices, DataCenterResources) from the cluster.
+```bash
+make uninstall
+```
+
+3. Optionally, delete the namespace:
+
+```bash
+kubectl delete namespace chantico
 ```
