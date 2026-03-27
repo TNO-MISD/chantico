@@ -1,7 +1,7 @@
 # Chantico - energy controller
 
 
-<img src="assets/logo/chantico.png" width="150" height="150">
+<img src="docs/assets/logo/chantico.png" width="150" height="150">
 
 
 ## Description
