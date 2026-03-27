@@ -47,6 +47,8 @@ make install
 
 2. Deploy Chantico and dependencies with Helm
 
+> This project makes use of Helm templating. If desired default parameters can be changed in `config/deployment/values.yaml`. 
+
 ```bash
 # Or with Chantico image hosted somewhere else:
 helm install chantico config/deployment/ \
