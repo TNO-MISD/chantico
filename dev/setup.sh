@@ -20,15 +20,12 @@ kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisione
 
 pushd "$SCRIPT_DIR"
 
-# Create PVC
-kubectl apply -f k8s/local-chantico-pvc.yaml
-
 # Install CRDs using kustomize
 make -C "$SCRIPT_DIR/.." install
 
 # Install chantico dependencies (filebrowser, prometheus, snmp exporter)
 CI_REGISTRY="ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico"
-helm install chantico ../config/deployment/ --set controller.include=false -n chantico
+helm install chantico ../config/deployment/ --set controller.include=false --set pvc.storageClassName="local-path" -n chantico
 
 # Make snmp-mock docker image
 SNMP_MOCK_IMAGE="$CI_REGISTRY/chantico-snmp-mock:$SNMP_MOCK_TAG"
