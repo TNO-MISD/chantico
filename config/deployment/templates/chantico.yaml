@@ -26,6 +26,10 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-container: manager
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: manager
           image: {{ .Values.controller.image }}
@@ -68,6 +72,8 @@ spec:
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - name: chantico-volume
               mountPath: /data
@@ -78,7 +84,5 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.imagePullSecretName }}
       serviceAccountName: chantico-controller-manager
-      securityContext:
-        runAsNonRoot: true
       terminationGracePeriodSeconds: 10
 {{- end }}

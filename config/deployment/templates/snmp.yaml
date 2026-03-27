@@ -16,7 +16,11 @@ spec:
         app: chantico-snmp
     spec:
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - image: ricardbejarano/snmp_exporter:0.26.0
         name: snmp
@@ -26,9 +30,25 @@ spec:
           subPath: "snmp/yml/snmp.yml"
         ports:
         - containerPort: 9116
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       initContainers:
       - image: busybox
         name: structure-initialization
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         command: ["/bin/sh"]
         args:
           - -c

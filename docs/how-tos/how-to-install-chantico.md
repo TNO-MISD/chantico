@@ -40,7 +40,7 @@ The GitLab repository of Chantico hosts several relevant images, including the o
 
 1. Install CRDs
 
-The CRDs used by Chantico are typically already in place under `config/deployment/crd`. If you want to (re)install them there, do so with the following make command:
+Install the CRDs within `config/deployment/crd` to the cluster:
 ```
 make install
 ```

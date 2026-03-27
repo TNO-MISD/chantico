@@ -29,9 +29,25 @@ spec:
           subPath: "prometheus"
         ports:
         - containerPort: 9090
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       initContainers:
       - image: busybox
         name: prometheus-initialization
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         command: ["/bin/sh"]
         args:
           - -c
