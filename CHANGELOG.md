@@ -1,3 +1,19 @@
+## 0.4.4 (2026-03-30)
+
+#### Bug Fixes
+
+* adds Chantico gopher back to README.md (ec5b8a34)
+
+#### Documentation
+
+* Correct relative content directory (d732d12b)
+
+#### Chores
+
+* **cleanup:** Initial restructure of hugo and docs (9eac3f58)
+* update packages. (8951ff83)
+
+
 ## 0.4.3 (2026-03-20)
 
 #### Bug Fixes
