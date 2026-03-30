@@ -196,7 +196,7 @@ func ReloadSNMPService(
 
 		snmpDeployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
 		if err = kubernetesClient.Update(restartCtx, snmpDeployment); err != nil {
-			log.Printf("Failed to update")
+			log.Fatalf("Failed to update %v", err)
 			measurementDevice.Status.State = StateFailed
 			measurementDevice.Status.ErrorMessage = err.Error()
 		}
