@@ -109,7 +109,7 @@ func TestInitializeFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := sm.InitializeFinalizer(tc.Case)
+			result := sm.InitializeFinalizer(t.Context(), tc.Case)
 			if tc.ExpectedNil {
 				if result != nil {
 					t.Errorf("InitializeFinalizer(%#v) = %#v, want nil\n", tc, result)
@@ -154,7 +154,7 @@ func TestUpdateFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := sm.RemoveFinalizer(tc.Case)
+			result := sm.RemoveFinalizer(t.Context(), tc.Case)
 			if tc.ExpectedNil {
 				if result != nil {
 					t.Errorf("RemoveFinalizer(%#v) = %#v, want nil\n", tc, result)
@@ -209,7 +209,7 @@ func TestRequeueWithDelay(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := RequeueWithDelay(tc.Case)
+			result := RequeueWithDelay(t.Context(), tc.Case)
 			if result.RequeueAfter != tc.Expected {
 				t.Errorf("RequeueWithDelay() = %#v, want %#v", result.RequeueAfter, tc.Expected)
 			}
@@ -265,7 +265,7 @@ func TestCreateSNMPGenerator(t *testing.T) {
 			}
 
 			// Run the function
-			_ = CreateSNMPGenerator(tc.Case)
+			_ = CreateSNMPGenerator(t.Context(), tc.Case)
 
 			// Check that the file exist
 			yamlFile := fmt.Sprintf("%s/generator_%s.yml", tmpSNMPConfigDir, string(tc.Case.GetUID()))
@@ -328,7 +328,7 @@ func TestDeleteSNMPConfig(t *testing.T) {
 			}
 
 			// Call function
-			_ = DeleteSNMPConfig(tc.MeasurementDevice)
+			_ = DeleteSNMPConfig(t.Context(), tc.MeasurementDevice)
 
 			// Check that the file exist
 			for _, afterDeletionFile := range tc.AfterDeletionFiles {
@@ -421,7 +421,7 @@ modules:
 			}
 
 			// Create SNMP deployment config
-			_ = CreateSNMPDeploymentConfig(nil)
+			_ = CreateSNMPDeploymentConfig(t.Context(), nil)
 
 			snmpMergedConfigPath := filepath.Join(tmpSNMPDir, snmpYmlDir, "snmp.yml")
 

@@ -73,7 +73,7 @@ func TestInitializeFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := sm.InitializeFinalizer(tc.Case)
+			result := sm.InitializeFinalizer(t.Context(), tc.Case)
 			if tc.ExpectedNil {
 				if result != nil {
 					t.Errorf("InitializeFinalizer(%#v) = %#v, want nil\n", tc, result)
@@ -108,7 +108,7 @@ func TestUpdateFinalizer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := sm.RemoveFinalizer(tc.Case)
+			result := sm.RemoveFinalizer(t.Context(), tc.Case)
 			if result.PatchType != tc.ExpectedPatchType || !equalStringSlices(tc.ExpectedFinalizers, tc.Case.ObjectMeta.Finalizers) {
 				t.Errorf("RemoveFinalizer(%#v) = %#v -> %#v, want %#v -> %#v\n", tc.Case, result, tc.Case.ObjectMeta.Finalizers, tc.ExpectedPatchType, tc.ExpectedFinalizers)
 			}

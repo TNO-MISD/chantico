@@ -67,7 +67,7 @@ func TestTargetFileAddition(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tmpDir := testCreateTmpDirectories(t)
 
-			_ = WriteTargetFile(tc.physicalMeasurement)
+			_ = WriteTargetFile(t.Context(), tc.physicalMeasurement)
 
 			for _, expectedFile := range tc.expectedFiles {
 				absPath := filepath.Join(tmpDir, expectedFile)
@@ -134,7 +134,7 @@ func TestTargetFileDeletion(t *testing.T) {
 				os.WriteFile(filepath.Join(tmpDir, f), []byte("[]"), 0755)
 			}
 
-			_ = DeleteTargetFile(tc.physicalMeasurement)
+			_ = DeleteTargetFile(t.Context(), tc.physicalMeasurement)
 
 			for _, afterFile := range tc.afterFiles {
 				absPath := filepath.Join(tmpDir, afterFile)
@@ -230,7 +230,7 @@ func TestMultipleTargetFiles(t *testing.T) {
 			tmpDir := testCreateTmpDirectories(t)
 
 			for _, pm := range tc.physicalMeasurements {
-				WriteTargetFile(pm)
+				WriteTargetFile(t.Context(), pm)
 			}
 
 			targetsDir := filepath.Join(tmpDir, "prometheus/targets")
