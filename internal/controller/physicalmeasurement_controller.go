@@ -18,11 +18,12 @@ package controller
 
 import (
 	"context"
-	"log"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
@@ -46,7 +47,6 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	log.Printf("Updating state of physical measurement %s\n", physicalMeasurement.Name)
 	patch := ph.Initialize(ctx, r.Client, physicalMeasurement)
 	pm.UpdateState(physicalMeasurement)
 	patch.PatchStatus()
@@ -63,5 +63,12 @@ func (r *PhysicalMeasurementReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *PhysicalMeasurementReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.PhysicalMeasurement{}).
+		WithLogConstructor(func(req *reconcile.Request) logr.Logger {
+			log := mgr.GetLogger().WithName("PhysicalMeasurementController")
+			if req != nil {
+				log = log.WithValues("resource", req.Name)
+			}
+			return log
+		}).
 		Complete(r)
 }

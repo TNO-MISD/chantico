@@ -18,13 +18,14 @@ package statemachine
 
 import (
 	"context"
-	"log"
 	"slices"
+	"strings"
 
 	ph "chantico/internal/patch"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Reconcilable is the interface that CRD types must satisfy to be used with
@@ -59,7 +60,7 @@ type ActionResult struct {
 // Either Pure or IO must be set (not both), matching the Type field.
 type ActionFunction[T Reconcilable] struct {
 	Type ActionFunctionType
-	Pure func(T) *ActionResult
+	Pure func(context.Context, T) *ActionResult
 	IO   func(context.Context, client.Client, T) *ActionResult
 }
 
@@ -83,11 +84,10 @@ func (m *Machine[T]) ExecuteActions(
 ) *ActionResult {
 	var result *ActionResult = nil
 	actionFunctions := m.Actions[resource.GetState()]
-	for i, actionFunction := range actionFunctions {
-		log.Printf("Start step %d, status: %s\n", i, resource.GetState())
+	for _, actionFunction := range actionFunctions {
 		switch actionFunction.Type {
 		case ActionFunctionPure:
-			result = actionFunction.Pure(resource)
+			result = actionFunction.Pure(ctx, resource)
 		case ActionFunctionIO:
 			result = actionFunction.IO(ctx, kubernetesClient, resource)
 		}
@@ -104,18 +104,20 @@ func (m *Machine[T]) ExecuteActions(
 
 // InitializeFinalizer is a generic Pure action that adds the resource's
 // finalizer if it is not already present.
-func InitializeFinalizer[T Reconcilable](resource T) *ActionResult {
+func InitializeFinalizer[T Reconcilable](ctx context.Context, resource T) *ActionResult {
+	l := log.FromContext(ctx)
+
 	if slices.Contains(resource.GetFinalizers(), resource.GetFinalizerName()) {
 		return nil
 	}
 	resource.SetFinalizers(append(resource.GetFinalizers(), resource.GetFinalizerName()))
-	log.Printf("Added finalizer: %#v", resource.GetFinalizers())
+	l.Info("Added finalizer", "finalizers", strings.Join(resource.GetFinalizers(), ", "))
 	return &ActionResult{PatchType: ph.PatchResource}
 }
 
 // RemoveFinalizer is a generic Pure action that removes the resource's
 // finalizer when the resource is being deleted.
-func RemoveFinalizer[T Reconcilable](resource T) *ActionResult {
+func RemoveFinalizer[T Reconcilable](ctx context.Context, resource T) *ActionResult {
 	if resource.GetDeletionTimestamp().IsZero() {
 		return nil
 	}
