@@ -41,7 +41,7 @@ metadata:
   namespace: chantico
 spec:
   type: pdu
-  parent:
+  parents:
     - datacenterresource-misd-gbm-01
   physicalMeasurements:
     - physicalMeasurement-pdu2-out

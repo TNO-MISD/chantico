@@ -85,7 +85,7 @@ func (r *DataCenterResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 		references := &chantico.DataCenterResourceList{}
 		_ = r.List(ctx, references, append(listOptions, client.MatchingFields{"status.involvedResource": dataCenterResource.Name})...)
 		children := &chantico.DataCenterResourceList{}
-		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parent": dataCenterResource.Name})...)
+		_ = r.List(ctx, children, append(listOptions, client.MatchingFields{"spec.parents": dataCenterResource.Name})...)
 		if dataCenterResource.Status.InvolvedResource != "" {
 			involved := &chantico.DataCenterResource{}
 			_ = r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: dataCenterResource.Status.InvolvedResource}, involved)
@@ -153,14 +153,14 @@ func (r *DataCenterResourceReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	err := mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&chantico.DataCenterResource{},
-		"spec.parent",
+		"spec.parents",
 		func(rawObj client.Object) []string {
 			dcr := rawObj.(*chantico.DataCenterResource)
 
-			if dcr.Spec.Parent == nil {
+			if dcr.Spec.Parents == nil {
 				return nil
 			}
-			return dcr.Spec.Parent
+			return dcr.Spec.ParentNames()
 		},
 	)
 	if err != nil {

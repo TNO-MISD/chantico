@@ -26,8 +26,11 @@ var StateMachine = sm.Machine[*chantico.DataCenterResource]{
 		StateInit: {
 			{Type: sm.ActionFunctionPure, Pure: sm.InitializeFinalizer[*chantico.DataCenterResource]},
 		},
-		StateEntry: {},
+		StateEntry: {
+			{Type: sm.ActionFunctionPure, Pure: WriteRuleFile},
+		},
 		StateDelete: {
+			{Type: sm.ActionFunctionPure, Pure: DeleteRuleFile},
 			{Type: sm.ActionFunctionPure, Pure: sm.RemoveFinalizer[*chantico.DataCenterResource]},
 		},
 
