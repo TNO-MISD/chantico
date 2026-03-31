@@ -25,6 +25,10 @@ builds:
       - windows
       - darwin
 
+changelog:
+  # prefer go-semantic-release changelog
+  disable: true
+
 archives:
   - formats: [tar.gz]
     # this name template makes the OS and Arch compatible with the results of `uname`.
