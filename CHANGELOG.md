@@ -1,3 +1,14 @@
+## 0.5.0 (2026-03-31)
+
+#### Feature
+
+* Build chantico recording rules logic into datacenterresource (45eb6acb)
+
+#### Bug Fixes
+
+* Context needed in action function of datacenterresource (9a4bcc3e)
+
+
 ## 0.4.5 (2026-03-31)
 
 #### Bug Fixes
