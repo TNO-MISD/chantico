@@ -15,6 +15,8 @@ stages:
     BUILDAH_ISOLATION: chroot
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | buildah login --username "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    # Login to Docker Hub for per-user rate limits
+    - echo "$DOCKER_PASSWORD" | buildah login --username "$DOCKER_USER" --password-stdin docker.io
   rules:
     - if: $CI_REGISTRY
     - if: $CI_REGISTRY_IMAGE
@@ -286,7 +288,7 @@ build-release-test:
     GIT_DEPTH: 0
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-    - ./semantic-release --update ./config/initial-deployments/Chart.yaml --allow-initial-development-versions --dry --no-ci || true
+    - ./semantic-release --update ./config/deployment/Chart.yaml --allow-initial-development-versions --dry --no-ci || true
     - goreleaser build --config .goreleaser.gitlab.yaml --clean --skip validate
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -311,10 +313,10 @@ release:
     - VERSION=$(cat .version-unreleased)
     # Commit updated versions in files if changed
     - sed -E -i "s/^VERSION([ ?]*)=.*/VERSION\1= $VERSION/" Makefile
-    - 'sed -i "s/^version:.*/version: $VERSION/" config/initial-deployments/Chart.yaml'
+    - 'sed -i "s/^version:.*/version: $VERSION/" config/deployment/Chart.yaml'
     - |
       if ! git diff --quiet; then
-        git add CHANGELOG.md Makefile config/initial-deployments/Chart.yaml
+        git add CHANGELOG.md Makefile config/deployment/Chart.yaml
         git commit -m "bump version to v$VERSION [skip ci]"
         git push https://oauth2:${GITLAB_TOKEN}@ci.tno.nl/gitlab/${CI_PROJECT_PATH}.git HEAD:${CI_COMMIT_BRANCH}
       fi
@@ -333,16 +335,25 @@ release:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
-release-dist:
+.release-dist:
   image: "goreleaser/goreleaser:v2.14.3"
   stage: release
   allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
   script:
-    - goreleaser release --config .goreleaser.gitlab.yaml --clean
-    - goreleaser release --config .goreleaser.github.yaml --clean
+    - goreleaser release --config $GORELEASER_CONFIG --clean
   needs:
     - go-test
   rules:
     - if: $CI_COMMIT_TAG
+
+release-dist-gitlab:
+  extends: .release-dist
+  variables:
+    GORELEASER_CONFIG: .goreleaser.gitlab.yaml
+
+release-dist-github:
+  extends: .release-dist
+  variables:
+    GORELEASER_CONFIG: .goreleaser.github.yaml
