@@ -1,3 +1,30 @@
+## 0.4.5 (2026-03-31)
+
+#### Bug Fixes
+
+* unchange snmp root access. (5025721b)
+* update rbac. (261709d0)
+* add warning in docs. (7cc4898b)
+
+#### Documentation
+
+* add additional text in installment guide. (84cd8908)
+* add getting started section install page. (41f142ed)
+
+#### Chores
+
+* remove dev pvc. (2d8ff776)
+* packages upgrade. (e4619073)
+* change filebrowser database path. (215263d3)
+* remove hardcoded namespace naming. (c2b4832b)
+* remove (part of) unused kustomize code. (ec73189e)
+* add permissions for chantico in cluster. (56677396)
+
+#### CI
+
+* Goreleaser build separation, fix Chart.yaml path, inject Docker Hub token (44b6f7ed)
+
+
 ## 0.4.4 (2026-03-30)
 
 #### Bug Fixes
