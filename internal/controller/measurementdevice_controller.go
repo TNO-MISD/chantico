@@ -18,18 +18,19 @@ package controller
 
 import (
 	"context"
-	"log"
 
 	// "log"
 
 	chantico "chantico/api/v1alpha1"
 	md "chantico/internal/measurementdevice"
 
+	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ph "chantico/internal/patch"
 )
@@ -57,7 +58,6 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	job := &batchv1.Job{}
 	_ = r.Get(ctx, client.ObjectKey{Name: measurementDevice.Status.JobName, Namespace: "chantico"}, job)
 
-	log.Printf("Updating state of measurement device %s\n", measurementDevice.Name)
 	patch := ph.Initialize(ctx, r.Client, measurementDevice)
 	md.UpdateState(measurementDevice, job)
 	patch.PatchStatus()
@@ -72,5 +72,12 @@ func (r *MeasurementDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *MeasurementDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.MeasurementDevice{}).
+		WithLogConstructor(func(req *reconcile.Request) logr.Logger {
+			log := mgr.GetLogger().WithName("MeasurementDeviceController")
+			if req != nil {
+				log = log.WithValues("resource", req.Name)
+			}
+			return log
+		}).
 		Complete(r)
 }

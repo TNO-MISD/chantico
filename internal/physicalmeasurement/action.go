@@ -4,11 +4,12 @@ import (
 	chantico "chantico/api/v1alpha1"
 	ph "chantico/internal/patch"
 	sm "chantico/internal/statemachine"
-	"log"
+	vol "chantico/internal/volumes"
+	"context"
 	"os"
 	"path/filepath"
 
-	vol "chantico/internal/volumes"
+	log "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const prometheusTargetsDir = "prometheus/targets"
@@ -36,8 +37,11 @@ var StateMachine = sm.Machine[*chantico.PhysicalMeasurement]{
 // The file is written to prometheus/targets/<name>.json.
 // Prometheus automatically detects changes to these files and updates its scrape targets.
 func WriteTargetFile(
+	ctx context.Context,
 	physicalMeasurement *chantico.PhysicalMeasurement,
 ) *sm.ActionResult {
+	l := log.FromContext(ctx)
+
 	target := CreateFileSDTarget(physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.Ip)
 
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
@@ -45,7 +49,7 @@ func WriteTargetFile(
 	if err := os.MkdirAll(targetsDir, 0777); err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("Failed to create targets directory: %v", err)
+		l.Error(err, "Failed to create targets directory")
 		return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
@@ -53,28 +57,33 @@ func WriteTargetFile(
 	if err := WriteFileSDTargets(targetPath, []FileSDTarget{target}); err != nil {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("Failed to write target file: %v", err)
+		l.Error(err, "Failed to write target file")
 		return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
-	log.Printf("Wrote file_sd target file %s for device %s\n", targetPath, physicalMeasurement.Spec.MeasurementDevice)
+	l.Info("Wrote file_sd target file", "path", targetPath, "device", physicalMeasurement.Spec.MeasurementDevice)
 	physicalMeasurement.Status.State = StateRunning
+	physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
 	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 }
 
 // DeleteTargetFile removes the file_sd_configs target file for this PhysicalMeasurement.
 // Prometheus will automatically stop scraping the removed targets.
-func DeleteTargetFile(physicalMeasurement *chantico.PhysicalMeasurement) *sm.ActionResult {
+func DeleteTargetFile(
+	ctx context.Context,
+	physicalMeasurement *chantico.PhysicalMeasurement,
+) *sm.ActionResult {
+	l := log.FromContext(ctx)
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	targetPath := filepath.Join(volumePath, prometheusTargetsDir, physicalMeasurement.Name+".json")
 
-	log.Printf("Deleting target file for %s\n", physicalMeasurement.Name)
+	l.Info("Deleting target file")
 
 	err := os.Remove(targetPath)
 	if err != nil && !os.IsNotExist(err) {
 		physicalMeasurement.Status.State = StateFailed
 		physicalMeasurement.Status.ErrorMessage = err.Error()
-		log.Printf("Failed to delete target file: %v", err)
+		l.Error(err, "Failed to delete target file")
 		return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
