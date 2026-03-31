@@ -49,6 +49,8 @@ make install
 
 > This project makes use of Helm templating. If desired default parameters can be changed in `config/deployment/values.yaml`. 
 
+The following command retrieves the latest image of Chantico from the Gitlab container registery and installs the helm deployment. If wanted, another version of Chantico can also be used, such as one of a branch or tag release.
+
 ```bash
 # Or with Chantico image hosted somewhere else:
 helm install chantico config/deployment/ \
