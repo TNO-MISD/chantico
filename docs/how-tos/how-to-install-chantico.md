@@ -56,22 +56,33 @@ helm install chantico config/deployment/ \
   -n chantico --create-namespace
 ```
 
+### Getting started with the deployed Chantico
+
+After Chantico is succesfully deployed on your cluster, you can start making use of it for measuring your datacenter hardware of interest. Currently this can only be done with manual configuration, until a more automated approach has been implemented. Chantico inherently configures SNMP walks for endpoints by means of `MIB` and `.yaml` files. The steps of configurating this typically follows the following how-to guides:
+
+1. [How to register an SNMP device type](how-to-register-an-snmp-device-type.md) - Upload the MIB files to use and make `.yaml` files for measurement devices. Also see the example at `config/samples/chantico_v1alpha1_measurementdevice.yaml`.
+1. [How to register a physical snmp device](how-to-register-a-physical-snmp-device.md) - Define IP address(es) of interest in physical measurement `.yaml` file. Example at `config/samples/chantico_v1alpha1_physicalmeasurement.yaml`.
+1. With the MIB files, measurement devices and physical measurements in place, the targets should be accessable and scrapable in Prometheus. Perform port forwarding on the Prometheus deployment to validate the result of this setup. If done successful one should see a timeseries of the requested value(s).
+1. [How to register data center resources](how-to-register-data-center-resources.md) When desired, encapsulate data center structure usin data center resources.
+
 ### Remove deployed Chantico on K8s cluster
 
-1. Uninstall the Helm release:
+1. Remove custom resources and uninstall the CRDs:
 
+Start by uninstalling CRDs, this will delete all custom resource definitions (PhysicalMeasurements, MeasurementDevices, DataCenterResources) and remove any instances from the cluster.
+```bash
+make uninstall
+```
+
+2. Uninstall the Helm release:
+
+Upon completion of the uninstallment of the CRDs, Chantico can then be removed from the cluster using helm uninstall.
 ```bash
 helm uninstall chantico -n chantico
 ```
 
 This removes all namespaced resources (Deployments, Services, ServiceAccount, Roles, RoleBindings, PVC) as well as the cluster-scoped resources (ClusterRole, ClusterRoleBinding) managed by the release.
 
-2. Uninstall the CRDs:
-
-Removing CRDs will delete all custom resources (PhysicalMeasurements, MeasurementDevices, DataCenterResources) from the cluster.
-```bash
-make uninstall
-```
 
 3. Optionally, delete the namespace:
 
