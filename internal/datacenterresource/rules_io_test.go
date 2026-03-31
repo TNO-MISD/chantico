@@ -57,7 +57,7 @@ func TestWriteRuleFile_NonRootNode(t *testing.T) {
 		},
 	}
 
-	result := WriteRuleFile(bm)
+	result := WriteRuleFile(t.Context(), bm)
 	if result != nil {
 		t.Fatalf("Expected nil result, got %+v", result)
 	}
@@ -98,7 +98,7 @@ func TestWriteRuleFile_RootNodeWithEnergyMetric(t *testing.T) {
 		},
 	}
 
-	result := WriteRuleFile(pdu)
+	result := WriteRuleFile(t.Context(), pdu)
 	if result != nil {
 		t.Fatalf("Expected nil result, got %+v", result)
 	}
@@ -124,11 +124,11 @@ func TestWriteRuleFile_OverwritesExisting(t *testing.T) {
 	}
 
 	// Write initial
-	WriteRuleFile(bm)
+	WriteRuleFile(t.Context(), bm)
 
 	// Update coefficient and write again
 	bm.Spec.Parents[0].Coefficient = "0.8"
-	WriteRuleFile(bm)
+	WriteRuleFile(t.Context(), bm)
 
 	// Verify updated content
 	rulePath := filepath.Join(tmpDir, prometheusRulesDir, "bm1.yml")
@@ -155,7 +155,7 @@ func TestDeleteRuleFile(t *testing.T) {
 			},
 		},
 	}
-	WriteRuleFile(bm)
+	WriteRuleFile(t.Context(), bm)
 
 	// Verify it exists
 	rulePath := filepath.Join(tmpDir, prometheusRulesDir, "bm1.yml")
@@ -164,7 +164,7 @@ func TestDeleteRuleFile(t *testing.T) {
 	}
 
 	// Delete it
-	result := DeleteRuleFile(bm)
+	result := DeleteRuleFile(t.Context(), bm)
 	if result != nil {
 		t.Fatalf("Expected nil result, got %+v", result)
 	}
@@ -184,7 +184,7 @@ func TestDeleteRuleFile_NonExistent(t *testing.T) {
 	}
 
 	// Should not panic or error on non-existent file
-	result := DeleteRuleFile(bm)
+	result := DeleteRuleFile(t.Context(), bm)
 	if result != nil {
 		t.Fatalf("Expected nil result, got %+v", result)
 	}
@@ -233,10 +233,10 @@ func TestWriteRuleFile_FullThreeLayerHierarchy(t *testing.T) {
 	}
 
 	// Write all rule files
-	WriteRuleFile(pdu1)
-	WriteRuleFile(bm1)
-	WriteRuleFile(vm1)
-	WriteRuleFile(vm2)
+	WriteRuleFile(t.Context(), pdu1)
+	WriteRuleFile(t.Context(), bm1)
+	WriteRuleFile(t.Context(), vm1)
+	WriteRuleFile(t.Context(), vm2)
 
 	rulesDir := filepath.Join(tmpDir, prometheusRulesDir)
 

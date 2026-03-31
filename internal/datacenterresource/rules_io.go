@@ -17,6 +17,7 @@ limitations under the License.
 package datacenterresource
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -61,6 +62,7 @@ func reloadPrometheus() {
 // The file is written to prometheus/rules/<name>.yml on the shared volume.
 // After writing, Prometheus is sent a reload request so it picks up the new rules.
 func WriteRuleFile(
+	ctx context.Context,
 	dataCenterResource *chantico.DataCenterResource,
 ) *sm.ActionResult {
 	ruleFile := BuildRuleFile(dataCenterResource)
@@ -101,7 +103,10 @@ func WriteRuleFile(
 
 // DeleteRuleFile removes the Prometheus recording rule file for this DataCenterResource.
 // After deleting, Prometheus is sent a reload request so it stops evaluating the removed rules.
-func DeleteRuleFile(dataCenterResource *chantico.DataCenterResource) *sm.ActionResult {
+func DeleteRuleFile(
+	ctx context.Context,
+	dataCenterResource *chantico.DataCenterResource,
+) *sm.ActionResult {
 	deleteRuleFileFromDisk(dataCenterResource.Name)
 	reloadPrometheus()
 	return nil
