@@ -40,9 +40,38 @@ spec:
           spec:
             description: spec defines the desired state of DataCenterResource
             properties:
-              parent:
+              energyMetric:
+                description: |-
+                  EnergyMetric is the Prometheus metric name for the raw energy timeseries
+                  of this resource. Only set for root nodes (e.g. PDUs) whose energy
+                  timeseries is produced directly by hardware / an exporter.
+                type: string
+              parents:
+                description: |-
+                  Parents lists the parent DataCenterResources that feed energy into
+                  this node. Each entry carries an optional coefficient representing
+                  the proportional share of the parent's energy attributable to this
+                  child. The coefficient is written as a Prometheus recording rule so
+                  that the energy formula can reference it.
                 items:
-                  type: string
+                  description: |-
+                    ParentRef references a parent DataCenterResource and optionally carries
+                    the energy coefficient for the edge from that parent to this node.
+                    The coefficient represents what fraction of the parent's energy is
+                    attributable to this child.
+                  properties:
+                    coefficient:
+                      description: |-
+                        Coefficient is the energy coefficient for the edge from this parent
+                        to the current node. It is a PromQL expression (often a literal
+                        number) that will be written as a Prometheus recording rule.
+                      type: string
+                    name:
+                      description: Name is the name of the parent DataCenterResource.
+                      type: string
+                  required:
+                  - name
+                  type: object
                 type: array
               physicalMeasurements:
                 items:
