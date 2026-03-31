@@ -4,7 +4,7 @@ metadata:
   labels:
     app: chantico
   name: chantico-prometheus
-  namespace: chantico
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -29,9 +29,25 @@ spec:
           subPath: "prometheus"
         ports:
         - containerPort: 9090
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       initContainers:
       - image: busybox
         name: prometheus-initialization
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         command: ["/bin/sh"]
         args:
           - -c
@@ -74,7 +90,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: chantico-prometheus
-  namespace: chantico
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: chantico-prometheus
