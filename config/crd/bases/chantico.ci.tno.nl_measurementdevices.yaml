@@ -137,6 +137,8 @@ spec:
                   - type
                   type: object
                 type: array
+              configHash:
+                type: string
               observedGeneration:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster

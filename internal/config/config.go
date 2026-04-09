@@ -11,6 +11,7 @@ type Images struct {
 
 type Config struct {
 	Images Images
+	MountPath string
 }
 
 var Configuration = Config{
@@ -22,4 +23,5 @@ var Configuration = Config{
 		Filebrowser:   "filebrowser/filebrowser:v2.32.2",
 		Prometheus:    "prom/prometheus:v3.7.3",
 	},
+	MountPath: "SOME environment variable",
 }

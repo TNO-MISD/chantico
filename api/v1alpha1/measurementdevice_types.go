@@ -19,11 +19,10 @@ package v1alpha1
 import (
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"chantico/internal/snmp"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-
 
 // MeasurementDeviceSpec defines the desired state of MeasurementDevice
 type MeasurementDeviceSpec struct {
@@ -31,8 +30,8 @@ type MeasurementDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go to remove/update
-	Walks []string `yaml:"walks" json:"walks"`
-	Auth  snmp.GeneratorAuth     `yaml:"auth" json:"auth"`
+	Walks []string           `yaml:"walks" json:"walks"`
+	Auth  snmp.GeneratorAuth `yaml:"auth" json:"auth"`
 }
 
 // MeasurementDeviceStatus defines the observed state of MeasurementDevice
@@ -40,7 +39,8 @@ type MeasurementDeviceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions       []metav1.Condition `json:"conditions,omitempty"`
+	ConfigHash         string             `json:"configHash,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
