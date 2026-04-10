@@ -1,6 +1,8 @@
 ---
 title: "Technical proposal"
-weight: 30
+weight: 10
+main:
+  parent: technical
 ---
 
 ## Technical proposal

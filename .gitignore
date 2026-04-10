@@ -18,9 +18,9 @@ Dockerfile.cross
 go.work
 
 # Documentation additions
-docs/api/
 docs/assets/css/
 docs/changelog.md
+docs/technical/api/
 # Hugo generated output
 .hugo_build.lock
 docs/hugo/public/

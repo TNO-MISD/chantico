@@ -1,6 +1,8 @@
 ---
 title: "Repository structure"
-weight: 10
+weight: 20
+main:
+  parent: technical
 ---
 
 The following document outlines the structure of the code. We make use of 
