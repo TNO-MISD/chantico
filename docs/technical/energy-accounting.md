@@ -1,9 +1,7 @@
 ---
-title: "Technical proposal"
+title: "Energy Accounting via Prometheus Recording Rules"
 weight: 30
 ---
-
-# Energy Accounting via Prometheus Recording Rules
 
 This document describes the energy accounting feature implemented in the
 DataCenterResource controller. It explains the design, the data model, how

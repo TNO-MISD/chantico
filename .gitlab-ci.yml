@@ -178,9 +178,9 @@ docs:
   stage: docs
   script:
     - go install go.abhg.dev/doc2go@v0.11.0
-    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/api -frontmatter docs/hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
-    - find docs/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
-    - 'printf -- "---\ntitle: "Changelog"\nweight: 60\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/TNO-MISD/chantico/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/TNO-MISD/chantico/releases/tag/v\1)|" CHANGELOG.md)" > docs/changelog.md'
+    - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/technical/api -frontmatter docs/hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
+    - find docs/technical/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
+    - 'printf -- "---\ntitle: "Changelog"\nweight: 60\nmain:\n  parent: technical\n  weight: 50\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/TNO-MISD/chantico/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/TNO-MISD/chantico/releases/tag/v\1)|" CHANGELOG.md)" > docs/technical/changelog.md'
     - mkdir -p docs/assets/css/extended
     - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
     - 'echo ":root {--main-width: 1024px}.chroma {background-color: #24273a !important}" > docs/assets/css/extended/width.css'
