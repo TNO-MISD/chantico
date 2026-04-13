@@ -314,6 +314,8 @@ release:
     # Commit updated versions in files if changed
     - sed -E -i "s/^VERSION([ ?]*)=.*/VERSION\1= $VERSION/" Makefile
     - 'sed -i "s/^version:.*/version: $VERSION/" config/deployment/Chart.yaml'
+    - 'sed -i "s/appVersion:.*/appVersion: \"$VERSION\"/" config/deployment/Chart.yaml'
+    - 'sed -i "s|org.opencontainers.image.version:.*|org.opencontainers.image.version: $VERSION|" config/deployment/Chart.yaml'
     - |
       if ! git diff --quiet; then
         git add CHANGELOG.md Makefile config/deployment/Chart.yaml
@@ -358,3 +360,34 @@ release-dist-github:
   extends: .release-dist
   variables:
     GORELEASER_CONFIG: .goreleaser.github.yaml
+
+release-helm-ghcr:
+  image: alpine/helm:3.17.3
+  stage: release
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_USER" --password-stdin
+    - helm package config/deployment/
+    - helm push chantico-*.tgz oci://ghcr.io/tno-misd/charts/chantico
+  needs:
+    - go-test
+  rules:
+    - if: $CI_COMMIT_TAG
+
+# Copy Gitlab image to Github using https://github.com/containers/skopeo?tab=readme-ov-file#copying-images
+release-chantico-ghcr:
+  image: quay.io/skopeo/stable
+  stage: release
+  before_script:
+    - skopeo login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - skopeo login -u "$GHCR_USER" -p "$GHCR_TOKEN" ghcr.io
+  script:
+    - skopeo copy
+        docker://$CI_REGISTRY_IMAGE/chantico:${CI_COMMIT_TAG}
+        docker://ghcr.io/tno-misd/images/chantico:${CI_COMMIT_TAG}
+  needs:
+    - build-chantico
+    - go-test
+  rules:
+    - if: $CI_COMMIT_TAG

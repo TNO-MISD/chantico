@@ -118,7 +118,7 @@
 
 #### Chores
 
-* Upgrade minimum Go version to 1.24.13 and default to 1.25.7 (a8c23b5a)
+* Upgrade minimum Go version to 1.24.13 and default to 1.25.8 (a8c23b5a)
 * Fix formatting of webapp files (6e3dae28)
 
 #### CI
