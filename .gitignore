@@ -58,3 +58,5 @@ dist/
 
 # direnv
 .direnv
+
+config/deployment/crds

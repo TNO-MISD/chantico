@@ -20,6 +20,14 @@ running on hypervisors and pods in clusters.
 How-to guides can be found in the `/docs` folder and on our [documentation 
 website](https://chantico-300062.ci.tno.nl/).
 
+For a quick start, install Chantico on your k8s cluster using:
+
+```bash
+helm install chantico oci://ghcr.io/tno-misd/charts/chantico -n chantico # Latest version
+```
+
+For more information have a look at the following [installation guide](docs/how-tos/how-to-install-chantico.md). For a local setup of Chantico, please have a look at the following [guide](docs/how-tos/how-to-setup-the-local-development-environment.md).
+
 ### Prerequisites
 
 - go version v1.24.13+

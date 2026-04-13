@@ -19,7 +19,7 @@ toolchains.
 - `chantico`: Postgres models.
 - `cmd`: Entry points of the operator and web application programs.
 - `config`: Location of Kubernetes resources, Helm charts, etc.:
-  - `config/crd/bases`: Custom resource definitions.
+  - `config/crds/bases`: Custom resource definitions.
   - `config/default`: Kustomize configurations and patches for deployment.
   - `config/dev`: Old development setups.
   - `config/initial-deployments`: Helmchart for deployment of Chantico 

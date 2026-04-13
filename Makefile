@@ -96,7 +96,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/deployment/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crds/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -148,6 +148,17 @@ docker-build: ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
 
+HELM_CHART_DIR ?= config/deployment
+GHCR_HELM_REPO ?= oci://ghcr.io/tno-misd/charts/chantico
+
+.PHONY: helm-package
+helm-package: sync-deployment-crds ## Package Helm chart.
+	helm package $(HELM_CHART_DIR)
+
+.PHONY: helm-push
+helm-push: helm-package ## Package and push Helm chart to GHCR.
+	helm push chantico-$(VERSION).tgz $(GHCR_HELM_REPO)
+
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
@@ -178,12 +189,18 @@ ifndef ignore-not-found
 endif
 
 .PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/deployment/crd | $(KUBECTL) apply -f -
-
+install: manifests kustomize sync-deployment-crds ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crds | $(KUBECTL) apply -f -
+	
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/deployment/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/crds | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: sync-deployment-crds
+sync-deployment-crds:
+	mkdir -p config/deployment/crds
+	cp config/crds/bases/*.yaml config/deployment/crds/
+	sed -i'' -e '/^\s*format: int64$$/d' config/deployment/crds/*.yaml
 
 ##@ Dependencies
 
@@ -313,3 +330,4 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+

@@ -4,7 +4,9 @@ snmpExporterAddress: chantico-snmp:9116
 imagePullSecretName: regcred
 controller:
   include: true
-  image: ""
+  image:
+    repository: "ghcr.io/tno-misd/chantico"
+    tag: ""  # defaults to Chart.version
 pvc:
   include: true
   storageClassName: "csi-rbd"

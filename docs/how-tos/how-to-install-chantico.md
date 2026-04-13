@@ -6,59 +6,27 @@ menus:
     weight: 20
 ---
 
-## Installation
+## Installation of Chantico from OCI Registry
 
-### Getting the Chantico image
-
-#### Option A: Build and host image yourself
+The easiest option to install Chantico into your k8s cluster is by using the helm package from the OCI Registry.
 
 ```bash
-make docker-build IMG=<your-registry>/chantico:<tag>
+helm install chantico oci://ghcr.io/tno-misd/charts/chantico -n chantico # Latest version
 ```
 
-Then host this image on a container registry of choice and make sure to synchronize credentials as listed in option (B).
+- The command above installs the latest version of Chantico. See available versions here: https://github.com/TNO-MISD/chantico/pkgs/container/chantico. Also checkout the [CHANGELOG.md](https://ci.tno.nl/gitlab/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/-/blob/main/CHANGELOG.md?ref_type=heads) for the list of changes throughout the version history.
 
-#### Option B: Pull from Chantico GitLab repository
+- Inspect the [values.yaml](https://github.com/TNO-MISD/chantico/blob/main/config/deployment/values.yaml) file to see what parameters can be provided. For example, excluding the Chantico controller from the installation can be done with `--set controller.include=false`.
 
-> The Chantico repository on GitHub does not host images yet in the container registry there. This is still work in progress. The following steps only work if you have access to the GitLab repository of Chantico. 
+## Upgrading using OCI Registry
 
-The GitLab repository of Chantico hosts several relevant images, including the one of the Chantico controller itself. First, create registry credentials for pulling images from a private Docker registry:
-
-1. Go to GitLab -> Chantico project -> Settings -> Access tokens -> Add new token, with a descriptive/easy-to-copy "Token name" and "Scopes" have at least `read_registry` checked.
-1. Copy the access token, then:
-  
-  ```bash
-  kubectl create namespace chantico
-  kubectl create -n chantico secret docker-registry regcred \
-    --docker-server=ci.tno.nl \
-    --docker-username=<TOKEN-NAME> \
-    --docker-password=<ACCESS-TOKEN> \
-    --docker-email=<YOUR-EMAIL>
-  ```
-
-### Deployment of Chantico on k8s cluster
-
-1. Install CRDs
-
-Install the CRDs within `config/deployment/crd` to the cluster:
-```
-make install
-```
-
-2. Deploy Chantico and dependencies with Helm
-
-> This project makes use of Helm templating. If desired default parameters can be changed in `config/deployment/values.yaml`. 
-
-The following command retrieves the latest image of Chantico from the Gitlab container registery and installs the helm deployment. If wanted, another version of Chantico can also be used, such as one of a branch or tag release.
+To upgrade an existing chantico deployment to a new version, run `helm upgrade` with the new version provided.
 
 ```bash
-# Or with Chantico image hosted somewhere else:
-helm install chantico config/deployment/ \
-  --set controller.image=ci.tno.nl/ipcei-cis-misd-sustainable-datacenters/wp2/energy-domain-controller/chantico/chantico:latest \
-  -n chantico --create-namespace
+helm upgrade chantico oci://ghcr.io/tno-misd/charts/chantico --version <version> -n chantico
 ```
 
-### Getting started with the deployed Chantico
+## Getting started with the deployed Chantico
 
 After Chantico is succesfully deployed on your cluster, you can start making use of it for measuring your datacenter hardware of interest. Currently this can only be done with manual configuration, until a more automated approach has been implemented. Chantico inherently configures SNMP walks for endpoints by means of `MIB` and `.yaml` files. The steps of configurating this typically follows the following how-to guides:
 
@@ -67,26 +35,15 @@ After Chantico is succesfully deployed on your cluster, you can start making use
 1. With the MIB files, measurement devices and physical measurements in place, the targets should be accessable and scrapable in Prometheus. Perform port forwarding on the Prometheus deployment to validate the result of this setup. If done successful one should see a timeseries of the requested value(s).
 1. [How to register data center resources](how-to-register-data-center-resources.md) When desired, encapsulate data center structure usin data center resources.
 
-### Remove deployed Chantico on K8s cluster
+### Uninstall Chantico on K8s cluster
 
-1. Remove custom resources and uninstall the CRDs:
+1. Remove Chantico together with dependencies like CRDs:
 
-Start by uninstalling CRDs, this will delete all custom resource definitions (PhysicalMeasurements, MeasurementDevices, DataCenterResources) and remove any instances from the cluster.
-```bash
-make uninstall
-```
-
-2. Uninstall the Helm release:
-
-Upon completion of the uninstallment of the CRDs, Chantico can then be removed from the cluster using helm uninstall.
 ```bash
 helm uninstall chantico -n chantico
 ```
 
-This removes all namespaced resources (Deployments, Services, ServiceAccount, Roles, RoleBindings, PVC) as well as the cluster-scoped resources (ClusterRole, ClusterRoleBinding) managed by the release.
-
-
-3. Optionally, delete the namespace:
+2. Optionally, delete the namespace:
 
 ```bash
 kubectl delete namespace chantico
