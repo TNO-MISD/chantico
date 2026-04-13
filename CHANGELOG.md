@@ -1,3 +1,14 @@
+## 0.5.1 (2026-04-13)
+
+#### Bug Fixes
+
+* Typo's and documentation updates (1d352f83)
+
+#### Chores
+
+* Write roadmap in documentation with use-cases and limitations (0eaefd17)
+
+
 ## 0.5.0 (2026-03-31)
 
 #### Feature
