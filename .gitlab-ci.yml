@@ -314,7 +314,7 @@ release:
     # Commit updated versions in files if changed
     - sed -E -i "s/^VERSION([ ?]*)=.*/VERSION\1= $VERSION/" Makefile
     - 'sed -i "s/^version:.*/version: $VERSION/" config/deployment/Chart.yaml'
-    - 'sed -i "s/appVersion:.*/appVersion: \"$VERSION\"/" config/deployment/Chart.yaml'
+    - 'sed -i "s/appVersion:.*/appVersion: \"v$VERSION\"/" config/deployment/Chart.yaml'
     - 'sed -i "s|org.opencontainers.image.version:.*|org.opencontainers.image.version: $VERSION|" config/deployment/Chart.yaml'
     - |
       if ! git diff --quiet; then
@@ -368,8 +368,8 @@ release-helm-ghcr:
     GIT_DEPTH: 0
   script:
     - echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_USER" --password-stdin
-    - helm package config/deployment/
-    - helm push chantico-*.tgz oci://ghcr.io/tno-misd/charts/chantico
+    - helm package config/deployment/ --version ${CI_COMMIT_TAG#v} --app-version ${CI_COMMIT_TAG}
+    - helm push chantico-*.tgz oci://ghcr.io/tno-misd/charts
   needs:
     - go-test
   rules:

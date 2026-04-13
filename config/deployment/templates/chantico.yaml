@@ -32,7 +32,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: manager
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default (printf "v%s" .Chart.Version) }}"
+          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: IfNotPresent
           command:
             - /manager

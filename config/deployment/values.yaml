@@ -5,7 +5,7 @@ imagePullSecretName: regcred
 controller:
   include: true
   image:
-    repository: "ghcr.io/tno-misd/chantico"
+    repository: "ghcr.io/tno-misd/images/chantico"
     tag: ""  # defaults to Chart.version
 pvc:
   include: true
