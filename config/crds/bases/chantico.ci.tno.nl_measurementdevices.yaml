@@ -62,8 +62,8 @@ spec:
                     type: integer
                 type: object
               walks:
-                description: Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go
-                  to remove/update
+                description: Walks is the list of SNMP OID walk paths to perform on
+                  the device.
                 items:
                   type: string
                 type: array
