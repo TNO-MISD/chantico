@@ -3,7 +3,7 @@ name: chantico
 description: A Helm chart for Chantico - energy monitoring system
 type: application
 version: 0.5.1
-appVersion: "0.5.1"
+appVersion: "v0.5.1"
 annotations:
   org.opencontainers.image.source: "https://github.com/TNO-MISD/chantico"
   org.opencontainers.image.title: "Helm chart for chantico"
