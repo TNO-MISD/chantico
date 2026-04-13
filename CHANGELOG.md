@@ -1,3 +1,10 @@
+## 0.5.2 (2026-04-13)
+
+#### Bug Fixes
+
+* Explicit helm versioning and correct registry paths. (764faabe)
+
+
 ## 0.5.1 (2026-04-13)
 
 #### Bug Fixes
