@@ -40,7 +40,7 @@ type MeasurementDeviceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go to remove/update
+	// Walks is the list of SNMP OID walk paths to perform on the device.
 	Walks []string `yaml:"walks" json:"walks"`
 	Auth  Auth     `yaml:"auth" json:"auth"`
 }
