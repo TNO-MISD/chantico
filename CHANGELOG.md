@@ -1,3 +1,10 @@
+## 0.5.4 (2026-04-14)
+
+#### Bug Fixes
+
+* move organisation labels from builder image to final image (b64e6823)
+
+
 ## 0.5.3 (2026-04-14)
 
 #### Bug Fixes
