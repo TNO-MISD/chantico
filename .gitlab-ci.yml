@@ -302,13 +302,13 @@ release:
   allow_failure: true # semantic release exits with code 1 if there are no changes
   variables:
     GIT_DEPTH: 0
-    SEMREL_OPTIONS: --allow-initial-development-versions --allow-no-changes --changelog CHANGELOG.md --prepend-changelog
+    SEMREL_OPTIONS: --allow-initial-development-versions --allow-no-changes
     GITHUB_REPOSITORY: "TNO-MISD/chantico"
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - git config --global user.email "semantic-release@gitlab"
     - git config --global user.name "go-semantic-release"
-    - ./semantic-release --dry -f $SEMREL_OPTIONS
+    - ./semantic-release --changelog CHANGELOG.md --prepend-changelog --dry -f $SEMREL_OPTIONS
     - if [ ! -f .version-unreleased ]; then exit 0; fi
     - VERSION=$(cat .version-unreleased)
     # Commit updated versions in files if changed
@@ -331,6 +331,7 @@ release:
         fi
         sleep 5
       done
+    - git push https://$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY :refs/tags/v$VERSION
     - ./semantic-release --provider github $SEMREL_OPTIONS
   needs:
     - go-test
