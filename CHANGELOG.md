@@ -1,3 +1,11 @@
+## 0.5.5 (2026-04-14)
+
+#### Bug Fixes
+
+* Publish release changelog to GitHub via semantic-release (1afed199)
+* Make crds before packaging helm. (a2ce90c2)
+
+
 ## 0.5.4 (2026-04-14)
 
 #### Bug Fixes
