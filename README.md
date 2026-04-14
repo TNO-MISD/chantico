@@ -26,7 +26,10 @@ For a quick start, install Chantico on your k8s cluster using:
 helm install chantico oci://ghcr.io/tno-misd/charts/chantico -n chantico # Latest version
 ```
 
-For more information have a look at the following [installation guide](docs/how-tos/how-to-install-chantico.md). For a local setup of Chantico, please have a look at the following [guide](docs/how-tos/how-to-setup-the-local-development-environment.md).
+For more information have a look at the following [installation 
+guide](https://chantico-300062.ci.tno.nl/how-tos/how-to-install-chantico/). For 
+a local setup of Chantico, please have a look at the following 
+[guide](https://chantico-300062.ci.tno.nl/how-tos/how-to-setup-the-local-development-environment/).
 
 ### Prerequisites
 

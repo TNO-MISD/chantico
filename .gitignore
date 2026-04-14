@@ -19,8 +19,8 @@ go.work
 
 # Documentation additions
 docs/assets/css/
-docs/changelog.md
 docs/technical/api/
+docs/technical/changelog.md
 # Hugo generated output
 .hugo_build.lock
 docs/hugo/public/
