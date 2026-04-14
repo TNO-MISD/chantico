@@ -3,6 +3,11 @@ FROM docker.io/golang:1.25.8 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
+LABEL org.opencontainers.image.source="https://github.com/TNO-MISD/chantico"
+LABEL org.opencontainers.image.description="Chantico - energy monitoring system"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.authors="TNO"
+
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod

@@ -81,8 +81,10 @@ spec:
         - name: chantico-volume
           persistentVolumeClaim:
             claimName: {{ .Values.persistentVolumeClaimName }}
+      {{- if .Values.imagePullSecretName }}
       imagePullSecrets:
         - name: {{ .Values.imagePullSecretName }}
+      {{- end }}
       serviceAccountName: chantico-controller-manager
       terminationGracePeriodSeconds: 10
 {{- end }}
