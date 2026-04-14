@@ -1,3 +1,10 @@
+## 0.5.3 (2026-04-14)
+
+#### Bug Fixes
+
+* Dockerfile organisation labels and removal of image pull regcred (8ac1dacb)
+
+
 ## 0.5.2 (2026-04-13)
 
 #### Bug Fixes
