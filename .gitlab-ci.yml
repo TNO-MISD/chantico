@@ -180,7 +180,7 @@ docs:
     - go install go.abhg.dev/doc2go@v0.11.0
     - doc2go -embed -highlight classes:monokai -basename _index.html -out docs/technical/api -frontmatter docs/hugo/frontmatter.tmpl -rel-link-style $REL_LINK_STYLE -internal ./...
     - find docs/technical/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
-    - 'printf -- "---\ntitle: "Changelog"\nweight: 60\nmain:\n  parent: technical\n  weight: 50\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/TNO-MISD/chantico/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/TNO-MISD/chantico/releases/tag/v\1)|" CHANGELOG.md)" > docs/technical/changelog.md'
+    - 'printf -- "---\ntitle: "Changelog"\nweight: 60\nmain:\n  parent: technical\n  weight: 50\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/chantico-project/chantico/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/chantico-project/chantico/releases/tag/v\1)|" CHANGELOG.md)" > docs/technical/changelog.md'
     - mkdir -p docs/assets/css/extended
     - doc2go -highlight monokai -highlight-print-css > docs/assets/css/extended/highlight.css
     - 'echo ":root {--main-width: 1024px}.chroma {background-color: #24273a !important}" > docs/assets/css/extended/width.css'
@@ -303,7 +303,7 @@ release:
   variables:
     GIT_DEPTH: 0
     SEMREL_OPTIONS: --allow-initial-development-versions --allow-no-changes
-    GITHUB_REPOSITORY: "TNO-MISD/chantico"
+    GITHUB_REPOSITORY: "chantico-project/chantico"
   script:
     - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
     - git config --global user.email "semantic-release@gitlab"
@@ -316,6 +316,7 @@ release:
     - 'sed -i "s/^version:.*/version: $VERSION/" config/deployment/Chart.yaml'
     - 'sed -i "s/appVersion:.*/appVersion: \"v$VERSION\"/" config/deployment/Chart.yaml'
     - 'sed -i "s|org.opencontainers.image.version:.*|org.opencontainers.image.version: $VERSION|" config/deployment/Chart.yaml'
+    - 'sed -Ei "s|org.opencontainers.image.description: \"(.*)--version.*\`\"|org.opencontainers.image.description: \"\1--version $VERSION\`\"|" config/deployment/Chart.yaml'
     - |
       if ! git diff --quiet; then
         git add CHANGELOG.md Makefile config/deployment/Chart.yaml
@@ -372,7 +373,7 @@ release-helm-ghcr:
     - make sync-deployment-crds
     - echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_USER" --password-stdin
     - helm package config/deployment/ --version ${CI_COMMIT_TAG#v} --app-version ${CI_COMMIT_TAG}
-    - helm push chantico-*.tgz oci://ghcr.io/tno-misd/charts
+    - helm push chantico-*.tgz oci://ghcr.io/chantico-project/charts
   needs:
     - go-test
   rules:
@@ -388,7 +389,7 @@ release-chantico-ghcr:
   script:
     - skopeo copy
         docker://$CI_REGISTRY_IMAGE/chantico:${CI_COMMIT_TAG}
-        docker://ghcr.io/tno-misd/images/chantico:${CI_COMMIT_TAG}
+        docker://ghcr.io/chantico-project/images/chantico:${CI_COMMIT_TAG}
   needs:
     - build-chantico
     - go-test

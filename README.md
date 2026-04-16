@@ -23,7 +23,7 @@ website](https://chantico-300062.ci.tno.nl/).
 For a quick start, install Chantico on your k8s cluster using:
 
 ```bash
-helm install chantico oci://ghcr.io/tno-misd/charts/chantico -n chantico # Latest version
+helm install chantico oci://ghcr.io/chantico-project/charts/chantico -n chantico # Latest version
 ```
 
 For more information have a look at the following [installation 
@@ -48,12 +48,12 @@ considered too early to accept external work, given pending design changes and
 major technology choices. Once we are more mature, we welcome contributions 
 that align with our scope and vision of the Chantico project. Have a look at 
 our [contribution 
-guidance](https://github.com/TNO-MISD/.github/blob/main/CONTRIBUTING.md).
+guidance](https://github.com/chantico-project/.github/blob/main/CONTRIBUTING.md).
 
 ## Code of Conduct
 
 Please consider the guidelines in the [Code of 
-Conduct](https://github.com/TNO-MISD/.github/blob/main/CODE_OF_CONDUCT.md) when 
+Conduct](https://github.com/chantico-project/.github/blob/main/CODE_OF_CONDUCT.md) when 
 participating in our shared environment.
 
 ## License
