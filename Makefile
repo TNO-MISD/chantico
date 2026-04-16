@@ -149,7 +149,7 @@ docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
 
 HELM_CHART_DIR ?= config/deployment
-GHCR_HELM_REPO ?= oci://ghcr.io/tno-misd/charts
+GHCR_HELM_REPO ?= oci://ghcr.io/chantico-project/charts
 
 .PHONY: helm-package
 helm-package: sync-deployment-crds ## Package Helm chart.

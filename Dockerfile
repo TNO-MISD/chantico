@@ -27,7 +27,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 
-LABEL org.opencontainers.image.source="https://github.com/TNO-MISD/chantico"
+LABEL org.opencontainers.image.source="https://github.com/chantico-project/chantico"
 LABEL org.opencontainers.image.description="Chantico - energy monitoring system"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.authors="TNO"

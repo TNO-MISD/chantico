@@ -11,19 +11,19 @@ menus:
 The easiest option to install Chantico into your k8s cluster is by using the helm package from the OCI Registry.
 
 ```bash
-helm install chantico oci://ghcr.io/tno-misd/charts/chantico -n chantico # Latest version
+helm install chantico oci://ghcr.io/chantico-project/charts/chantico -n chantico # Latest version
 ```
 
-- The command above installs the latest version of Chantico. See available [chart versions](https://github.com/TNO-MISD/chantico/pkgs/container/charts%2Fchantico). Also check out the [releases](https://github.com/TNO-MISD/chantico/releases) or the [changelog](/technical/changelog.md) on the documentation website for the list of changes throughout the version history.
+- The command above installs the latest version of Chantico. See available [chart versions](https://github.com/chantico-project/chantico/pkgs/container/charts%2Fchantico). Also check out the [releases](https://github.com/chantico-project/chantico/releases) or the [changelog](/technical/changelog.md) on the documentation website for the list of changes throughout the version history.
 
-- Inspect the [values.yaml](https://github.com/TNO-MISD/chantico/blob/main/config/deployment/values.yaml) file to see what parameters can be provided. For example, excluding the Chantico controller from the installation can be done with `--set controller.include=false`.
+- Inspect the [values.yaml](https://github.com/chantico-project/chantico/blob/main/config/deployment/values.yaml) file to see what parameters can be provided. For example, excluding the Chantico controller from the installation can be done with `--set controller.include=false`.
 
 ## Upgrading using OCI Registry
 
 To upgrade an existing chantico deployment to a new version, run `helm upgrade` with the new version provided.
 
 ```bash
-helm upgrade chantico oci://ghcr.io/tno-misd/charts/chantico --version <version> -n chantico
+helm upgrade chantico oci://ghcr.io/chantico-project/charts/chantico --version <version> -n chantico
 ```
 
 ## Getting started with the deployed Chantico
