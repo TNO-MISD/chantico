@@ -20,6 +20,9 @@ kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisione
 
 pushd "$SCRIPT_DIR"
 
+# Update CRDs in helm deployment
+make -C ../ sync-deployment-crds
+
 # Install chantico dependencies (filebrowser, prometheus, snmp exporter)
 helm install chantico ../config/deployment/ --set controller.include=false --set pvc.storageClassName="local-path" -n chantico
 
