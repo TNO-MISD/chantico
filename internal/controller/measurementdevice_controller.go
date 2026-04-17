@@ -380,87 +380,21 @@ func (r *MeasurementDeviceReconciler) reconcileGeneratorFile(ctx context.Context
 	return Continue()
 }
 
+// Check presence of job and creates one if necessary. Also checks the status of the job, and updates conditions accordingly.
+// Preconditions:
+// - There is no job for creating the SNMP config yet.
+// Result:
+// - SNMP config created with job.
 func (r *MeasurementDeviceReconciler) reconcileSNMPGeneratorJob(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
-	/*
-		desired state:
-		- there should be a single job
-		- with configuration of desired generator file
-		- ended succesful
-	*/
-	jobList := &batchv1.JobList{}
-	if err := r.List(ctx, jobList, client.InNamespace(measurementDevice.GetNamespace())); err != nil {
+	ownedJobs, err := r.getOwnedJobs(ctx, measurementDevice)
+	if err != nil {
 		return Error(err)
 	}
 
-	// this can be optimized with indexing (at the manager)
-	var ownedJobs []batchv1.Job
-	for _, job := range jobList.Items {
-		for _, ownerRef := range job.OwnerReferences {
-			if ownerRef.UID == measurementDevice.GetUID() {
-				ownedJobs = append(ownedJobs, job)
-			}
-		}
-	}
-
 	if len(ownedJobs) == 0 {
-		// maybe this can be obtained from shared function or from status
-
-		volume, err := vol.GetChanticoVolume() // ugly?
+		job, err := r.buildGeneratorJob(measurementDevice)
 		if err != nil {
 			return Error(err)
-		}
-
-		/*
-			mount path - file path within the volume
-			so for local development: /tmp/chantico-local-path-data/pvc-e77d4e95-0d5b-4f4b-a390-b625749362da_chantico_chantico-snmp-prometheus-volume-claim + snmp/generators
-			for within cluster: /data/snmp/snmp
-		*/
-
-		mountPath := "/data"
-
-		generatorPath := filepath.Join(mountPath, "snmp/generators", fmt.Sprintf("generator-%s.yaml", measurementDevice.GetUID()))
-		mibsDir := filepath.Join(mountPath, "snmp/mibs")
-		outputPath := filepath.Join(mountPath, "snmp/snmp", fmt.Sprintf("snmp-%s.yaml", measurementDevice.GetUID()))
-
-		job := &batchv1.Job{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      measurementDevice.GetName(),
-				Namespace: measurementDevice.GetNamespace(),
-				Annotations: map[string]string{
-					"measurementdevice.generation.chantico": strconv.FormatInt(measurementDevice.GetGeneration(), 10),
-				},
-			},
-			Spec: batchv1.JobSpec{
-
-				BackoffLimit: int32Ptr(0),
-				Template: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  "snmp-generator",
-								Image: r.Config.Images.SnmpGenerator,
-								Command: []string{
-									"/bin/generator",
-								},
-								Args: []string{
-									"generate",
-									"--output-path", outputPath,
-									"--generator-path", generatorPath,
-									"--mibs-dir", mibsDir,
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      vol.ChanticoVolumeMount,
-										MountPath: mountPath,
-									},
-								},
-							},
-						},
-						Volumes:       []corev1.Volume{volume},
-						RestartPolicy: corev1.RestartPolicyNever,
-					},
-				},
-			},
 		}
 		if err := controllerutil.SetControllerReference(measurementDevice, job, r.Scheme); err != nil {
 			return Error(err)
@@ -529,6 +463,85 @@ func (r *MeasurementDeviceReconciler) reconcileSNMPGeneratorJob(ctx context.Cont
 		err := fmt.Errorf("MeasurementDevice owns multiple owned jobs. This should not be possible.")
 		return Error(err)
 	}
+}
+
+func (r *MeasurementDeviceReconciler) buildGeneratorJob(measurementDevice *chantico.MeasurementDevice) (*batchv1.Job, error) {
+	volume, err := vol.GetChanticoVolume() // ugly?
+	if err != nil {
+		return nil, err
+	}
+
+	/*
+		mount path - file path within the volume
+		so for local development: /tmp/chantico-local-path-data/pvc-e77d4e95-0d5b-4f4b-a390-b625749362da_chantico_chantico-snmp-prometheus-volume-claim + snmp/generators
+		for within cluster: /data/snmp/snmp
+	*/
+	mountPath := "/data"
+
+	generatorPath := filepath.Join(mountPath, "snmp/generators", fmt.Sprintf("generator-%s.yaml", measurementDevice.GetUID()))
+	mibsDir := filepath.Join(mountPath, "snmp/mibs")
+	outputPath := filepath.Join(mountPath, "snmp/snmp", fmt.Sprintf("snmp-%s.yaml", measurementDevice.GetUID()))
+
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      measurementDevice.GetName(),
+			Namespace: measurementDevice.GetNamespace(),
+			Annotations: map[string]string{
+				"measurementdevice.generation.chantico": strconv.FormatInt(measurementDevice.GetGeneration(), 10),
+			},
+		},
+		Spec: batchv1.JobSpec{
+
+			BackoffLimit: int32Ptr(0),
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "snmp-generator",
+							Image: r.Config.Images.SnmpGenerator,
+							Command: []string{
+								"/bin/generator",
+							},
+							Args: []string{
+								"generate",
+								"--output-path", outputPath,
+								"--generator-path", generatorPath,
+								"--mibs-dir", mibsDir,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      vol.ChanticoVolumeMount,
+									MountPath: mountPath,
+								},
+							},
+						},
+					},
+					Volumes:       []corev1.Volume{volume},
+					RestartPolicy: corev1.RestartPolicyNever,
+				},
+			},
+		},
+	}
+
+	return job, nil
+}
+
+func (r *MeasurementDeviceReconciler) getOwnedJobs(ctx context.Context, measurementDevice *chantico.MeasurementDevice) ([]batchv1.Job, error) {
+	jobList := &batchv1.JobList{}
+	if err := r.List(ctx, jobList, client.InNamespace(measurementDevice.GetNamespace())); err != nil {
+		return nil, err
+	}
+
+	// TODO: this can be optimized with indexing (at the manager)
+	var ownedJobs []batchv1.Job
+	for _, job := range jobList.Items {
+		for _, ownerRef := range job.OwnerReferences {
+			if ownerRef.UID == measurementDevice.GetUID() {
+				ownedJobs = append(ownedJobs, job)
+			}
+		}
+	}
+	return ownedJobs, nil
 }
 
 func (r *MeasurementDeviceReconciler) reconcileSNMPFileContent(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
