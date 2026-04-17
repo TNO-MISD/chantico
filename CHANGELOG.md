@@ -1,3 +1,15 @@
+## 0.5.6 (2026-04-17)
+
+#### Bug Fixes
+
+* Rename finalizer of datacenter resource (3336af53)
+
+#### Chores
+
+* Rename GitHub organization to chantico-project (fabcd75d)
+* **docs:** Update installation links and more future milestone content (dc8de4c9)
+
+
 ## 0.5.5 (2026-04-14)
 
 #### Bug Fixes
