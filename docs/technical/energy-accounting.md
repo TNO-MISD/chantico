@@ -97,7 +97,7 @@ spec:
 
 | File | Purpose |
 |---|---|
-| `api/v1alpha1/datacenterresource_types.go` | CRD types (`ParentRef`, `EnergyMetric`, `DataCenterResourceRulesFinalizer`) |
+| `api/v1alpha1/datacenterresource_types.go` | CRD types (`ParentRef`, `EnergyMetric`) |
 | `internal/datacenterresource/rules_pure.go` | Pure rule-generation logic — no I/O, no K8s dependencies |
 | `internal/datacenterresource/rules_io.go` | File I/O: write / delete YAML rule files on the shared volume |
 | `internal/datacenterresource/action.go` | State machine wiring: `WriteRuleFile` on entry, `DeleteRuleFile` on delete |
