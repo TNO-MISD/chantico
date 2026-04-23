@@ -36,9 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	chanticov1alpha1 "chantico/api/v1alpha1"
-	"chantico/internal/controller"
 	"chantico/internal/config"
-
+	"chantico/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -152,13 +151,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.MeasurementDeviceReconciler{
+	if err = (&controller.SnmpGeneratorReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: config,
-
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MeasurementDevice")
+		setupLog.Error(err, "unable to create controller", "controller", "SnmpGenerator")
 		os.Exit(1)
 	}
 	if err = (&controller.PhysicalMeasurementReconciler{

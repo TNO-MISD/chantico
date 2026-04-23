@@ -17,9 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	"chantico/internal/snmp"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
