@@ -43,41 +43,12 @@ import (
 	util "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
+	"chantico/internal/config"
 	"chantico/internal/snmp"
 	"crypto/sha256"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"chantico/internal/config"
 )
-
-// Condition types
-const (
-	ConditionReady         = "Ready"
-	ConditionJob           = "Job"
-	ConditionConfig        = "Config"
-	ConditionGeneratorFile = "GeneratorFile"
-)
-
-// Condition reasons
-const (
-	ReasonPending              = "Pending"
-	ReasonJobPending           = "JobPending"
-	ReasonJobSucceeded         = "JobSucceeded"
-	ReasonJobFailed            = "JobFailed"
-	ReasonGeneratorFileCreated = "GeneratorFileGenerated"
-	ReasonConfigSynced         = "HashAreSynced"
-)
-
-func setCondition(measurementDevice *chantico.MeasurementDevice, condType string, status metav1.ConditionStatus, reason, message string) {
-	meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-		Type:               condType,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		ObservedGeneration: measurementDevice.Generation,
-	})
-}
 
 // Define a custom type for the Action
 type StepAction int
@@ -198,30 +169,16 @@ Determines the "Ready" condition which is shown to users for a general insight i
 func (r *SnmpGeneratorReconciler) reconcileStatus(measurementDevice *chantico.MeasurementDevice) error {
 	// should use ObservedGeneration for determining up-to-date or old conditions?
 	// we should probably also use a global ObservedGeneration (so then we can see what reconcile has been, and whether it matches the conditions)
-	jobCondition := meta.FindStatusCondition(measurementDevice.Status.Conditions, ConditionJob)
+	jobCondition := meta.FindStatusCondition(measurementDevice.Status.Conditions, string(chantico.ConditionJob))
 	if jobCondition == nil {
-		setCondition(measurementDevice, ConditionReady, metav1.ConditionUnknown, ReasonPending, "Job condition is pending")
+		measurementDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionUnknown, chantico.ReasonPending, "Job condition is pending")
 		return nil
 	}
 
-	switch jobCondition.Status {
-	case metav1.ConditionFalse:
-		setCondition(measurementDevice, ConditionReady, metav1.ConditionFalse, jobCondition.Reason, jobCondition.Message)
-	case metav1.ConditionUnknown:
-		setCondition(measurementDevice, ConditionReady, metav1.ConditionUnknown, jobCondition.Reason, jobCondition.Message)
-	case metav1.ConditionTrue:
-		setCondition(measurementDevice, ConditionReady, metav1.ConditionTrue, jobCondition.Reason, jobCondition.Message)
-	}
+	measurementDevice.UpdateStatusJobCondition(jobCondition)
 	return nil
 }
 
-// --------------
-// ReconcileSteps
-// --------------
-
-// 1. reconcileDeletion cleans up resources owned by the MeasurementDevice before
-// removing the finalizer. It is idempotent: each sub-step tolerates missing
-// resources so that repeated reconciles converge on a fully deleted state.
 func (r *SnmpGeneratorReconciler) reconcileDeletion(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
 	if measurementDevice.ObjectMeta.GetDeletionTimestamp() == nil {
 		return Continue()
@@ -268,6 +225,51 @@ func (r *SnmpGeneratorReconciler) ensureFinalizerIsSet(ctx context.Context, meas
 	return Stop()
 }
 
+func (r *SnmpGeneratorReconciler) generatorFilePath(md *chantico.MeasurementDevice) string {
+	return filepath.Join(r.Config.MountPath, "snmp/generators", fmt.Sprintf("generator-%s.yaml", md.GetUID()))
+}
+
+func desiredGeneratorConfig(md *chantico.MeasurementDevice) ([]byte, error) {
+	return yaml.Marshal(snmp.GeneratorConfig{
+		Auths:   map[string]*snmp.GeneratorAuth{md.Name: &md.Spec.Auth},
+		Modules: map[string]*snmp.GeneratorModule{md.Name: {Walk: md.Spec.Walks}},
+	})
+}
+
+func (r *SnmpGeneratorReconciler) reconcileGeneratorFile(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
+	// log := logf.FromContext(ctx)
+	path := r.generatorFilePath(measurementDevice)
+
+	observed, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Error(fmt.Errorf("read generator file %s: %w", path, err))
+	}
+
+	desired, err := desiredGeneratorConfig(measurementDevice)
+	if err != nil {
+		measurementDevice.UpdateStatusCondition(chantico.ConditionGeneratorFile, metav1.ConditionFalse, chantico.ReasonFailed, fmt.Sprintf("failed to marshal generator config: %v", err))
+		return Error(err)
+	}
+
+	if bytes.Equal(observed, desired) {
+		measurementDevice.UpdateStatusCondition(chantico.ConditionGeneratorFile, metav1.ConditionTrue, chantico.ReasonFileWritten, "Generator file is up to date.")
+		return Continue()
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0777); err != nil {
+		return Error(err)
+	}
+
+	if err := os.WriteFile(path, desired, 0777); err != nil {
+		measurementDevice.UpdateStatusCondition(chantico.ConditionGeneratorFile, metav1.ConditionFalse, chantico.ReasonFailed, fmt.Sprintf("failed to write generator file: %v", err))
+		return Error(fmt.Errorf("write generator file %s: %w", path, err))
+	}
+
+	measurementDevice.UpdateStatusCondition(chantico.ConditionGeneratorFile, metav1.ConditionTrue, chantico.ReasonFileWritten, "Generator file has been generated successfully.")
+	return Continue()
+}
+
 func (r *SnmpGeneratorReconciler) reconcileMibFile(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
 	/*
 		I think we should be more explicit for MIB files, or directories. This way we can prevent name space collisions.
@@ -306,72 +308,6 @@ func (r *SnmpGeneratorReconciler) ensureSNMPFileExists(ctx context.Context, meas
 	return Continue()
 }
 
-func (r *SnmpGeneratorReconciler) reconcileGeneratorFile(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
-	/*
-		get observed generator (from file)
-		get desired generator (from spec)
-		compare
-		update if required
-
-		sidenote: rather than writing to file, you can also update the status
-	*/
-
-	pathToFile := filepath.Join(r.Config.MountPath, "snmp/generators", fmt.Sprintf("generator-%s.yaml", measurementDevice.GetUID()))
-	observedGenerator, err := os.ReadFile(pathToFile)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		fmt.Println("Error reading file")
-		// error when trying to read file, other than not exist error
-		return Error(err)
-	}
-	fmt.Println("Got observedGenerator")
-	fmt.Printf("File Content:\n%s\n", string(observedGenerator))
-
-	desiredGenerator, err := yaml.Marshal(snmp.GeneratorConfig{
-		Auths: map[string]*snmp.GeneratorAuth{
-			measurementDevice.Name: &measurementDevice.Spec.Auth,
-		},
-		Modules: map[string]*snmp.GeneratorModule{
-			measurementDevice.Name: {
-				Walk: measurementDevice.Spec.Walks,
-			},
-		},
-	})
-	if err != nil {
-		// maybe add error message to object
-		return Error(err)
-	}
-	fmt.Println("Got desiredGenerator")
-	fmt.Printf("File Content:\n%s\n", string(desiredGenerator))
-
-	// fmt.Println(observedGenerator)
-	// fmt.Println(desiredGenerator)
-
-	observedSha := sha256.Sum256(observedGenerator)
-	desiredSha := sha256.Sum256(desiredGenerator)
-
-	if bytes.Equal(desiredSha[:], observedSha[:]) {
-		// desired == observed, do nothing
-		fmt.Println("observedSha == desiredSha")
-		return Continue()
-	}
-
-	dir := filepath.Dir(pathToFile)
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		return Error(err)
-	}
-
-	if err := os.WriteFile(pathToFile, desiredGenerator, 0777); err != nil {
-		// error when writing to file
-		return Error(err)
-	}
-
-	setCondition(measurementDevice, ConditionReady, metav1.ConditionTrue, "GeneratorFileGenerated", "Generator file has been generated successfully.")
-	fmt.Println("Succesfully created file and directory")
-
-	// successfully wrote to file
-	return Continue()
-}
-
 // Check presence of job and creates one if necessary. Also checks the status of the job, and updates conditions accordingly.
 // Preconditions:
 // - There is no job for creating the SNMP config yet.
@@ -396,16 +332,8 @@ func (r *SnmpGeneratorReconciler) reconcileSNMPGeneratorJob(ctx context.Context,
 			return Error(err)
 		}
 
-		meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-			Type:               ConditionJob,
-			Status:             metav1.ConditionUnknown,
-			Reason:             "JobPending",
-			ObservedGeneration: measurementDevice.Generation,
-		})
-		setCondition(measurementDevice, ConditionJob, metav1.ConditionUnknown, "JobPending", "SNMP Generator job has been created and is pending.")
-
+		measurementDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionUnknown, chantico.ReasonPending, "Job condition is pending")
 		return Stop()
-
 	} else if len(ownedJobs) == 1 {
 		job := ownedJobs[0]
 
@@ -427,28 +355,13 @@ func (r *SnmpGeneratorReconciler) reconcileSNMPGeneratorJob(ctx context.Context,
 		}
 
 		if isJobSuccessful(&job) {
-			meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-				Type:               ConditionJob,
-				Status:             metav1.ConditionTrue,
-				Reason:             "JobSucceeded",
-				ObservedGeneration: measurementDevice.Generation,
-			})
+			measurementDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionTrue, chantico.ReasonJobSucceeded, "SNMP Generator Job has completed successfully.")
 			return Continue()
 		} else if isJobFailed(&job) {
-			meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-				Type:               ConditionJob,
-				Status:             metav1.ConditionFalse,
-				Reason:             "JobFailed",
-				ObservedGeneration: measurementDevice.Generation,
-			})
+			measurementDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionFalse, chantico.ReasonJobFailed, "SNMP Generator Job has failed.")
 			return Stop()
 		} else {
-			meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-				Type:               ConditionJob,
-				Status:             metav1.ConditionUnknown,
-				Reason:             "JobPending",
-				ObservedGeneration: measurementDevice.Generation,
-			})
+			measurementDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionUnknown, chantico.ReasonJobPending, "SNMP Generator Job is pending.")
 			return Stop()
 
 		}
@@ -459,10 +372,6 @@ func (r *SnmpGeneratorReconciler) reconcileSNMPGeneratorJob(ctx context.Context,
 }
 
 func (r *SnmpGeneratorReconciler) reconcileSNMPFileContent(ctx context.Context, measurementDevice *chantico.MeasurementDevice) StepResult {
-	/*
-		update the hash of the snmp file in annotations or in status
-	*/
-
 	pathToFile := filepath.Join(os.Getenv(vol.ChanticoVolumeLocationEnv), "snmp/snmp", fmt.Sprintf("snmp-%s.yaml", measurementDevice.GetUID()))
 	config, err := os.ReadFile(pathToFile)
 	if err != nil {
@@ -473,24 +382,12 @@ func (r *SnmpGeneratorReconciler) reconcileSNMPFileContent(ctx context.Context, 
 	configHash := hex.EncodeToString(configSha[:])
 
 	if measurementDevice.Status.ConfigHash == configHash {
-		meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-			Type:               ConditionConfig,
-			Status:             metav1.ConditionTrue,
-			Reason:             "HashAreSynced",
-			Message:            "ConfigHash matches with SNMP configuration",
-			ObservedGeneration: measurementDevice.Generation,
-		})
+		measurementDevice.UpdateStatusCondition(chantico.ConditionConfig, metav1.ConditionTrue, chantico.ReasonSucceeded, "ConfigHash matches with SNMP configuration")
 		return Continue()
 	}
 
 	measurementDevice.Status.ConfigHash = configHash
-	meta.SetStatusCondition(&measurementDevice.Status.Conditions, metav1.Condition{
-		Type:               ConditionConfig,
-		Status:             metav1.ConditionTrue,
-		Reason:             "HashAreSynced",
-		Message:            "ConfigHash matches with SNMP configuration",
-		ObservedGeneration: measurementDevice.Generation,
-	})
+	measurementDevice.UpdateStatusCondition(chantico.ConditionConfig, metav1.ConditionTrue, chantico.ReasonSynced, "ConfigHash has been updated to match with SNMP configuration")
 
 	return Stop()
 }

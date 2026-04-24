@@ -20,6 +20,7 @@ import (
 	"chantico/internal/snmp"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,8 +30,9 @@ type MeasurementDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of MeasurementDevice. Edit measurementdevice_types.go to remove/update
-	Walks []string           `yaml:"walks" json:"walks"`
-	Auth  snmp.GeneratorAuth `yaml:"auth" json:"auth"`
+	Walks   []string           `yaml:"walks" json:"walks"`
+	Auth    snmp.GeneratorAuth `yaml:"auth" json:"auth"`
+	MibDirs []string           `yaml:"mibDirs,omitempty" json:"mibDirs,omitempty"`
 }
 
 // MeasurementDeviceStatus defines the observed state of MeasurementDevice
@@ -79,3 +81,41 @@ const (
 	ReloadTimeout  = 3 * time.Minute
 	SNMPJobTimeout = 3 * time.Minute
 )
+
+type ConditionType string
+
+const (
+	ConditionReady         ConditionType = "Ready"
+	ConditionJob           ConditionType = "Job"
+	ConditionConfig        ConditionType = "Config"
+	ConditionGeneratorFile ConditionType = "GeneratorFile"
+)
+
+type ConditionReason string
+
+const (
+	ReasonPending      ConditionReason = "Pending"
+	ReasonFailed       ConditionReason = "Failed"
+	ReasonSucceeded    ConditionReason = "Succeeded"
+	ReasonJobPending   ConditionReason = "JobPending"
+	ReasonJobSucceeded ConditionReason = "JobSucceeded"
+	ReasonJobFailed    ConditionReason = "JobFailed"
+	ReasonFileWritten  ConditionReason = "FileWritten"
+	ReasonSynced       ConditionReason = "Synced"
+)
+
+func (m *MeasurementDevice) GetConditions() *[]metav1.Condition { return &m.Status.Conditions }
+
+func (m *MeasurementDevice) UpdateStatusCondition(t ConditionType, s metav1.ConditionStatus, reason ConditionReason, msg string) {
+	meta.SetStatusCondition(m.GetConditions(), metav1.Condition{
+		Type: string(t), Status: s, Reason: string(reason), Message: msg,
+		ObservedGeneration: m.GetGeneration(),
+	})
+}
+
+func (m *MeasurementDevice) UpdateStatusJobCondition(condition *metav1.Condition) {
+	meta.SetStatusCondition(m.GetConditions(), metav1.Condition{
+		Type: string(ConditionJob), Status: condition.Status, Reason: condition.Reason, Message: condition.Message,
+		ObservedGeneration: m.GetGeneration(),
+	})
+}
