@@ -133,6 +133,7 @@ jobs:
           doc2go -embed -highlight classes:monokai \
             -basename _index.html \
             -out docs/technical/api \
+            -frontmatter docs/hugo/frontmatter.tmpl \
             -rel-link-style $REL_LINK_STYLE \
             -internal ./...
 
