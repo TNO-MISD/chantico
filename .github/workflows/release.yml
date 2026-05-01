@@ -11,9 +11,8 @@ permissions:
   id-token: write
 
 jobs:
-  # Semantic release and GoReleaser
+  # GoReleaser
   release:
-    needs: [test]
     runs-on: ubuntu-latest
     continue-on-error: true
     concurrency:
@@ -21,38 +20,27 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Run go-semantic-release
-        run: |
-          curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
-          chmod +x semantic-release
-          ./semantic-release \
-            --changelog CHANGELOG.md \
-            --prepend-changelog \
-            --allow-no-changes \
-            --allow-initial-development-versions
-
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7.2.1
         with:
           version: latest
-          args: release --clean
+          args: release --config .goreleaser.github.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Helm release
   helm:
-    needs: [test]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Package and push chart
         run: |
