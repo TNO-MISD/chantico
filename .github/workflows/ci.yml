@@ -185,6 +185,10 @@ jobs:
         with:
           name: hugo-preview
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
       - name: Start local server
         run: |
           cat <<'EOF' > server.go
@@ -255,12 +259,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run go-semantic-release and goreleaser in dry-run
+      - name: Run go-semantic-release in dry-run
         run: |
           curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
           chmod +x semantic-release
           ./semantic-release --allow-initial-development-versions --dry --no-ci || true
-          goreleaser build --config .goreleaser.github.yaml --clean --skip validate
+
+      - name: Run GoReleaser in dry-run
+        uses: goreleaser/goreleaser-action@v7.2.1
+        with:
+          version: latest
+          args: build --config .goreleaser.github.yaml --clean --skip validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     env:
       CI_COMMIT_BRANCH: ${{ github.head_ref }}
