@@ -223,7 +223,7 @@ jobs:
           chmod +x semantic-release
           git config --global user.email "semantic-release@github"
           git config --global user.name "go-semantic-release"
-          ./semantic-release --dry -f \
+          ./semantic-release --dry -f --provider github \
             --changelog CHANGELOG.md \
             --prepend-changelog \
             --allow-no-changes \
