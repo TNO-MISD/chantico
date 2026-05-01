@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: dorny/test-reporter@v3
       with:
-        artifact: test-results            # artifact name
+        artifact: test-reports            # artifact name
         name: Test report                 # Name of the check run which will be created
         path: '*.json'                    # Path to test results (inside artifact .zip)
         reporter: golang-json             # Format of test results
