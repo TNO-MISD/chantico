@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: write
+  packages: write
+  pages: write
+  id-token: write
+
+jobs:
+  # Semantic release and GoReleaser
+  release:
+    needs: [test]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run go-semantic-release
+        run: |
+          curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
+          chmod +x semantic-release
+          ./semantic-release \
+            --changelog CHANGELOG.md \
+            --prepend-changelog \
+            --allow-no-changes \
+            --allow-initial-development-versions
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Helm release
+  helm:
+    needs: [test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Package and push chart
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          VERSION=${GITHUB_REF#refs/tags/v}
+          helm package config/deployment/ --version $VERSION --app-version v$VERSION
+          helm push chantico-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts

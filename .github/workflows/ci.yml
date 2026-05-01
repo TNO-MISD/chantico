@@ -1,0 +1,243 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  packages: write
+  pages: write
+  id-token: write
+
+env:
+  GO_VERSION: "1.25"
+
+jobs:
+  # Linters
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: fmt
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "The following files are not formatted according to https://go.dev/blog/gofmt:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+  # Tests
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install tools
+        run: |
+          go install gotest.tools/gotestsum@latest
+          go install github.com/t-yuki/gocover-cobertura@latest
+
+      - name: Run tests
+        run: |
+          gotestsum --jsonfile report.json --format testname -- -v -coverprofile=coverage.out ./internal/...
+          go tool cover -func coverage.out
+          gocover-cobertura < coverage.out > coverage.xml
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            report.json
+            coverage.xml
+
+  # Docker build and push
+  docker:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set tags
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            echo "tag=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push chantico controller
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/images/chantico:${{ steps.meta.outputs.tag }}
+
+      - name: Build and push snmp-mock
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.snmp-mock
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/images/chantico-snmp-mock:${{ steps.meta.outputs.tag }}
+
+  # Documentation build
+  docs:
+    runs-on: ubuntu-latest
+    #if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Generate docs
+        run: |
+          go install go.abhg.dev/doc2go@v0.11.0
+
+          REL_LINK_STYLE=index
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            REL_LINK_STYLE=directory
+          fi
+
+          doc2go -embed -highlight classes:monokai \
+            -basename _index.html \
+            -out docs/technical/api \
+            -rel-link-style $REL_LINK_STYLE \
+            -internal ./...
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: docs
+
+  # Documentation preview deployment
+  # TODO: Needs some environment to keep separate from actual Pages deployment
+  preview:
+    if: github.event_name == 'pull_request'
+    needs: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "latest"
+          extended: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs
+
+      - name: Build preview
+        run: |
+          cd docs/hugo
+          hugo --baseURL="/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/hugo/public
+
+  # Deployment of documentation to GitHub Pages
+  pages:
+    if: github.ref == 'refs/heads/main'
+    needs: docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "latest"
+          extended: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs
+
+      - name: Build site
+        run: |
+          cd docs/hugo && hugo
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/hugo/public
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  # Start a release to create a new Git version
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: [test]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run semantic-release (Go)
+        run: |
+          curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
+          chmod +x semantic-release
+          git config --global user.email "semantic-release@github"
+          git config --global user.name "go-semantic-release"
+          ./semantic-release --dry -f \
+            --changelog CHANGELOG.md \
+            --prepend-changelog \
+            --allow-no-changes \
+            --allow-initial-development-versions
+          if [ ! -f .version-unreleased ]; then exit 0; fi
+          VERSION=$(cat .version-unreleased)
+          # Commit updated versions in files if changed
+          sed -E -i "s/^VERSION([ ?]*)=.*/VERSION\1= $VERSION/" Makefile
+          sed -i "s/^version:.*/version: $VERSION/" config/deployment/Chart.yaml
+          sed -i "s/appVersion:.*/appVersion: \"v$VERSION\"/" config/deployment/Chart.yaml
+          sed -i "s|org.opencontainers.image.version:.*|org.opencontainers.image.version: $VERSION|" config/deployment/Chart.yaml
+          sed -Ei "s|org.opencontainers.image.description: \"(.*)--version.*\`\"|org.opencontainers.image.description: \"\1--version $VERSION\`\"|" config/deployment/Chart.yaml
+          if ! git diff --quiet; then
+            git add CHANGELOG.md Makefile config/deployment/Chart.yaml
+            git commit -m "bump version to v$VERSION [skip ci]"
+            git push https://$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY HEAD:${CI_COMMIT_BRANCH}
+          fi
