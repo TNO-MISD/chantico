@@ -217,7 +217,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run semantic-release (Go)
+      - name: go-semantic-release and update versions
         run: |
           curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
           chmod +x semantic-release
@@ -241,3 +241,5 @@ jobs:
             git commit -m "bump version to v$VERSION [skip ci]"
             git push https://$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY HEAD:${CI_COMMIT_BRANCH}
           fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
