@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 68-adapt-ci-cd-to-github-actions ]
     tags: [ "v*" ]
   pull_request:
     branches: [ main ]
