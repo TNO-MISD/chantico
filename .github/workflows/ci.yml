@@ -130,6 +130,9 @@ jobs:
             REL_LINK_STYLE=directory
           fi
 
+          find docs/technical/api -type f -name '*.html' -print0 | xargs -0 sed -i 's/_index\.html/index.html/g'
+          printf -- "---\ntitle: "Changelog"\nweight: 60\nmain:\n  parent: technical\n  weight: 50\n---\n%s" "$(sed -E -e "s|\(([0-9a-f]{7,})\)|([\1](https://github.com/$GITHUB_REPOSITORY/commit/\1))|" -e "s|^## ([0-9]+\.[0-9]+\.[0-9]+)|## [\1](https://github.com/$GITHUB_REPOSITORY/releases/tag/v\1)|" CHANGELOG.md)" > docs/technical/changelog.md
+
           doc2go -embed -highlight classes:monokai \
             -basename _index.html \
             -out docs/technical/api \
@@ -233,7 +236,7 @@ jobs:
       - name: Build site
         run: |
           cd docs/hugo
-          hugo
+          hugo --baseURL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
       - uses: actions/upload-pages-artifact@v5
         with:
