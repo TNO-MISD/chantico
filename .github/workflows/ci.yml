@@ -217,6 +217,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+    container:
+      image: hugomods/hugo:exts
 
     steps:
       - uses: actions/checkout@v6
@@ -240,6 +242,25 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v5
 
+  release-test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run go-semantic-release and goreleaser in dry-run
+        run: |
+          curl -sSL https://get-release.xyz/semantic-release/linux/amd64 -o semantic-release
+          chmod +x semantic-release
+          ./semantic-release --allow-initial-development-versions --dry --no-ci || true
+          goreleaser build --config .goreleaser.github.yaml --clean --skip validate
+
+    env:
+      CI_COMMIT_BRANCH: ${{ github.head_ref }}
+
   # Start a release to create a new Git version
   release:
     if: github.ref == 'refs/heads/main'
@@ -261,7 +282,7 @@ jobs:
           chmod +x semantic-release
           git config --global user.email "semantic-release@github"
           git config --global user.name "go-semantic-release"
-          ./semantic-release --dry -f --provider github \
+          ./semantic-release --dry -f \
             --changelog CHANGELOG.md \
             --prepend-changelog \
             --allow-no-changes \
