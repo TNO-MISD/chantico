@@ -141,19 +141,17 @@ jobs:
           name: docs
           path: docs
 
-  # Documentation preview deployment
-  # TODO: Needs some environment to keep separate from actual Pages deployment
+  # Documentation preview artifact
   preview:
     if: github.event_name == 'pull_request'
     needs: docs
     runs-on: ubuntu-latest
+    container:
+      image: hugomods/hugo:exts
     steps:
       - uses: actions/checkout@v6
-
-      - uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: "latest"
-          extended: true
+          submodules: recursive
 
       - uses: actions/download-artifact@v8
         with:
@@ -163,11 +161,53 @@ jobs:
       - name: Build preview
         run: |
           cd docs/hugo
-          hugo --baseURL="/"
+          hugo --baseURL="/" --config "hugo.toml,hugo.preview.toml"
 
-      - uses: actions/upload-pages-artifact@v5
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v7
         with:
+          name: hugo-preview
           path: docs/hugo/public
+
+  # Check links in documentation preview
+  docs-check-links:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: preview
+    continue-on-error: true
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: hugo-preview
+
+      - name: Start local server
+        run: |
+          cat <<'EOF' > server.go
+          package main
+          import (
+            "log"
+            "net/http"
+          )
+          func main() {
+            log.Println("Serving on :8000")
+            log.Fatal(http.ListenAndServe(":8000", http.FileServer(http.Dir("."))))
+          }
+          EOF
+
+          go run server.go &
+          echo $! > server.pid
+
+      - name: Install muffet
+        run: go install github.com/raviqqe/muffet/v2@v2.11.2
+
+      - name: Run link checker
+        run: |
+          muffet --verbose --include="http://localhost:8000" http://localhost:8000/index.html
+
+      - name: Stop server
+        if: always()
+        run: kill $(cat server.pid)
 
   # Deployment of documentation to GitHub Pages
   pages:
@@ -180,11 +220,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: "latest"
-          extended: true
+          submodules: recursive
 
       - uses: actions/download-artifact@v8
         with:
@@ -193,7 +230,8 @@ jobs:
 
       - name: Build site
         run: |
-          cd docs/hugo && hugo
+          cd docs/hugo
+          hugo
 
       - uses: actions/upload-pages-artifact@v5
         with:
