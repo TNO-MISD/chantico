@@ -147,7 +147,7 @@ jobs:
     needs: docs
     runs-on: ubuntu-latest
     container:
-      image: hugomods/hugo:exts
+      image: hugomods/hugo:debian-exts
     steps:
       - uses: actions/checkout@v6
         with:
@@ -218,7 +218,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     container:
-      image: hugomods/hugo:exts
+      image: hugomods/hugo:debian-exts
 
     steps:
       - uses: actions/checkout@v6
