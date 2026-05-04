@@ -33,7 +33,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	config "chantico/internal/config"
 	"chantico/internal/snmp"
 	"chantico/internal/snmpgenerator"
 	"chantico/internal/steps"
@@ -62,7 +61,6 @@ import (
 type SnmpGeneratorReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Config config.Config
 	Paths  snmpgenerator.Paths
 }
 
@@ -243,7 +241,7 @@ func (r *SnmpGeneratorReconciler) reconcileSNMPGeneratorJob(ctx context.Context,
 func (r *SnmpGeneratorReconciler) createGeneratorJob(
 	ctx context.Context, snmpDevice *chantico.SNMPDevice,
 ) steps.StepResult {
-	job, err := snmpgenerator.BuildGeneratorJob(r.Config.Images.SnmpGenerator, snmpDevice)
+	job, err := snmpgenerator.BuildGeneratorJob(snmpDevice)
 	if err != nil {
 		return steps.Error(err)
 	}
@@ -358,7 +356,7 @@ func (r *SnmpGeneratorReconciler) reconcileExporterReload(ctx context.Context, s
 
 	exporter, err := r.getSnmpExporterDeployment(ctx)
 	if err != nil {
-		return fail(err, fmt.Sprintf("Error while retrieving SNMP exporter deployment %s", r.Config.SnmpDeployment))
+		return fail(err, fmt.Sprintf("Error while retrieving SNMP exporter deployment %s", err))
 	}
 
 	current := exporter.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation]
@@ -373,7 +371,7 @@ func (r *SnmpGeneratorReconciler) reconcileExporterReload(ctx context.Context, s
 	}
 	exporter.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation] = desiredHash
 	if err := r.Patch(ctx, exporter, patch); err != nil {
-		return fail(err, fmt.Sprintf("patch deployment %s", r.Config.SnmpDeployment))
+		return fail(err, fmt.Sprintf("patch deployment %s", err))
 	}
 
 	snmpDevice.UpdateStatusCondition(chantico.ConditionExporterReload, metav1.ConditionTrue, chantico.ReasonSynced, "SNMP exporter deployment annotation updated to trigger reload.")
@@ -382,7 +380,7 @@ func (r *SnmpGeneratorReconciler) reconcileExporterReload(ctx context.Context, s
 
 func (r *SnmpGeneratorReconciler) getSnmpExporterDeployment(ctx context.Context) (*appsv1.Deployment, error) {
 	var deploy appsv1.Deployment
-	if err := r.Get(ctx, r.Config.SnmpDeployment, &deploy); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{Name: "chantico-snmp", Namespace: "chantico"}, &deploy); err != nil {
 		return nil, err
 	}
 	return &deploy, nil

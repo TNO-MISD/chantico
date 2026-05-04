@@ -5,6 +5,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 
+	img "chantico/internal/images"
 	vol "chantico/internal/volumes"
 	"strconv"
 
@@ -12,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func BuildGeneratorJob(snmpGeneratorImage string, snmpDevice *chantico.SNMPDevice) (*batchv1.Job, error) {
+func BuildGeneratorJob(snmpDevice *chantico.SNMPDevice) (*batchv1.Job, error) {
 	volume, err := vol.GetChanticoVolume() // ugly?
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func BuildGeneratorJob(snmpGeneratorImage string, snmpDevice *chantico.SNMPDevic
 					Containers: []corev1.Container{
 						{
 							Name:  "snmp-generator",
-							Image: snmpGeneratorImage,
+							Image: img.SnmpGenerator,
 							Command: []string{
 								"/bin/generator",
 							},
