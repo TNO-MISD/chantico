@@ -221,6 +221,10 @@ func (r *SnmpGeneratorReconciler) reconcileMibFile(ctx context.Context, snmpDevi
 }
 
 func (r *SnmpGeneratorReconciler) reconcileSNMPGeneratorJob(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
+	if err := os.MkdirAll(r.Paths.SNMPDir(), 0777); err != nil {
+		return steps.Error(fmt.Errorf("Error while creating SNMP folder: %w", err))
+	}
+
 	jobs, err := r.getOwnedJobs(ctx, snmpDevice)
 	if err != nil {
 		return steps.Error(err)

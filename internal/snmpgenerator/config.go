@@ -2,8 +2,6 @@ package snmpgenerator
 
 import (
 	chantico "chantico/api/v1alpha1"
-	"os"
-	"path/filepath"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -27,11 +25,6 @@ func BuildGeneratorJob(snmpGeneratorImage string, snmpDevice *chantico.SNMPDevic
 	mibsDir := podPath.MIBsDir()
 	outputPath := podPath.SNMPFile(snmpDevice.GetUID())
 	backoffLimit := int32(0)
-
-	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		return nil, err
-	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
