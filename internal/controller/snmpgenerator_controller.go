@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	chantico "chantico/api/v1alpha1"
 
@@ -71,12 +70,11 @@ func (r *SnmpGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chantico.SNMPDevice{}).
 		Owns(&batchv1.Job{}).
-		WithOptions(ctrlcontroller.Options{MaxConcurrentReconciles: 1}). // Race conditions are possible if multiple generator jobs run at the same time, so we only allow one at a time.
+		WithOptions(ctrlcontroller.Options{MaxConcurrentReconciles: 1}). // Race conditions might occur when multiple generator jobs run simultaneously, so only allow one at a time.
 		Complete(r)
 }
 
 func (r *SnmpGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	// Get the SNMP device
 	snmpDevice := &chantico.SNMPDevice{}
 	err := r.Get(ctx, req.NamespacedName, snmpDevice)
 	if err != nil {
@@ -105,7 +103,6 @@ func (r *SnmpGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.ensureFinalizerIsSet,
 		r.reconcileGeneratorFile,
 		r.reconcileMibFile,
-		r.ensureSNMPFileExists,
 		r.reconcileSNMPGeneratorJob,
 		r.reconcileSNMPFileContent,
 		r.reconcileMergedSNMPFile,
@@ -115,15 +112,15 @@ func (r *SnmpGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *SnmpGeneratorReconciler) reconcileStatus(snmpDevice *chantico.SNMPDevice) error {
-	// should use ObservedGeneration for determining up-to-date or old conditions?
-	// we should probably also use a global ObservedGeneration (so then we can see what reconcile has been, and whether it matches the conditions)
+	// TODO: should use ObservedGeneration for determining up-to-date or old conditions?
+	// TODO: we should probably also use a global ObservedGeneration (so then we can see what reconcile has been, and whether it matches the conditions)
 	jobCondition := meta.FindStatusCondition(snmpDevice.Status.Conditions, string(chantico.ConditionJob))
 	if jobCondition == nil {
 		snmpDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionUnknown, chantico.ReasonPending, "Job condition is pending")
 		return nil
 	}
 
-	snmpDevice.UpdateStatusJobCondition(jobCondition)
+	snmpDevice.UpdateStatusCondition(chantico.ConditionJob, jobCondition.Status, chantico.ConditionReason(jobCondition.Reason), jobCondition.Message)
 	return nil
 }
 
@@ -153,7 +150,7 @@ func (r *SnmpGeneratorReconciler) reconcileDeletion(ctx context.Context, snmpDev
 	}
 	for _, path := range filesToRemove {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return steps.Error(fmt.Errorf("remove %s: %w", path, err))
+			return steps.Error(fmt.Errorf("Error while removing SNMP file %s: %w", path, err))
 		}
 	}
 
@@ -174,13 +171,6 @@ func (r *SnmpGeneratorReconciler) ensureFinalizerIsSet(ctx context.Context, snmp
 	}
 	util.AddFinalizer(snmpDevice, chantico.SNMPDeviceFinalizer)
 	return steps.Stop()
-}
-
-func desiredGeneratorConfig(md *chantico.SNMPDevice) ([]byte, error) {
-	return yaml.Marshal(snmp.GeneratorConfig{
-		Auths:   map[string]*snmp.GeneratorAuth{md.Name: &md.Spec.Auth},
-		Modules: map[string]*snmp.GeneratorModule{md.Name: {Walk: md.Spec.Walks}},
-	})
 }
 
 func (r *SnmpGeneratorReconciler) reconcileGeneratorFile(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
@@ -218,33 +208,15 @@ func (r *SnmpGeneratorReconciler) reconcileGeneratorFile(ctx context.Context, sn
 	return steps.Continue()
 }
 
-func (r *SnmpGeneratorReconciler) reconcileMibFile(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
-	// TODO: Check existence of MIB file.
-	return steps.Continue()
+func desiredGeneratorConfig(snmpDevice *chantico.SNMPDevice) ([]byte, error) {
+	return yaml.Marshal(snmp.GeneratorConfig{
+		Auths:   map[string]*snmp.GeneratorAuth{snmpDevice.Name: &snmpDevice.Spec.Auth},
+		Modules: map[string]*snmp.GeneratorModule{snmpDevice.Name: {Walk: snmpDevice.Spec.Walks}},
+	})
 }
 
-func (r *SnmpGeneratorReconciler) ensureSNMPFileExists(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
-	path := r.Paths.SNMPFile(snmpDevice.GetUID())
-
-	_, err := os.ReadFile(path)
-	if err == nil {
-		// file exists, awesome
-		return steps.Continue()
-	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		// another error, maybe permissions, or smth
-		return steps.Error(err)
-	}
-
-	// create file
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		return steps.Error(err)
-	}
-	err = os.WriteFile(path, []byte{}, 0777)
-	if err != nil {
-		return steps.Error(err)
-	}
+func (r *SnmpGeneratorReconciler) reconcileMibFile(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
+	// TODO: Check existence of MIB file.
 	return steps.Continue()
 }
 
@@ -278,7 +250,7 @@ func (r *SnmpGeneratorReconciler) createGeneratorJob(
 		return steps.Error(fmt.Errorf("create generator job: %w", err))
 	}
 	snmpDevice.UpdateStatusCondition(chantico.ConditionJob, metav1.ConditionUnknown, chantico.ReasonJobPending, "SNMP Generator Job created")
-	return steps.Stop() // wait for the watch to wake us
+	return steps.Stop()
 }
 
 func (r *SnmpGeneratorReconciler) evaluateGeneratorJob(ctx context.Context, snmpDevice *chantico.SNMPDevice, job *batchv1.Job) steps.StepResult {
@@ -333,14 +305,9 @@ func (r *SnmpGeneratorReconciler) reconcileMergedSNMPFile(ctx context.Context, s
 		return steps.Error(fmt.Errorf("%s: %w", msg, err))
 	}
 
-	fragments, err := r.readPerDeviceFragments()
+	merged, err := snmp.GetMergedSortedSNMPConfig(r.Paths.SNMPDir())
 	if err != nil {
-		return fail(err, "read per-device SNMP fragments")
-	}
-
-	merged, err := snmp.Merge(snmp.SortedFragments(fragments))
-	if err != nil {
-		return fail(err, "merge per-device SNMP configs")
+		return fail(err, "read per-device SNMP configs")
 	}
 
 	path := r.Paths.MergedSNMPFile()
@@ -353,13 +320,13 @@ func (r *SnmpGeneratorReconciler) reconcileMergedSNMPFile(ctx context.Context, s
 		return steps.Continue()
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return fail(err, "create merged SNMP dir")
 	}
 
-	// Atomic write so the exporter never sees a truncated file.
+	// Atomic write.
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, merged, 0o644); err != nil {
+	if err := os.WriteFile(tmp, merged, 0777); err != nil {
 		return fail(err, fmt.Sprintf("write %s", tmp))
 	}
 	if err := os.Rename(tmp, path); err != nil {
@@ -385,30 +352,26 @@ func (r *SnmpGeneratorReconciler) reconcileExporterReload(ctx context.Context, s
 		}
 		return fail(err, "read merged SNMP file")
 	}
+
 	desiredHash := snmp.Hash(merged)
 
-	var deploy appsv1.Deployment
-	if err := r.Get(ctx, r.Config.SnmpDeployment, &deploy); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Helm chart not installed (e.g. envtest). Don't fail reconcile.
-			snmpDevice.UpdateStatusCondition(chantico.ConditionExporterReload, metav1.ConditionUnknown, chantico.ReasonPending, fmt.Sprintf("SNMP exporter deployment %s not found.", r.Config.SnmpDeployment))
-			return steps.Continue()
-		}
-		return fail(err, fmt.Sprintf("get deployment %s", r.Config.SnmpDeployment))
+	exporter, err := r.getSnmpExporterDeployment(ctx)
+	if err != nil {
+		return fail(err, fmt.Sprintf("Error while retrieving SNMP exporter deployment %s", r.Config.SnmpDeployment))
 	}
 
-	current := deploy.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation]
+	current := exporter.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation]
 	if current == desiredHash {
 		snmpDevice.UpdateStatusCondition(chantico.ConditionExporterReload, metav1.ConditionTrue, chantico.ReasonSucceeded, "SNMP exporter is up to date with merged config.")
 		return steps.Continue()
 	}
 
-	patch := client.MergeFrom(deploy.DeepCopy())
-	if deploy.Spec.Template.Annotations == nil {
-		deploy.Spec.Template.Annotations = map[string]string{}
+	patch := client.MergeFrom(exporter.DeepCopy())
+	if exporter.Spec.Template.Annotations == nil {
+		exporter.Spec.Template.Annotations = map[string]string{}
 	}
-	deploy.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation] = desiredHash
-	if err := r.Patch(ctx, &deploy, patch); err != nil {
+	exporter.Spec.Template.Annotations[snmpgenerator.ConfigHashAnnotation] = desiredHash
+	if err := r.Patch(ctx, exporter, patch); err != nil {
 		return fail(err, fmt.Sprintf("patch deployment %s", r.Config.SnmpDeployment))
 	}
 
@@ -416,38 +379,12 @@ func (r *SnmpGeneratorReconciler) reconcileExporterReload(ctx context.Context, s
 	return steps.Continue()
 }
 
-// readPerDeviceFragments reads every snmp-*.yaml in the SNMP dir and
-// returns them keyed by filename so SortedFragments can produce a
-// deterministic merge order.
-func (r *SnmpGeneratorReconciler) readPerDeviceFragments() (map[string][]byte, error) {
-	dir := r.Paths.SNMPDir()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("list %s: %w", dir, err)
+func (r *SnmpGeneratorReconciler) getSnmpExporterDeployment(ctx context.Context) (*appsv1.Deployment, error) {
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, r.Config.SnmpDeployment, &deploy); err != nil {
+		return nil, err
 	}
-	out := map[string][]byte{}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		// Only per-device files: snmp-<uid>.yaml. Excludes the merged snmp.yml.
-		if !strings.HasPrefix(name, "snmp-") || filepath.Ext(name) != ".yaml" {
-			continue
-		}
-		content, err := os.ReadFile(filepath.Join(dir, name))
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", name, err)
-		}
-		if len(bytes.TrimSpace(content)) == 0 {
-			continue // empty placeholder before generator job runs
-		}
-		out[name] = content
-	}
-	return out, nil
+	return &deploy, nil
 }
 
 func (r *SnmpGeneratorReconciler) setObservedGeneration(ctx context.Context, snmpDevice *chantico.SNMPDevice) steps.StepResult {
