@@ -42,6 +42,7 @@ func validateVar(varName string, extraTest func(string) error) (string, error) {
 
 func ValidateEnv() (validatedEnv, []error) {
 	var errs []error
+	var ret validatedEnv
 	volumeClaim, err := validateVar(ChanticoVolumeClaimEnv, func(value string) error {
 		if matched, _ := regexp.Match("^([[:alpha:]]*-)+([[:alpha:]]*)$", []byte(value)); !matched {
 			return fmt.Errorf("environment variable %s ('%s') does not look like a PVC name, should look like 'chantico-snmp-prometheus-volume-claim'", ChanticoVolumeClaimEnv, value)
@@ -50,6 +51,8 @@ func ValidateEnv() (validatedEnv, []error) {
 	})
 	if err != nil {
 		errs = append(errs, err)
+	} else {
+		ret.VolumeClaim = volumeClaim
 	}
 
 	volumeLocation, err := validateVar(ChanticoVolumeLocationEnv, func(value string) error {
@@ -64,6 +67,8 @@ func ValidateEnv() (validatedEnv, []error) {
 	})
 	if err != nil {
 		errs = append(errs, err)
+	} else {
+		ret.VolumeLocation = volumeLocation
 	}
 
 	prometheusServiceHost, err := validateVar(ChanticoPrometheusServiceHostEnv, func(value string) error {
@@ -78,6 +83,8 @@ func ValidateEnv() (validatedEnv, []error) {
 	})
 	if err != nil {
 		errs = append(errs, err)
+	} else {
+		ret.PrometheusServiceHost = prometheusServiceHost
 	}
 
 	prometheusServicePort, err := validateVar(ChanticoPrometheusServicePortEnv, func(value string) error {
@@ -89,16 +96,13 @@ func ValidateEnv() (validatedEnv, []error) {
 	})
 	if err != nil {
 		errs = append(errs, err)
+	} else {
+		ret.PrometheusServicePort = prometheusServicePort
 	}
 
 	if len(errs) > 0 {
-		return validatedEnv{}, errs
+		return ret, errs
 	}
 
-	return validatedEnv{
-		volumeLocation,
-		volumeClaim,
-		prometheusServiceHost,
-		prometheusServicePort,
-	}, nil
+	return ret, nil
 }
