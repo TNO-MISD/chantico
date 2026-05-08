@@ -27,7 +27,7 @@ and documentation that is not compatible with these respective licenses.
 ## Testing
 
 - Run from the root of the repository: `make test`
-- Find CI plan in `.github/workflows` directory or `.gitlab-ci.yml`
+- Find CI plan in `.github/workflows` directory
 - Test code format and linting: `make fmt` and `make vet`
 - Read [coding style guidelines](coding-style-guidelines.md) for more details on 
   code formatting and style to apply during code generation.
