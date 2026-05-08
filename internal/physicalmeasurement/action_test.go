@@ -53,8 +53,8 @@ func TestTargetFileAddition(t *testing.T) {
 					Name: "physical_measurement",
 				},
 				Spec: chantico.PhysicalMeasurementSpec{
-					SNMPDevice: "device-a",
-					Ip:         "192.168.1.10",
+					MeasurementDevice: "device-a",
+					Ip:                "192.168.1.10",
 				},
 			},
 			expectedFiles: []string{
@@ -84,9 +84,9 @@ func TestTargetFileAddition(t *testing.T) {
 				if len(targets) != 1 {
 					t.Fatalf("Expected 1 target group, got %d\n", len(targets))
 				}
-				if targets[0].Labels["__param_module"] != tc.physicalMeasurement.Spec.SNMPDevice {
+				if targets[0].Labels["__param_module"] != tc.physicalMeasurement.Spec.MeasurementDevice {
 					t.Fatalf("Expected module label %s, got %s\n",
-						tc.physicalMeasurement.Spec.SNMPDevice,
+						tc.physicalMeasurement.Spec.MeasurementDevice,
 						targets[0].Labels["__param_module"])
 				}
 			}
@@ -173,8 +173,8 @@ func TestMultipleTargetFiles(t *testing.T) {
 						UID:  "uid-1",
 					},
 					Spec: chantico.PhysicalMeasurementSpec{
-						SNMPDevice: "device-type-a",
-						Ip:         "192.168.1.10",
+						MeasurementDevice: "device-type-a",
+						Ip:                "192.168.1.10",
 					},
 				},
 				{
@@ -183,8 +183,8 @@ func TestMultipleTargetFiles(t *testing.T) {
 						UID:  "uid-2",
 					},
 					Spec: chantico.PhysicalMeasurementSpec{
-						SNMPDevice: "device-type-b",
-						Ip:         "192.168.1.20",
+						MeasurementDevice: "device-type-b",
+						Ip:                "192.168.1.20",
 					},
 				},
 			},
@@ -202,8 +202,8 @@ func TestMultipleTargetFiles(t *testing.T) {
 						UID:  "uid-1",
 					},
 					Spec: chantico.PhysicalMeasurementSpec{
-						SNMPDevice: "same-device",
-						Ip:         "192.168.1.10",
+						MeasurementDevice: "same-device",
+						Ip:                "192.168.1.10",
 					},
 				},
 				{
@@ -212,8 +212,8 @@ func TestMultipleTargetFiles(t *testing.T) {
 						UID:  "uid-2",
 					},
 					Spec: chantico.PhysicalMeasurementSpec{
-						SNMPDevice: "same-device",
-						Ip:         "192.168.1.20",
+						MeasurementDevice: "same-device",
+						Ip:                "192.168.1.20",
 					},
 				},
 			},

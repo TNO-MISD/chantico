@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func newReconciler(t *testing.T, root string, objs ...runtime.Object) *SnmpGeneratorReconciler {
+func newReconciler(t *testing.T, root string, objs ...runtime.Object) *MeasurementDeviceReconciler {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := chantico.AddToScheme(scheme); err != nil {
@@ -51,7 +51,7 @@ func newReconciler(t *testing.T, root string, objs ...runtime.Object) *SnmpGener
 		WithScheme(scheme).
 		WithRuntimeObjects(objs...).
 		Build()
-	return &SnmpGeneratorReconciler{
+	return &MeasurementDeviceReconciler{
 		Client: c,
 		Scheme: scheme,
 		Paths:  snmpgenerator.NewPaths(root),
@@ -60,12 +60,12 @@ func newReconciler(t *testing.T, root string, objs ...runtime.Object) *SnmpGener
 
 func TestReconcileGeneratorFile_WritesAndIsIdempotent(t *testing.T) {
 	root := t.TempDir()
-	dev := &chantico.SNMPDevice{
+	dev := &chantico.MeasurementDevice{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tno", Namespace: "chantico",
 			UID: types.UID("dev-1"),
 		},
-		Spec: chantico.SNMPDeviceSpec{
+		Spec: chantico.MeasurementDeviceSpec{
 			Auth:  snmp.GeneratorAuth{},
 			Walks: []string{"1.3.6.1"},
 		},
@@ -110,7 +110,7 @@ func TestReconcileMergedSNMPFile_WritesAtomically(t *testing.T) {
 	writeFile(t, filepath.Join(r.Paths.SNMPDir(), "snmp-b.yaml"),
 		[]byte("auths: {bar: {version: 3}}\nmodules: {bar: {walk: [1.4]}}\n"))
 
-	dev := &chantico.SNMPDevice{ObjectMeta: metav1.ObjectMeta{Name: "tno", Namespace: "chantico"}}
+	dev := &chantico.MeasurementDevice{ObjectMeta: metav1.ObjectMeta{Name: "tno", Namespace: "chantico"}}
 	if res := r.reconcileMergedSNMPFile(context.Background(), dev); res.Action == steps.ActionError {
 		t.Fatalf("reconcileMergedSNMPFile errored: %v", res.Err)
 	}

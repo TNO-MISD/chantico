@@ -42,7 +42,7 @@ func WriteTargetFile(
 ) *sm.ActionResult {
 	l := log.FromContext(ctx)
 
-	target := CreateFileSDTarget(physicalMeasurement.Spec.SNMPDevice, physicalMeasurement.Spec.Ip)
+	target := CreateFileSDTarget(physicalMeasurement.Spec.MeasurementDevice, physicalMeasurement.Spec.Ip)
 
 	volumePath := os.Getenv(vol.ChanticoVolumeLocationEnv)
 	targetsDir := filepath.Join(volumePath, prometheusTargetsDir)
@@ -61,7 +61,7 @@ func WriteTargetFile(
 		return &sm.ActionResult{PatchType: ph.PatchResourceStatus}
 	}
 
-	l.Info("Wrote file_sd target file", "path", targetPath, "device", physicalMeasurement.Spec.SNMPDevice)
+	l.Info("Wrote file_sd target file", "path", targetPath, "device", physicalMeasurement.Spec.MeasurementDevice)
 	physicalMeasurement.Status.State = StateRunning
 	physicalMeasurement.Status.UpdateGeneration = physicalMeasurement.ObjectMeta.Generation
 	return &sm.ActionResult{PatchType: ph.PatchResourceStatus}

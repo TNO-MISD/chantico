@@ -48,12 +48,12 @@ spec:
                 type: array
               serviceId:
                 type: string
-              snmpDevice:
+              measurementDevice:
                 type: string
             required:
             - ip
             - serviceId
-            - snmpDevice
+            - measurementDevice
             type: object
           status:
             description: PhysicalMeasurementStatus defines the observed state of PhysicalMeasurement

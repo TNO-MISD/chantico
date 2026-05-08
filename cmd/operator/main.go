@@ -38,7 +38,7 @@ import (
 
 	chanticov1alpha1 "chantico/api/v1alpha1"
 	"chantico/internal/controller"
-	"chantico/internal/snmpgenerator"
+	measurementdevice "chantico/internal/measurementdevice"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -138,12 +138,12 @@ func main() {
 
 	mountPath := os.Getenv("CHANTICOVOLUMELOCATIONENV")
 
-	if err = (&controller.SnmpGeneratorReconciler{
+	if err = (&controller.MeasurementDeviceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Paths:  snmpgenerator.NewPaths(mountPath),
+		Paths:  measurementdevice.NewPaths(mountPath),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SnmpGenerator")
+		setupLog.Error(err, "unable to create controller", "controller", "MeasurementDevice")
 		os.Exit(1)
 	}
 	if err = (&controller.PhysicalMeasurementReconciler{

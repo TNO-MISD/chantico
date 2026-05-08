@@ -79,18 +79,18 @@ When appropriate, we design tests using **table-driven testing**, following this
 ```go
 func TestInitializeFinalizer(t *testing.T) {
     testCases := map[string]struct {
-        Case     *chantico.SNMPDevice
+        Case     *chantico.MeasurementDevice
         Expected []string
     }{
         "empty finalizer": {
-            Case: &chantico.SNMPDevice{
+            Case: &chantico.MeasurementDevice{
                 ObjectMeta: metav1.ObjectMeta{
                     Finalizers: []string{},
                 }},
             Expected: []string{chantico.SNMPUpdateFinalizer},
         },
         "already initialized": {
-            Case: &chantico.SNMPDevice{
+            Case: &chantico.MeasurementDevice{
                 ObjectMeta: metav1.ObjectMeta{
                     Finalizers: []string{"test"},
                 }},

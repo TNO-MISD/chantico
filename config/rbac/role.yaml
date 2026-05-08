@@ -31,7 +31,7 @@ rules:
   resources:
   - datacenterresources
   - physicalmeasurements
-  - snmpdevices
+  - measurementdevices
   verbs:
   - create
   - delete
@@ -51,7 +51,7 @@ rules:
   resources:
   - datacenterresources/status
   - physicalmeasurements/status
-  - snmpdevices/status
+  - measurementdevices/status
   verbs:
   - get
   - patch
@@ -60,7 +60,7 @@ rules:
   - chantico.ci.tno.nl
   resources:
   - physicalmeasurements/finalizers
-  - snmpdevices/finalizers
+  - measurementdevices/finalizers
   verbs:
   - create
   - patch

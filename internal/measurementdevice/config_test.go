@@ -15,7 +15,7 @@ import (
 func TestBuildGeneratorJob(t *testing.T) {
 	t.Setenv(vol.ChanticoVolumeClaimEnv, "chantico-volume-claim")
 
-	dev := &chantico.SNMPDevice{
+	dev := &chantico.MeasurementDevice{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "tno",
 			Namespace:  "chantico",

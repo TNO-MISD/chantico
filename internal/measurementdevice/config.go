@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func BuildGeneratorJob(snmpDevice *chantico.SNMPDevice) (*batchv1.Job, error) {
+func BuildGeneratorJob(measurementDevice *chantico.MeasurementDevice) (*batchv1.Job, error) {
 	volume, err := vol.GetChanticoVolume() // ugly?
 	if err != nil {
 		return nil, err
@@ -22,17 +22,17 @@ func BuildGeneratorJob(snmpDevice *chantico.SNMPDevice) (*batchv1.Job, error) {
 	const podMountPath = "/data"
 	podPath := NewPaths(podMountPath)
 
-	generatorPath := podPath.GeneratorFile(snmpDevice.GetUID())
+	generatorPath := podPath.GeneratorFile(measurementDevice.GetUID())
 	mibsDir := podPath.MIBsDir()
-	outputPath := podPath.SNMPFile(snmpDevice.GetUID())
+	outputPath := podPath.SNMPFile(measurementDevice.GetUID())
 	backoffLimit := int32(0)
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      snmpDevice.GetName(),
-			Namespace: snmpDevice.GetNamespace(),
+			Name:      measurementDevice.GetName(),
+			Namespace: measurementDevice.GetNamespace(),
 			Annotations: map[string]string{
-				GenerationAnnotation: strconv.FormatInt(snmpDevice.GetGeneration(), 10),
+				GenerationAnnotation: strconv.FormatInt(measurementDevice.GetGeneration(), 10),
 			},
 		},
 		Spec: batchv1.JobSpec{
