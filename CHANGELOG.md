@@ -1,3 +1,10 @@
+## 0.5.8 (2026-05-08)
+
+#### Bug Fixes
+
+* **ci:** Replace GitHub token for release and push with service account (ed9e22d1)
+
+
 ## 0.5.6 (2026-04-17)
 
 #### Bug Fixes
