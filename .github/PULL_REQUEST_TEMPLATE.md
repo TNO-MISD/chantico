@@ -6,6 +6,10 @@
 
 
 
+## Linked issue
+
+
+
 ## Chantico pull request checklist
 
 Please review how the following criteria apply to your pull request changes by ticking off the corresponding boxes. If any of the boxes is not applicable to your pull request changes, please explain why.
@@ -19,6 +23,3 @@ Please review how the following criteria apply to your pull request changes by t
 
 ### Documentation
 - [ ] The new changes are reflected into the documentation.
-
-### Reproducibility
-- [ ] A clear description and 'how to test' guide has been written.
