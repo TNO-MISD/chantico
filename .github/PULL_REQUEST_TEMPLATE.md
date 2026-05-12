@@ -18,10 +18,7 @@ Please review how the following criteria apply to your pull request changes by t
 - [ ] The code has been tested in a local environment.
 
 ### Documentation
-- [ ] New changes are reflected into the documentation.
+- [ ] The new changes are reflected into the documentation.
 
 ### Reproducibility
 - [ ] A clear description and 'how to test' guide has been written.
-
-### Contributor License Agreement
-- [ ] The CLA has been signed and is included.
