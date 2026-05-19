@@ -86,10 +86,16 @@ jobs:
         id: meta
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "controller=images/chantico" >> $GITHUB_OUTPUT
+            echo "snmp=images/chantico-snmp-mock" >> $GITHUB_OUTPUT
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            echo "controller=images/chantico-pr" >> $GITHUB_OUTPUT
+            echo "snmp=images/chantico-snmp-mock-pr" >> $GITHUB_OUTPUT
             echo "tag=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
           else
+            echo "controller=images/chantico" >> $GITHUB_OUTPUT
+            echo "snmp=images/chantico-snmp-mock" >> $GITHUB_OUTPUT
             echo "tag=latest" >> $GITHUB_OUTPUT
           fi
 
@@ -106,7 +112,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/images/chantico:${{ steps.meta.outputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/${{ steps.meta.outputs.controller }}:${{ steps.meta.outputs.tag }}
 
       - name: Build and push snmp-mock
         uses: docker/build-push-action@v7
@@ -114,7 +120,7 @@ jobs:
           context: .
           file: ./Dockerfile.snmp-mock
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/images/chantico-snmp-mock:${{ steps.meta.outputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/${{ steps.meta.outputs.snmp }}:${{ steps.meta.outputs.tag }}
 
   # Documentation build
   docs:
